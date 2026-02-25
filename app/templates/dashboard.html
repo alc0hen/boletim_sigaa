@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Boletim App 2025</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+      .account-dropdown {
+          position: relative;
+          display: inline-block;
+      }
+      .account-dropdown-content {
+          display: none;
+          position: absolute;
+          background-color: var(--bg-card);
+          min-width: 200px;
+          box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+          z-index: 1000;
+          border-radius: 8px;
+          border: 1px solid var(--border-color);
+          overflow: hidden;
+          top: 30px;
+          left: 0;
+      }
+      .account-dropdown-content form button, .account-dropdown-content a {
+          color: var(--text-main);
+          padding: 12px 16px;
+          text-decoration: none;
+          display: block;
+          width: 100%;
+          text-align: left;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 14px;
+      }
+      .account-dropdown-content form button:hover, .account-dropdown-content a:hover {
+          background-color: var(--bg-body);
+      }
+      .account-dropdown.show .account-dropdown-content {
+          display: block;
+      }
+      .stat-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 15px;
+          margin-bottom: 20px;
+      }
+      .stat-box {
+          background: var(--bg-card);
+          padding: 15px;
+          border-radius: 8px;
+          text-align: center;
+          border: 1px solid var(--border-color);
+      }
+      .stat-val { font-size: 24px; font-weight: 800; color: #fff; }
+      .stat-lbl { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; }
+      .grade-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          gap: 10px;
+          margin-top: 10px;
+      }
+      .grade-item {
+          background: rgba(255,255,255,0.05);
+          padding: 8px;
+          border-radius: 4px;
+      }
+      .grade-item label {
+          display: block;
+          font-size: 11px;
+          color: var(--text-muted);
+          margin-bottom: 4px;
+      }
+      .grade-values {
+          display: flex;
+          gap: 4px;
+          flex-wrap: wrap;
+      }
+      .grade-val-box {
+          background: var(--bg-body);
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-size: 13px;
+          border: 1px solid var(--border-color);
+      }
+      /* Refresh loading state */
+      .card.refreshing {
+          opacity: 0.7;
+          pointer-events: none;
+          position: relative;
+      }
+      .card.refreshing::after {
+          content: "";
+          position: absolute;
+          top: 50%; left: 50%;
+          width: 20px; height: 20px;
+          margin: -10px 0 0 -10px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <nav>
+      <div class="container nav-content">
+          <div>
+            {% if user %}
+            <div class="account-dropdown" id="accDropdown">
+                <div onclick="toggleAccountMenu()" style="cursor:pointer; display:flex; align-items:center; gap:6px;">
+                    <div class="logo" style="display:block; line-height:1.2">
+                        {{ session['sigaa_inst'] or 'SIGAA' }}
+                        <span style="font-size:12px; opacity:0.7">▾</span>
+                    </div>
+                </div>
+                <div class="account-dropdown-content">
+                    {% for acc in linked_accounts %}
+                    <form action="{{ url_for('main.activate_account', id=acc.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">
+                            {{ acc.institution }} <span style="font-size:11px; opacity:0.7">({{ acc.username }})</span>
+                            {% if acc.id == active_account_id %} ✓ {% endif %}
+                        </button>
+                    </form>
+                    {% endfor %}
+                    <div style="border-top:1px solid var(--border-color)"></div>
+                    <a href="{{ url_for('main.profile') }}">Gerenciar Perfil</a>
+                </div>
+            </div>
+            <div class="account-dropdown" id="semDropdown" style="display:none; margin-left: 12px;">
+                <div onclick="toggleSemesterMenu()" style="cursor:pointer; display:flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="logo" style="display:block; line-height:1.2; font-size: 0.9rem;">
+                        <span id="currentSemesterLabel">Atual</span>
+                        <span style="font-size:12px; opacity:0.7">▾</span>
+                    </div>
+                </div>
+                <div class="account-dropdown-content" id="semDropdownContent" style="min-width: 140px; top: 40px;">
+                </div>
+            </div>
+            {% else %}
+            <div class="logo" style="display:block; line-height:1.2">SIGAA</div>
+            {% endif %}
+            <span class="app-subtitle" id="totalResume" style="font-size: 0.8rem; color: var(--text-muted); display:block;">Conectando...</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:16px;">
+              {% if not user %}
+              <a href="{{ url_for('main.logout') }}" style="color:var(--text-muted); text-decoration:none; font-size:12px; font-weight:600;">Sair</a>
+              {% endif %}
+          </div>
+      </div>
+  </nav>
+  <div class="tabs container">
+    <button class="tab-btn active" onclick="switchTab('list')">Notas</button>
+    <button class="tab-btn" onclick="switchTab('stats')">Análise</button>
+    <button class="tab-btn" onclick="switchTab('frequency')">Frequência</button>
+    <button class="tab-btn" onclick="switchTab('achievements')">Conquistas</button>
+  </div>
+  <div class="container" style="margin-top: 20px;">
+    <div id="view-list" class="view-section active">
+      <div id="cards-container"></div>
+      <div id="empty-list-msg" style="text-align:center; padding:20px; font-size:12px; color:var(--text-muted); opacity:0.5; display:none;">
+        Buscando disciplinas...
+      </div>
+    </div>
+    <div id="view-stats" class="view-section">
+      <h3 style="margin:0 0 15px 0; font-size:18px;">Perfil Acadêmico</h3>
+      <div id="academic-profile-loading" style="display:none; text-align:center; padding:20px; color:var(--text-muted);">
+          Carregando histórico completo...
+      </div>
+      <div id="academic-profile-content" style="display:none;">
+          <div class="stat-grid">
+              <div class="stat-box">
+                  <div class="stat-val" id="prof-general-avg" style="color:#ffd700">0.0</div>
+                  <div class="stat-lbl">Média Geral</div>
+              </div>
+              <div class="stat-box">
+                   <div class="stat-val" id="prof-best-grade" style="color:#4ade80">0</div>
+                   <div class="stat-lbl">Melhor Nota</div>
+                   <div id="prof-best-subj" style="font-size:10px; color:var(--text-muted); margin-top:2px;">-</div>
+              </div>
+          </div>
+          <div style="text-align:right; margin-bottom: 15px;">
+              <button onclick="forceUpdateProfile()" id="btn-force-update" style="width:auto; padding: 8px 16px; font-size: 12px; background: transparent; border: 1px solid var(--accent); color: var(--accent);">
+                  ↻ Atualizar Histórico
+              </button>
+          </div>
+          <div class="card">
+            <h3 style="margin:0 0 10px 0; font-size:14px;">Evolução por Semestre</h3>
+            <div style="height:200px"><canvas id="historyChart"></canvas></div>
+          </div>
+      </div>
+      <div class="card" id="chart-card" style="margin-top:20px;">
+        <h3 style="margin:0 0 10px 0; font-size:14px;">Disciplinas</h3>
+        <div style="height:200px"><canvas id="chartCanvas"></canvas></div>
+      </div>
+      <h3 id="priority-header" style="margin:16px 0 8px 0; font-size:14px; color:var(--text-muted); text-transform:uppercase;">Prioridade Alta</h3>
+      <div id="priority-list"></div>
+    </div>
+    <div id="view-frequency" class="view-section">
+      <div id="frequency-container"></div>
+    </div>
+    <div id="view-achievements" class="view-section">
+        <div style="text-align:center; padding: 20px 0;">
+             <h3 style="margin-bottom:4px;">Sala de Troféus</h3>
+             <p style="font-size:12px; color:var(--text-muted); margin-top:0;">Suas conquistas acadêmicas desbloqueadas</p>
+        </div>
+        <div id="achievements-list"></div>
+    </div>
+  </div>
+  <footer>
+    Desenvolvido por <a href="https://www.instagram.com/al.c0hen/" target="_blank" rel="noopener">al.cohen</a>
+  </footer>
+  <div id="modal">
+    <div class="modal-content">
+      <button class="btn-close" onclick="closeModal()">✕</button>
+      <h2 id="m-title" style="margin:0 0 20px 0; font-size:20px;">Detalhes</h2>
+      <label>Nome da Disciplina</label>
+      <input type="text" id="inpName" disabled>
+      <label>Situação</label>
+      <input type="text" id="inpStatus" disabled style="font-weight:700;">
+      <div id="modal-grades-content" class="grade-grid"></div>
+      <label style="margin-top:15px">Observação</label>
+      <input type="text" id="inpObs" disabled>
+    </div>
+  </div>
+<script>
+  // --- CONFIG E DADOS ---
+  let data = [];      // View Model (what is displayed)
+  let liveData = [];  // Data from current semester (stream/cache)
+  let isHistoryMode = false;
+  let chart = null;
+  let historyChart = null;
+  let isStreamActive = false;
+  let supportCardShown = false;
+  let isSupporter = false;
+  let profileData = null;
+  const CURRENT_USER = "{{ session['username']|default('guest') }}";
+  const CACHE_KEY = `grades_${CURRENT_USER}`;
+  function toggleAccountMenu() {
+      document.getElementById('accDropdown').classList.toggle('show');
+  }
+  function toggleSemesterMenu() {
+      document.getElementById('semDropdown').classList.toggle('show');
+  }
+  window.onclick = function(event) {
+      if (!event.target.closest('.account-dropdown')) {
+          var dropdowns = document.getElementsByClassName("account-dropdown");
+          for (var i = 0; i < dropdowns.length; i++) {
+              dropdowns[i].classList.remove('show');
+          }
+      }
+  }
+  // --- NAVEGAÇÃO DE ABAS ---
+  window.switchTab = function(viewId) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + viewId).classList.add('active');
+    const buttons = document.querySelectorAll('.tab-btn');
+    if(viewId === 'list') buttons[0].classList.add('active');
+    else if(viewId === 'stats') {
+        buttons[1].classList.add('active');
+        renderChart(); // Current semester chart
+        loadAcademicProfile(); // Fetch history
+    }
+    else if(viewId === 'frequency') {
+        buttons[2].classList.add('active');
+        renderFrequency();
+    }
+    else if(viewId === 'achievements') {
+        buttons[3].classList.add('active');
+        renderAchievements();
+    }
+  }
+  function togglePrivacy() {
+      document.body.classList.toggle('privacy-active');
+  }
+  function showSupportCard() {
+    if (supportCardShown) return;
+    supportCardShown = true;
+    const container = document.getElementById('cards-container');
+    const supportDiv = document.createElement('div');
+    supportDiv.className = 'card support-card';
+    supportDiv.onclick = () => window.location.href = "{{ url_for('main.support') }}";
+    supportDiv.innerHTML = `
+      <div class="card-indicator" style="background:rgba(255,255,255,0.3)"></div>
+      <div class="row-top">
+        <div>
+          <div class="subj-name">✨ Apoie o Projeto</div>
+          <span class="subj-obs">Tenha acesso a funções antecipadas!</span>
+        </div>
+        <div class="score-box">
+          <div class="score-val">💝</div>
+          <span class="score-label">Premium</span>
+        </div>
+      </div>
+    `;
+    container.appendChild(supportDiv);
+  }
+  setTimeout(() => {
+    if (!isStreamActive) return;
+    showSupportCard();
+  }, 5000);
+  function escapeHtml(text) {
+    if (text == null) return '';
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+  function roundSigga(val) {
+      return Math.round(val * 2) / 2;
+  }
+  function deepEqual(obj1, obj2) {
+      if (obj1 === obj2) return true;
+      if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) return false;
+      const keys1 = Object.keys(obj1);
+      const keys2 = Object.keys(obj2);
+      if (keys1.length !== keys2.length) return false;
+      for (let key of keys1) {
+          if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) return false;
+      }
+      return true;
+  }
+  // --- STREAMING LOGIC ---
+  async function startDataStream() {
+    const isDemo = window.location.pathname === '/demo';
+    if (isDemo) {
+        document.body.insertAdjacentHTML('afterbegin', `
+            <div style="background:var(--warning); color:#000; text-align:center; padding:8px; font-weight:700; font-size:12px; position:sticky; top:0; z-index:9999;">
+                MODO DEMONSTRAÇÃO - DADOS FICTÍCIOS
+            </div>
+        `);
+    }
+    if (!isDemo) {
+        const stored = localStorage.getItem(CACHE_KEY);
+        if (stored) {
+            try {
+                const cached = JSON.parse(stored);
+                if (Array.isArray(cached.data)) {
+                    liveData = cached.data;
+                    if (!isHistoryMode) {
+                        data = liveData;
+                        renderList();
+                        updateHeader();
+                    }
+                }
+            } catch(e) { console.error("Cache load error", e); }
+        }
+    }
+    let priorityIndices = [];
+    if (liveData.length > 0) {
+        priorityIndices = liveData
+            .map(d => {
+                if (d.status && d.status.is_critical) return d.id;
+                return null;
+            })
+            .filter(id => id !== null);
+    }
+    isStreamActive = true;
+    try {
+        let endpoint = isDemo ? '/api/stream_demo' : '/api/stream_grades';
+        if (!isDemo && priorityIndices.length > 0) {
+            endpoint += `?priority=${priorityIndices.join(',')}`;
+        }
+        const response = await fetch(endpoint);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                    const msg = JSON.parse(line);
+                    handleStreamMessage(msg);
+                } catch (e) { }
+            }
+        }
+    } catch (e) {
+        document.getElementById('totalResume').textContent = "Erro na conexão.";
+    } finally {
+        isStreamActive = false;
+        const totalResume = document.getElementById('totalResume');
+        if (totalResume.textContent === "Conectando..." || totalResume.textContent === "Carregando notas...") {
+             // updateHeader called in handleStreamMessage
+        }
+        saveGradesState();
+    }
+  }
+  function saveGradesState() {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+          timestamp: Date.now(),
+          data: liveData
+      }));
+  }
+  function handleStreamMessage(msg) {
+    if (msg.error) {
+        if(msg.error === "Session expired") window.location.href = "/login";
+        return;
+    }
+    if (msg.type === 'user_info') {
+        isSupporter = msg.is_supporter;
+    }
+    else if (msg.type === 'course_start') {
+        addOrUpdateCourse({
+            id: msg.id,
+            name: msg.name,
+            obs: msg.obs,
+            grades: [],
+            status: {},
+            isLoading: true
+        });
+        document.getElementById('empty-list-msg').style.display = 'none';
+        if (!isHistoryMode) document.getElementById('totalResume').textContent = "Carregando notas...";
+    }
+    else if (msg.type === 'course_data') {
+        const idx = liveData.findIndex(d => d.id === msg.id);
+        if (idx !== -1) {
+            const current = liveData[idx];
+            // Fix: Use Deep Equality for check
+            const isNew = current.grades ? !deepEqual(current.grades, msg.data.grades) : true;
+            liveData[idx] = { ...liveData[idx], ...msg.data, isLoading: false, isNew: isNew };
+            if (!isHistoryMode) {
+                data = liveData;
+                renderList();
+                updateHeader();
+                if (isNew) {
+                    setTimeout(() => {
+                        const i = data.findIndex(d => d.id === msg.id);
+                        if (i !== -1) {
+                            data[i].isNew = false;
+                            renderList();
+                        }
+                    }, 15000);
+                }
+            }
+        }
+    }
+    else if (msg.type === 'course_frequency') {
+        const idx = liveData.findIndex(d => d.id === msg.id);
+        if (idx !== -1) {
+            liveData[idx] = { ...liveData[idx], frequency: msg.data };
+            if (!isHistoryMode) {
+                data = liveData;
+                if (document.getElementById('view-frequency').classList.contains('active')) {
+                    renderFrequency();
+                }
+            }
+        }
+    }
+  }
+  function addOrUpdateCourse(courseObj) {
+      const idx = liveData.findIndex(d => d.id === courseObj.id);
+      if (idx !== -1) {
+          liveData[idx] = { ...liveData[idx], ...courseObj };
+      } else {
+          liveData.push(courseObj);
+      }
+      if (!isHistoryMode) {
+          data = liveData;
+          renderList();
+      }
+  }
+  // --- ACADEMIC PROFILE LOGIC ---
+  async function loadAcademicProfile(force = false) {
+      if (profileData && !force) return;
+      const loading = document.getElementById('academic-profile-loading');
+      const content = document.getElementById('academic-profile-content');
+      const isDemo = window.location.pathname === '/demo';
+      if (!profileData) { // Only show full loading if first time
+          loading.style.display = 'block';
+          content.style.display = 'none';
+      } else {
+          const btn = document.getElementById('btn-force-update');
+          if(btn) { btn.disabled = true; btn.textContent = 'Atualizando...'; }
+      }
+      try {
+          if (isDemo) {
+              await new Promise(r => setTimeout(r, 800));
+              profileData = {
+                  general_average: 8.7,
+                  best_grade: 10.0,
+                  best_subject: "Programação Web",
+                  semesters: [
+                      { semester: "2023.1", average: 7.5, count: 5 },
+                      { semester: "2023.2", average: 8.2, count: 5 },
+                      { semester: "2024.1", average: 8.5, count: 6 }
+                  ],
+                  history_raw: {}
+              };
+          } else {
+              let url = '/api/academic_profile';
+              if (force) url += '?force=true';
+              const resp = await fetch(url);
+              if (!resp.ok) throw new Error("Failed to load");
+              profileData = await resp.json();
+          }
+          // Populate Dropdown
+          const dropdown = document.getElementById('semDropdown');
+          const ddContent = document.getElementById('semDropdownContent');
+          if (profileData.history_raw || isDemo) {
+              dropdown.style.display = 'inline-block';
+              ddContent.innerHTML = '<button onclick="switchSemester(\'Atual\')">Atual</button>';
+              const sems = profileData.semesters.map(s => s.semester).sort().reverse();
+              sems.forEach(sem => {
+                  if (!sem.includes('(Atual)')) {
+                       ddContent.innerHTML += `<button onclick="switchSemester('${sem}')">${sem}</button>`;
+                  }
+              });
+          }
+          document.getElementById('prof-general-avg').textContent = profileData.general_average;
+          document.getElementById('prof-best-grade').textContent = profileData.best_grade;
+          document.getElementById('prof-best-subj').textContent = profileData.best_subject;
+          let finalSemesters = [...profileData.semesters];
+          const currentGrades = liveData.filter(d => !d.isLoading && d.status);
+          if (currentGrades.length > 0) {
+              const currentAvgs = currentGrades.map(d => d.status.average || 0).filter(n => n > 0);
+              if (currentAvgs.length > 0) {
+                  const currentAvg = currentAvgs.reduce((a,b)=>a+b, 0) / currentAvgs.length;
+                  const now = new Date();
+                  const currentLabel = `${now.getFullYear()}.${now.getMonth() < 6 ? '1' : '2'} (Atual)`;
+                  if (!finalSemesters.find(s => s.semester.startsWith(currentLabel.split(' ')[0]))) {
+                       finalSemesters.push({
+                          semester: currentLabel,
+                          average: parseFloat(currentAvg.toFixed(2)),
+                          count: currentAvgs.length
+                       });
+                  }
+              }
+          }
+          renderHistoryChart(finalSemesters);
+          loading.style.display = 'none';
+          content.style.display = 'block';
+      } catch (e) {
+          console.error(e);
+          loading.textContent = "Não foi possível carregar o histórico completo.";
+      } finally {
+          const btn = document.getElementById('btn-force-update');
+          if(btn) { btn.disabled = false; btn.textContent = '↻ Atualizar Histórico'; }
+      }
+  }
+  function forceUpdateProfile() {
+      if(confirm("Deseja forçar a atualização do histórico? Isso pode demorar alguns segundos.")) {
+          loadAcademicProfile(true);
+      }
+  }
+  function switchSemester(sem) {
+      const lbl = document.getElementById('currentSemesterLabel');
+      if (sem === 'Atual') {
+          isHistoryMode = false;
+          data = liveData;
+          lbl.textContent = 'Atual';
+          document.getElementById('totalResume').textContent = "Visualizando dados em tempo real";
+      } else {
+          isHistoryMode = true;
+          lbl.textContent = sem;
+          if (profileData && profileData.history_raw && profileData.history_raw[sem]) {
+              const rawList = profileData.history_raw[sem];
+              // Convert to Data Format
+              data = rawList.map((subj, index) => {
+                  let details = {};
+                  if (subj.grades) {
+                      subj.grades.forEach(g => {
+                          details[g.name] = g.value;
+                      });
+                  }
+                  return {
+                      id: 1000 + index,
+                      name: subj.name,
+                      obs: subj.status,
+                      grades: subj.grades || [],
+                      status: {
+                          status: subj.status,
+                          average: subj.final_grade !== null ? subj.final_grade : 0.0,
+                          needed: 0,
+                          is_critical: subj.status === 'Reprovado',
+                          message: subj.status,
+                          details: details
+                      },
+                      frequency: {
+                          total_faltas: subj.absences || 0,
+                          max_faltas: 0,
+                          percent: 0
+                      },
+                      isLoading: false,
+                      isRefreshing: false
+                  };
+              });
+              document.getElementById('totalResume').textContent = `Visualizando histórico: ${sem}`;
+          } else {
+              data = [];
+          }
+      }
+      renderList();
+      updateHeader();
+  }
+  function renderHistoryChart(semesters) {
+      const ctx = document.getElementById('historyChart').getContext('2d');
+      if (historyChart) historyChart.destroy();
+      const sortedSemesters = [...semesters].sort((a,b) => a.semester.localeCompare(b.semester));
+      historyChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+              labels: sortedSemesters.map(s => s.semester),
+              datasets: [{
+                  label: 'Média Semestral',
+                  data: sortedSemesters.map(s => s.average),
+                  borderColor: '#38bdf8',
+                  backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                  fill: true,
+                  tension: 0.3
+              }]
+          },
+          options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                  y: { beginAtZero: true, max: 10, grid: { color: 'rgba(255,255,255,0.1)' } },
+                  x: { ticks: { color: '#999' }, grid: { display: false } }
+              }
+          }
+      });
+  }
+  // --- ACHIEVEMENTS LOGIC ---
+  const ACHIEVEMENTS_DB = [
+      { id: 'nerd_supremo', icon: '📘', name: 'Nerd Supremo', desc: 'Tirar 10 em qualquer disciplina',
+        check: (d) => d.some(c => hasGradeVal(c, 10)) },
+      { id: 'genio_incompreendido', icon: '📘', name: 'Gênio Incompreendido', desc: 'Média 9+ em 3 matérias',
+        check: (d) => d.filter(c => c.status && c.status.average >= 9).length >= 3 },
+      { id: 'sobrevivente', icon: '🔥', name: 'Sobrevivente', desc: 'Passar na recuperação/final',
+        check: (d) => d.some(c => c.status && (c.status.status === 'Recuperação' || c.status.status === 'Prova Final')) },
+      { id: 'onipresente', icon: '🕒', name: 'Onipresente', desc: '100% de Frequência',
+        check: (d) => d.some(c => c.frequency && c.frequency.percent === 0) },
+      { id: 'cartola', icon: '📝', name: 'Cartola do Semestre', desc: 'Todas notas > 8',
+        check: (d) => d.length > 0 && d.every(c => c.status && c.status.average > 8) }
+  ];
+  function hasGradeVal(course, val) {
+      if(!course.grades) return false;
+      const check = (list) => {
+          for(let g of list) {
+              if (g.value === val) return true;
+              if (g.grades) if (check(g.grades)) return true;
+          }
+          return false;
+      };
+      return check(course.grades);
+  }
+  function getUnlockedAchievements() {
+      const validData = data.filter(d => !d.isLoading);
+      return ACHIEVEMENTS_DB.map(ach => ({
+          ...ach,
+          unlocked: ach.check(validData)
+      }));
+  }
+  function renderAchievements() {
+      const list = document.getElementById('achievements-list');
+      list.innerHTML = '';
+      const achs = getUnlockedAchievements();
+      achs.sort((a,b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0));
+      achs.forEach(a => {
+          const div = document.createElement('div');
+          div.className = `achievement-card ${!a.unlocked ? 'locked-achievement' : ''}`;
+          div.innerHTML = `
+             <div class="achievement-img">${a.icon}</div>
+             <div>
+                 <div style="font-weight:700; font-size:14px; color:${a.unlocked ? '#fff' : 'var(--text-muted)'}">${a.name}</div>
+                 <div style="font-size:12px; color:var(--text-muted)">${a.desc}</div>
+                 ${!a.unlocked ? '<div style="font-size:10px; color:#555; margin-top:4px;">BLOQUEADO</div>' : ''}
+             </div>
+          `;
+          list.appendChild(div);
+      });
+  }
+  // --- RENDERIZAÇÃO DA UI ---
+  function getStatusColor(status){
+    if(status === 'Aprovado' || status === 'Concluído') return 'bd-ok';
+    if(status === 'Reprovado') return 'bd-danger';
+    if(status === 'Cursando' || status === 'Indefinido') return 'bd-info';
+    return 'bd-warn'; // Final/Recovery
+  }
+  function updateHeader(){
+    const valid = data.filter(d => !d.isLoading && d.status);
+    const pending = valid.filter(s => s.status.needed > 0).length;
+    const critical = valid.filter(s => s.status.is_critical).length;
+    const passed = valid.filter(s => s.status.status === 'Aprovado').length;
+    document.getElementById('totalResume').innerHTML =
+      `${passed} concluídas • ${pending} pendentes • <span style="color:var(--danger)">${critical} críticas</span>`;
+  }
+  function renderList(){
+    const container = document.getElementById('cards-container');
+    const existingCards = container.querySelectorAll('.card:not(.support-card)');
+    // Create map of existing cards by ID to check for refreshing state
+    const refreshingIds = new Set();
+    existingCards.forEach(card => {
+        const btn = card.querySelector('.btn-refresh');
+        if (btn && btn.classList.contains('loading')) {
+             // Find ID? The button has onclick="refreshCourse(event, ID)"
+             // We can extract it or use data attribute if we added one.
+             // But simpler: We rebuild list.
+             // The refreshCourse function sets loading class.
+        }
+    });
+    // We will clear and rebuild. But we want to preserve refreshing state if possible?
+    // Actually, `renderList` is called after data update.
+    // If we are just refreshing one card, we probably shouldn't rebuild ALL cards if not needed.
+    // But keeping it simple: rebuild.
+    existingCards.forEach(card => card.remove());
+    const sorted = [...data].sort((a,b) => {
+        if (a.isLoading && !b.isLoading) return 1;
+        if (!a.isLoading && b.isLoading) return -1;
+        if (!a.status || !b.status) return 0;
+        if(a.status.is_critical && !b.status.is_critical) return -1;
+        if(b.status.is_critical && !a.status.is_critical) return 1;
+        return b.status.needed - a.status.needed;
+    });
+    const supportCard = container.querySelector('.support-card');
+    sorted.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      if (item.isRefreshing) div.classList.add('refreshing'); // Add visual indicator
+      if (item.isLoading) {
+          div.className += ' skeleton';
+          div.innerHTML = `
+            <div class="row-top">
+              <div class="subj-name">${escapeHtml(item.name)} <span style="font-weight:400; font-size:12px; color:var(--text-muted)">...</span></div>
+            </div>
+            <div class="subj-obs">${escapeHtml(item.obs)}</div>
+          `;
+          if (supportCard) container.insertBefore(div, supportCard);
+          else container.appendChild(div);
+          return;
+      }
+      const st = item.status || {};
+      const isCritical = st.is_critical;
+      const isApproved = st.status === 'Aprovado';
+      const sideColor = isCritical ? 'var(--danger)' : (isApproved ? 'var(--success)' : 'var(--accent)');
+      const scoreColor = isApproved ? 'var(--success)' : (isCritical ? 'var(--danger)' : '#fff');
+      let scoreLabel = 'Status';
+      let scoreDisplay = st.status;
+      // APPROVED TEXT LOGIC
+      if (isApproved) {
+          scoreLabel = '';
+          scoreDisplay = `Aprovado ${st.average.toFixed(1)}`;
+      } else if (st.needed > 0 && !isCritical) {
+          scoreLabel = 'Falta';
+          scoreDisplay = st.needed.toFixed(1);
+      }
+      let extraBadges = '';
+      if(item.isNew) extraBadges += `<span class="tag-new">ATUALIZADO</span>`;
+      // Dynamic details badges
+      let detailsHtml = '';
+      if (st.details) {
+          const styling = st.details.styling || {};
+          // Define standard order for keys
+          const orderedKeys = ['b1', 'b2', 'r1', 'b3', 'b4', 'r2', 'av1', 'av2', 'reav', 'final'];
+          const allKeys = Object.keys(st.details).filter(k => st.details[k] !== null && typeof st.details[k] === 'number');
+          // Sort keys based on standard order, putting unknown keys at the end
+          allKeys.sort((a, b) => {
+              const idxA = orderedKeys.indexOf(a.toLowerCase());
+              const idxB = orderedKeys.indexOf(b.toLowerCase());
+              if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+              if (idxA !== -1) return -1;
+              if (idxB !== -1) return 1;
+              return a.localeCompare(b);
+          });
+          allKeys.forEach(k => {
+              let disp = k.toUpperCase();
+              // Format recovery to R1, R2
+              if (k === 'r1') disp = 'R1';
+              if (k === 'r2') disp = 'R2';
+              let badgeClass = styling[`${k}_class`] || 'bd-info';
+              detailsHtml += `<span class="badge ${badgeClass}" style="margin-right:4px">${disp}: ${st.details[k].toFixed(1)}</span>`;
+          });
+      }
+      div.onclick = () => openModal(item.id);
+      div.innerHTML = `
+        <div class="card-indicator" style="background:${sideColor}"></div>
+        <div class="row-top">
+          <div>
+            <div class="subj-name">${escapeHtml(item.name)} ${extraBadges}</div>
+            <div class="badges-row" style="margin-top:4px;">
+              ${detailsHtml}
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${escapeHtml(st.message)}</div>
+          </div>
+          <div class="score-box">
+             <div class="score-val" style="color:${scoreColor}; font-size:${isApproved ? '18px' : '24px'}">${scoreDisplay}</div>
+             <span class="score-label">${scoreLabel}</span>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+            ${item.obs ? `<span class="subj-obs">${escapeHtml(item.obs)}</span>` : '<span></span>'}
+            <button class="btn-refresh ${item.isRefreshing ? 'loading' : ''}" onclick="refreshCourse(event, ${item.id})" title="Atualizar esta disciplina">
+               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                 <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                 <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+               </svg>
+            </button>
+        </div>
+      `;
+      if (supportCard) container.insertBefore(div, supportCard);
+      else container.appendChild(div);
+    });
+  }
+  async function refreshCourse(event, id) {
+      event.stopPropagation();
+      const btn = event.currentTarget;
+      if (btn.classList.contains('loading')) return;
+      // Set refreshing state in data
+      const idx = data.findIndex(d => d.id === id);
+      if (idx !== -1) {
+          data[idx].isRefreshing = true;
+          renderList();
+      }
+      try {
+          const resp = await fetch(`/api/update_course/${id}`, {
+              method: 'POST',
+              headers: {'X-CSRFToken': '{{ csrf_token() }}'}
+          });
+          if (!resp.ok) throw new Error("Update failed");
+          const result = await resp.json();
+          const i = data.findIndex(d => d.id === result.id);
+          if (i !== -1) {
+              const oldData = data[i];
+              // Fix: Use Deep Equality for check
+              const isNew = oldData.grades ? !deepEqual(oldData.grades, result.data.grades) : true;
+              data[i] = { ...oldData, ...result.data, isNew: isNew, isRefreshing: false };
+              if (result.frequency) data[i].frequency = result.frequency;
+              saveGradesState();
+              renderList();
+              updateHeader();
+              if(document.getElementById('view-frequency').classList.contains('active')) renderFrequency();
+          }
+      } catch (e) {
+          console.error(e);
+          alert("Falha ao atualizar disciplina.");
+          if (idx !== -1) {
+             data[idx].isRefreshing = false;
+             renderList();
+          }
+      }
+  }
+  // --- FREQUÊNCIA ---
+  function renderFrequency() {
+      const container = document.getElementById('frequency-container');
+      container.innerHTML = '';
+      if (!isSupporter) {
+          const lockedCard = document.createElement('div');
+          lockedCard.className = 'card support-card';
+          lockedCard.onclick = () => window.location.href = "{{ url_for('main.support') }}";
+          lockedCard.style.padding = '32px 20px';
+          lockedCard.style.textAlign = 'center';
+          lockedCard.innerHTML = `
+            <div class="card-indicator" style="background:rgba(255,255,255,0.3)"></div>
+            <h3 style="margin:0 0 10px 0; font-size:20px; color:#fff;">🔒 Recurso Premium</h3>
+            <p style="font-size:14px; color:rgba(255,255,255,0.8); margin-bottom:20px;">
+              A análise detalhada de frequência é exclusiva para apoiadores do projeto.
+            </p>
+            <div style="background:rgba(0,0,0,0.2); padding:10px 20px; border-radius:12px; display:inline-block; font-weight:600; color:#ffd700;">
+              ✨ Tornar-se Apoiador
+            </div>
+          `;
+          container.appendChild(lockedCard);
+          return;
+      }
+      const items = data.filter(d => !d.isLoading);
+      const itemsWithFreq = items.filter(d => d.frequency);
+      let overallAvg = 0;
+      let sumTotalFaltas = 0;
+      let sumMaxFaltas = 0;
+      if (itemsWithFreq.length > 0) {
+          const totalPct = itemsWithFreq.reduce((sum, d) => sum + d.frequency.percent, 0);
+          overallAvg = totalPct / itemsWithFreq.length;
+          sumTotalFaltas = itemsWithFreq.reduce((sum, d) => sum + d.frequency.total_faltas, 0);
+          sumMaxFaltas = itemsWithFreq.reduce((sum, d) => sum + d.frequency.max_faltas, 0);
+      }
+      const overallColor = overallAvg > 25 ? 'var(--danger)' : 'var(--accent)';
+      const summaryCard = document.createElement('div');
+      summaryCard.className = 'card';
+      summaryCard.innerHTML = `
+         <div class="row-top">
+           <div class="subj-name">Média Geral de Faltas</div>
+         </div>
+         <div style="text-align:center; padding:10px 0;">
+            <div style="font-size:32px; font-weight:800; color:${overallColor}">${overallAvg.toFixed(1)}%</div>
+            <div style="font-size:16px; font-weight:600; color:#fff; margin-top: 4px;">${sumTotalFaltas}/${sumMaxFaltas}</div>
+         </div>
+      `;
+      container.appendChild(summaryCard);
+      items.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'card';
+          let freqContent = '';
+          if (item.frequency) {
+              const { total_faltas, max_faltas, percent } = item.frequency;
+              const pctDisplay = percent.toFixed(1) + '%';
+              const isFailed = total_faltas > max_faltas;
+              const statusColor = isFailed ? 'var(--danger)' : 'var(--success)';
+              const statusText = isFailed ? 'Limite indicado ultrapassado' : 'Dentro do Limite';
+              freqContent = `
+                  <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
+                      <div>
+                          <div style="font-size:12px; color:var(--text-muted)">Faltas / Limite</div>
+                          <div style="font-size:16px; font-weight:600; color:#fff">${total_faltas} / ${max_faltas}</div>
+                      </div>
+                      <div style="text-align:right">
+                          <div style="font-size:12px; color:var(--text-muted)">Ausência</div>
+                          <div style="font-size:24px; font-weight:800; color:${statusColor}">${pctDisplay}</div>
+                      </div>
+                  </div>
+                  <div style="margin-top:4px; font-size:10px; color:${statusColor}; text-align:right; font-weight:700; text-transform:uppercase;">
+                      ${statusText}
+                  </div>
+              `;
+          } else {
+              freqContent = `<div style="margin-top:8px; font-size:12px; color:var(--text-muted)">Carregando frequência...</div>`;
+          }
+          div.innerHTML = `
+              <div class="row-top">
+                  <div class="subj-name">${escapeHtml(item.name)}</div>
+              </div>
+              ${freqContent}
+          `;
+          container.appendChild(div);
+      });
+  }
+  function renderPriority(){
+    const list = document.getElementById('priority-list');
+    const header = document.getElementById('priority-header');
+    list.innerHTML = '';
+    const priorityItems = data
+        .filter(d => !d.isLoading && d.status)
+        .filter(d => d.status.is_critical || d.status.needed > 0)
+        .sort((a,b) => b.status.needed - a.status.needed);
+    if(priorityItems.length === 0) {
+        header.style.display = 'none';
+        list.style.display = 'none';
+    } else {
+        header.style.display = 'block';
+        list.style.display = 'block';
+        priorityItems.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.style.padding = '12px';
+            div.innerHTML = `<div style="font-weight:700">${escapeHtml(c.name)}</div>
+                             <div style="font-size:12px; color:var(--text-muted)">
+                                ${c.status.is_critical ? '<span style="color:var(--danger)">STATUS CRÍTICO</span>' : `Falta ${c.status.needed.toFixed(1)} pts`}
+                             </div>`;
+            list.appendChild(div);
+        });
+    }
+  }
+  function renderChart(){
+    const chartCard = document.getElementById('chart-card');
+    const active = data
+        .filter(d => !d.isLoading && d.status && d.status.needed > 0)
+        .sort((a,b) => b.status.needed - a.status.needed)
+        .slice(0, 10);
+    if (active.length === 0) {
+        chartCard.style.display = 'none';
+        return;
+    }
+    chartCard.style.display = 'block';
+    const ctx = document.getElementById('chartCanvas').getContext('2d');
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: active.map(d => d.name.substring(0,8)),
+            datasets: [{
+                label: 'Falta',
+                data: active.map(d => d.status.needed),
+                backgroundColor: active.map(d => d.status.is_critical ? '#ef4444' : '#38bdf8'),
+                borderRadius:4
+            }]
+        },
+        options: {
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins: { legend:{display:false} },
+            scales: {
+                y: { beginAtZero:true, grid:{color:'rgba(255,255,255,0.1)'} },
+                x: { ticks:{color:'#999', font:{size:10}}, grid:{display:false} }
+            }
+        }
+    });
+    renderPriority();
+  }
+  function openModal(id = null){
+    const modal = document.getElementById('modal');
+    modal.style.display = 'flex';
+    if(id){
+        const item = data.find(d => d.id === id);
+        if(!item || item.isLoading) return;
+        document.getElementById('inpName').value = item.name;
+        document.getElementById('inpObs').value = item.obs || '';
+        document.getElementById('inpStatus').value = item.status ? item.status.status : 'Indefinido';
+        const container = document.getElementById('modal-grades-content');
+        container.innerHTML = '';
+        if (item.grades && item.grades.length > 0) {
+            item.grades.forEach(g => {
+                const grDiv = document.createElement('div');
+                grDiv.className = 'grade-item';
+                let valsHtml = '';
+                if (g.type === 'group' && g.grades) {
+                     // Check if subgrades exist
+                     g.grades.forEach(sg => {
+                         if(sg.value !== null) {
+                            valsHtml += `<div class="grade-val-box">${sg.value.toFixed(1)}</div>`;
+                         }
+                     });
+                     if(!valsHtml) valsHtml = '<span style="color:#555; font-size:12px;">-</span>';
+                } else {
+                    if (g.value !== null) valsHtml = `<div class="grade-val-box">${g.value.toFixed(1)}</div>`;
+                    else valsHtml = '<span style="color:#555; font-size:12px;">-</span>';
+                }
+                grDiv.innerHTML = `
+                   <label>${g.name}</label>
+                   <div class="grade-values">${valsHtml}</div>
+                `;
+                container.appendChild(grDiv);
+            });
+        } else {
+            container.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">Sem notas lançadas.</div>';
+        }
+    }
+  }
+  function closeModal(){ document.getElementById('modal').style.display='none'; }
+  document.getElementById('modal').addEventListener('click', (e) => {
+    if(e.target.id === 'modal') closeModal();
+  });
+  startDataStream();
+</script>
+</body>
+</html>
