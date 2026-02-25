@@ -365,6 +365,7 @@
             .filter(id => id !== null);
     }
     isStreamActive = true;
+    const updatedCourseIds = new Set();
     try {
         let endpoint = isDemo ? '/api/stream_demo' : '/api/stream_grades';
         if (!isDemo && priorityIndices.length > 0) {
@@ -384,10 +385,12 @@
                 if (!line.trim()) continue;
                 try {
                     const msg = JSON.parse(line);
-                    handleStreamMessage(msg);
+                    handleStreamMessage(msg, updatedCourseIds);
                 } catch (e) { }
             }
         }
+        // If stream finished successfully, prune stale courses
+        pruneStaleCourses(updatedCourseIds);
     } catch (e) {
         document.getElementById('totalResume').textContent = "Erro na conexão.";
     } finally {
@@ -399,16 +402,31 @@
         saveGradesState();
     }
   }
+  function pruneStaleCourses(validIds) {
+      if (!validIds) return;
+      const initialCount = liveData.length;
+      liveData = liveData.filter(d => validIds.has(d.id));
+      if (liveData.length !== initialCount) {
+          if (!isHistoryMode) {
+              data = liveData;
+              renderList();
+              updateHeader();
+          }
+      }
+  }
   function saveGradesState() {
       localStorage.setItem(CACHE_KEY, JSON.stringify({
           timestamp: Date.now(),
           data: liveData
       }));
   }
-  function handleStreamMessage(msg) {
+  function handleStreamMessage(msg, updatedCourseIds) {
     if (msg.error) {
         if(msg.error === "Session expired") window.location.href = "/login";
         return;
+    }
+    if (msg.id !== undefined && updatedCourseIds) {
+        updatedCourseIds.add(msg.id);
     }
     if (msg.type === 'user_info') {
         isSupporter = msg.is_supporter;

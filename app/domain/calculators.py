@@ -33,18 +33,8 @@ class IFAcademicCalculator(AcademicCalculator):
                 subs = [float(sg['value']) for sg in g.get('grades', []) if sg.get('value') is not None]
                 if not subs:
                     val = None
-                elif len(subs) == 1:
-                    val = subs[0]
                 else:
-                    max_val = max(subs)
-                    sum_all = sum(subs)
-                    others_sum = sum_all - max_val
-                    if abs(max_val - others_sum) < 0.1:
-                        val = max_val
-                    elif sum_all <= 10.05:
-                        val = sum_all
-                    else:
-                        val = sum_all / len(subs)
+                    val = subs[-1]
             elif g.get('value') is not None:
                 val = float(g.get('value'))
             if val is None:
