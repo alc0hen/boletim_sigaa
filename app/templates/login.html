@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login | Boletim App</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            background-color: #fff;
+            color: #757575;
+            border: 1px solid #ddd;
+            border-radius: 8px; /* Adjusted to match theme */
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            font-family: var(--font-sans);
+        }
+        .btn-google:hover {
+            background-color: #f1f1f1;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .btn-google svg {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+        }
+        .alert-error {
+            background: rgba(207, 102, 121, 0.1);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 14px;
+            border: 1px solid var(--danger);
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid var(--border);
+        }
+        .divider::before { margin-right: .5em; }
+        .divider::after { margin-left: .5em; }
+        /* Loading Overlay */
+        #login-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-left-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container nav-content">
+            <div class="logo">Boletim App</div>
+        </div>
+    </nav>
+    <div class="container" style="display:flex; justify-content:center; align-items:center; min-height:80vh;">
+        <div class="card" style="width:100%; max-width:350px; padding:1.5rem;">
+            {% if error %}
+                <div class="alert-error">{{ error }}</div>
+            {% endif %}
+            <form method="POST" action="{{ url_for('main.login') }}" onsubmit="startLogin()">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="inst-selector-container" style="margin-top: 0.5rem;">
+                    <input type="radio" name="institution" value="IFAL" id="ifal" class="inst-radio" checked>
+                    <label for="ifal" class="inst-label">IFAL</label>
+                    <input type="radio" name="institution" value="UFAL" id="ufal" class="inst-radio">
+                    <label for="ufal" class="inst-label">UFAL</label>
+                </div>
+                <input type="text" name="username" placeholder="Username" required style="margin-bottom: 1rem;">
+                <input type="password" name="password" placeholder="Sua senha do SIGAA" required style="margin-bottom: 1rem;">
+                <button type="submit">Entrar</button>
+            </form>
+            <div class="divider">OU</div>
+            <a href="{{ url_for('main.login_google') }}" class="btn-google">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                </svg>
+                Entrar com Google
+            </a>
+            <div style="margin-top: 20px; text-align: center; font-size: 12px;">
+                <a href="{{ url_for('main.privacy') }}" style="color: var(--text-muted); text-decoration: none;">Política de Privacidade e Transparência</a>
+            </div>
+        </div>
+    </div>
+    <div id="login-overlay">
+        <div class="spinner"></div>
+        <p id="login-msg" style="margin-top:20px; color:#fff; font-size:1.1rem; text-align:center; padding:0 20px;">Fazendo login no sigaa...</p>
+    </div>
+    <script>
+        function startLogin() {
+            const overlay = document.getElementById('login-overlay');
+            const msg = document.getElementById('login-msg');
+            overlay.style.display = 'flex';
+            setTimeout(() => {
+                msg.textContent = "Trabalhando no seu login, o sigaa pode estar congestionado...";
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

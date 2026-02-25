@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Apoie o Projeto | Boletim App</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .pix-box {
+            margin: 24px 0;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px dashed rgba(74,222,128,.5);
+            background: rgba(74,222,128,.05);
+            text-align: center;
+        }
+        .pix-label {
+            font-size: 11px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .pix-key {
+            font-family: monospace;
+            font-size: 16px;
+            color: var(--success);
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container nav-content">
+            <div class="logo">Apoie o Projeto</div>
+            <a href="{{ url_for('main.dashboard') }}" class="btn-secondary" style="width: auto; padding: 8px 16px; font-size: 14px;">Voltar</a>
+        </div>
+    </nav>
+    <div class="container" style="display:flex; justify-content:center; align-items:center; min-height:80vh;">
+        <div class="card" style="width:100%; max-width:480px; padding:2rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 8px;">Apoie o Espelho SIGAA</h2>
+                <p style="color:var(--text-muted); font-size:14px;">Mantido de forma independente, sem anúncios.</p>
+            </div>
+            <p style="text-align: center; font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Esse projeto existe pra facilitar a vida de estudantes.
+                Se ele te ajuda de alguma forma e você puder contribuir, qualquer valor já faz diferença 💚
+            </p>
+            <div class="pix-box">
+                <div class="pix-label">Chave PIX (email)</div>
+                <div class="pix-key" id="pixKey">al.cohenhgs@gmail.com</div>
+            </div>
+            <button onclick="copyPixKey()" style="background: var(--success); color: #000;">Copiar chave PIX</button>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:16px; line-height:1.5; text-align: center;">
+                Se puder, coloque sua <strong>matrícula</strong> e um contato na descrição do PIX pra facilitar a identificação.
+            </div>
+        </div>
+    </div>
+    <footer>
+        Desenvolvido por <a href="https://www.instagram.com/al.c0hen/" target="_blank" rel="noopener">al.cohen</a>
+    </footer>
+    <script>
+        function copyPixKey(){
+            const key = document.getElementById('pixKey').innerText;
+            navigator.clipboard.writeText(key).then(()=>{
+                alert('Chave PIX copiada 💚');
+            });
+        }
+    </script>
+</body>
+</html>
