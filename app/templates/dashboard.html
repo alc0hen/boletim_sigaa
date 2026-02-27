@@ -15,33 +15,135 @@
       .account-dropdown-content {
           display: none;
           position: absolute;
-          background-color: var(--bg-card);
-          min-width: 200px;
-          box-shadow: 0 8px 16px rgba(0,0,0,0.2);
           z-index: 1000;
-          border-radius: 8px;
-          border: 1px solid var(--border-color);
-          overflow: hidden;
-          top: 30px;
+          top: calc(100% + 10px);
           left: 0;
-      }
-      .account-dropdown-content form button, .account-dropdown-content a {
-          color: var(--text-main);
-          padding: 12px 16px;
-          text-decoration: none;
-          display: block;
-          width: 100%;
-          text-align: left;
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 14px;
-      }
-      .account-dropdown-content form button:hover, .account-dropdown-content a:hover {
-          background-color: var(--bg-body);
+          background: #111;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 14px;
+          box-shadow: 0 20px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+          overflow: hidden;
+          opacity: 0;
+          transform: translateY(-6px) scale(0.98);
+          pointer-events: none;
+          transition: opacity 0.18s ease, transform 0.18s ease;
       }
       .account-dropdown.show .account-dropdown-content {
           display: block;
+          opacity: 1;
+          transform: translateY(0) scale(1);
+          pointer-events: auto;
+      }
+
+      #accDropdown .account-dropdown-content {
+          min-width: 240px;
+          padding: 6px;
+      }
+      #accDropdown .account-dropdown-content form {
+          margin: 0;
+      }
+      #accDropdown .account-dropdown-content form button {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          text-align: left;
+          transition: background 0.15s;
+      }
+      #accDropdown .account-dropdown-content form button:hover {
+          background: rgba(255,255,255,0.06) !important;
+      }
+      .acc-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, rgba(56,189,248,0.25), rgba(56,189,248,0.08));
+          border: 1px solid rgba(56,189,248,0.2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 13px;
+          font-weight: 700;
+          color: #38bdf8;
+          flex-shrink: 0;
+          letter-spacing: -0.5px;
+      }
+      .acc-info {
+          flex: 1;
+          min-width: 0;
+      }
+      .acc-name {
+          display: block;
+          font-weight: 600;
+          font-size: 13px;
+          color: #fff;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+      .acc-user {
+          display: block;
+          font-size: 11px;
+          color: rgba(255,255,255,0.4);
+          margin-top: 1px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+      }
+      .acc-check {
+          color: #38bdf8;
+          font-size: 14px;
+          flex-shrink: 0;
+      }
+      .acc-dropdown-divider {
+          height: 1px;
+          background: rgba(255,255,255,0.06);
+          margin: 4px 0;
+      }
+      #accDropdown .account-dropdown-content a {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          color: rgba(255,255,255,0.55);
+          font-size: 12px;
+          font-weight: 500;
+          text-decoration: none;
+          transition: background 0.15s, color 0.15s;
+          letter-spacing: 0.01em;
+      }
+      #accDropdown .account-dropdown-content a:hover {
+          background: rgba(255,255,255,0.05) !important;
+          color: #fff;
+      }
+
+      #semDropdown .account-dropdown-content {
+          min-width: 130px;
+          padding: 6px;
+      }
+      #semDropdown .account-dropdown-content button {
+          display: block;
+          width: 100%;
+          padding: 8px 12px;
+          border-radius: 8px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 13px;
+          color: rgba(255,255,255,0.7);
+          font-weight: 500;
+          text-align: left;
+          transition: background 0.15s, color 0.15s;
+      }
+      #semDropdown .account-dropdown-content button:hover {
+          background: rgba(255,255,255,0.06) !important;
+          color: #fff;
       }
       .stat-grid {
           display: grid;
@@ -87,7 +189,6 @@
           font-size: 13px;
           border: 1px solid var(--border-color);
       }
-      /* Refresh loading state */
       .card.refreshing {
           opacity: 0.7;
           pointer-events: none;
@@ -110,8 +211,8 @@
 <body>
   <nav>
       <div class="container nav-content">
-          <div>
-            {% if user %}
+          <div style="display:flex; align-items:center;">
+            {% if user or request.path == '/demo' %}
             <div class="account-dropdown" id="accDropdown">
                 <div onclick="toggleAccountMenu()" style="cursor:pointer; display:flex; align-items:center; gap:6px;">
                     <div class="logo" style="display:block; line-height:1.2">
@@ -124,15 +225,28 @@
                     <form action="{{ url_for('main.activate_account', id=acc.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit">
-                            {{ acc.institution }} <span style="font-size:11px; opacity:0.7">({{ acc.username }})</span>
-                            {% if acc.id == active_account_id %} ✓ {% endif %}
+                            <div class="acc-avatar">{{ acc.institution[:2] | upper }}</div>
+                            <div class="acc-info">
+                                <span class="acc-name">{{ acc.institution }}</span>
+                                <span class="acc-user">{{ acc.username }}</span>
+                            </div>
+                            {% if acc.id == active_account_id %}
+                            <span class="acc-check">✓</span>
+                            {% endif %}
                         </button>
                     </form>
                     {% endfor %}
-                    <div style="border-top:1px solid var(--border-color)"></div>
-                    <a href="{{ url_for('main.profile') }}">Gerenciar Perfil</a>
+                    <div class="acc-dropdown-divider"></div>
+                    <a href="{{ url_for('main.profile') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                        Gerenciar Perfil
+                    </a>
                 </div>
             </div>
+            {% else %}
+            <div class="logo" style="display:block; line-height:1.2">SIGAA</div>
+            {% endif %}
+
             <div class="account-dropdown" id="semDropdown" style="display:none; margin-left: 12px;">
                 <div onclick="toggleSemesterMenu()" style="cursor:pointer; display:flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <div class="logo" style="display:block; line-height:1.2; font-size: 0.9rem;">
@@ -140,13 +254,11 @@
                         <span style="font-size:12px; opacity:0.7">▾</span>
                     </div>
                 </div>
-                <div class="account-dropdown-content" id="semDropdownContent" style="min-width: 140px; top: 40px;">
+                <div class="account-dropdown-content" id="semDropdownContent">
                 </div>
             </div>
-            {% else %}
-            <div class="logo" style="display:block; line-height:1.2">SIGAA</div>
-            {% endif %}
-            <span class="app-subtitle" id="totalResume" style="font-size: 0.8rem; color: var(--text-muted); display:block;">Conectando...</span>
+
+            <span class="app-subtitle" id="totalResume" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 16px; display:block;">Conectando...</span>
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
               {% if not user %}
@@ -230,9 +342,8 @@
     </div>
   </div>
 <script>
-  // --- CONFIG E DADOS ---
-  let data = [];      // View Model (what is displayed)
-  let liveData = [];  // Data from current semester (stream/cache)
+  let data = [];
+  let liveData = [];
   let isHistoryMode = false;
   let chart = null;
   let historyChart = null;
@@ -256,7 +367,6 @@
           }
       }
   }
-  // --- NAVEGAÇÃO DE ABAS ---
   window.switchTab = function(viewId) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -265,8 +375,8 @@
     if(viewId === 'list') buttons[0].classList.add('active');
     else if(viewId === 'stats') {
         buttons[1].classList.add('active');
-        renderChart(); // Current semester chart
-        loadAcademicProfile(); // Fetch history
+        renderChart();
+        loadAcademicProfile();
     }
     else if(viewId === 'frequency') {
         buttons[2].classList.add('active');
@@ -329,7 +439,6 @@
       }
       return true;
   }
-  // --- STREAMING LOGIC ---
   async function startDataStream() {
     const isDemo = window.location.pathname === '/demo';
     if (isDemo) {
@@ -389,7 +498,6 @@
                 } catch (e) { }
             }
         }
-        // If stream finished successfully, prune stale courses
         pruneStaleCourses(updatedCourseIds);
     } catch (e) {
         document.getElementById('totalResume').textContent = "Erro na conexão.";
@@ -397,7 +505,6 @@
         isStreamActive = false;
         const totalResume = document.getElementById('totalResume');
         if (totalResume.textContent === "Conectando..." || totalResume.textContent === "Carregando notas...") {
-             // updateHeader called in handleStreamMessage
         }
         saveGradesState();
     }
@@ -443,11 +550,25 @@
         document.getElementById('empty-list-msg').style.display = 'none';
         if (!isHistoryMode) document.getElementById('totalResume').textContent = "Carregando notas...";
     }
+    else if (msg.type === 'profile_data') {
+        profileData = msg.data;
+        const dropdown = document.getElementById('semDropdown');
+        const ddContent = document.getElementById('semDropdownContent');
+        if (profileData.history_raw) {
+              dropdown.style.display = 'inline-block';
+              ddContent.innerHTML = '<button onclick="switchSemester(\'Atual\')">Atual</button>';
+              const sems = profileData.semesters.map(s => s.semester).sort().reverse();
+              sems.forEach(sem => {
+                  if (!sem.includes('(Atual)')) {
+                       ddContent.innerHTML += `<button onclick="switchSemester('${sem}')">${sem}</button>`;
+                  }
+              });
+        }
+    }
     else if (msg.type === 'course_data') {
         const idx = liveData.findIndex(d => d.id === msg.id);
         if (idx !== -1) {
             const current = liveData[idx];
-            // Fix: Use Deep Equality for check
             const isNew = current.grades ? !deepEqual(current.grades, msg.data.grades) : true;
             liveData[idx] = { ...liveData[idx], ...msg.data, isLoading: false, isNew: isNew };
             if (!isHistoryMode) {
@@ -491,13 +612,19 @@
           renderList();
       }
   }
-  // --- ACADEMIC PROFILE LOGIC ---
   async function loadAcademicProfile(force = false) {
-      if (profileData && !force) return;
       const loading = document.getElementById('academic-profile-loading');
       const content = document.getElementById('academic-profile-content');
+
+      if (profileData && !force) {
+          renderAcademicProfileData();
+          content.style.display = 'block';
+          loading.style.display = 'none';
+          return;
+      }
+
       const isDemo = window.location.pathname === '/demo';
-      if (!profileData) { // Only show full loading if first time
+      if (!profileData) {
           loading.style.display = 'block';
           content.style.display = 'none';
       } else {
@@ -525,7 +652,6 @@
               if (!resp.ok) throw new Error("Failed to load");
               profileData = await resp.json();
           }
-          // Populate Dropdown
           const dropdown = document.getElementById('semDropdown');
           const ddContent = document.getElementById('semDropdownContent');
           if (profileData.history_raw || isDemo) {
@@ -538,27 +664,7 @@
                   }
               });
           }
-          document.getElementById('prof-general-avg').textContent = profileData.general_average;
-          document.getElementById('prof-best-grade').textContent = profileData.best_grade;
-          document.getElementById('prof-best-subj').textContent = profileData.best_subject;
-          let finalSemesters = [...profileData.semesters];
-          const currentGrades = liveData.filter(d => !d.isLoading && d.status);
-          if (currentGrades.length > 0) {
-              const currentAvgs = currentGrades.map(d => d.status.average || 0).filter(n => n > 0);
-              if (currentAvgs.length > 0) {
-                  const currentAvg = currentAvgs.reduce((a,b)=>a+b, 0) / currentAvgs.length;
-                  const now = new Date();
-                  const currentLabel = `${now.getFullYear()}.${now.getMonth() < 6 ? '1' : '2'} (Atual)`;
-                  if (!finalSemesters.find(s => s.semester.startsWith(currentLabel.split(' ')[0]))) {
-                       finalSemesters.push({
-                          semester: currentLabel,
-                          average: parseFloat(currentAvg.toFixed(2)),
-                          count: currentAvgs.length
-                       });
-                  }
-              }
-          }
-          renderHistoryChart(finalSemesters);
+          renderAcademicProfileData();
           loading.style.display = 'none';
           content.style.display = 'block';
       } catch (e) {
@@ -568,6 +674,30 @@
           const btn = document.getElementById('btn-force-update');
           if(btn) { btn.disabled = false; btn.textContent = '↻ Atualizar Histórico'; }
       }
+  }
+  function renderAcademicProfileData() {
+      if (!profileData) return;
+      document.getElementById('prof-general-avg').textContent = profileData.general_average;
+      document.getElementById('prof-best-grade').textContent = profileData.best_grade;
+      document.getElementById('prof-best-subj').textContent = profileData.best_subject;
+      let finalSemesters = [...profileData.semesters];
+      const currentGrades = liveData.filter(d => !d.isLoading && d.status);
+      if (currentGrades.length > 0) {
+          const currentAvgs = currentGrades.map(d => d.status.average || 0).filter(n => n > 0);
+          if (currentAvgs.length > 0) {
+              const currentAvg = currentAvgs.reduce((a,b)=>a+b, 0) / currentAvgs.length;
+              const now = new Date();
+              const currentLabel = `${now.getFullYear()}.${now.getMonth() < 6 ? '1' : '2'} (Atual)`;
+              if (!finalSemesters.find(s => s.semester.startsWith(currentLabel.split(' ')[0]))) {
+                   finalSemesters.push({
+                      semester: currentLabel,
+                      average: parseFloat(currentAvg.toFixed(2)),
+                      count: currentAvgs.length
+                   });
+              }
+          }
+      }
+      renderHistoryChart(finalSemesters);
   }
   function forceUpdateProfile() {
       if(confirm("Deseja forçar a atualização do histórico? Isso pode demorar alguns segundos.")) {
@@ -586,7 +716,6 @@
           lbl.textContent = sem;
           if (profileData && profileData.history_raw && profileData.history_raw[sem]) {
               const rawList = profileData.history_raw[sem];
-              // Convert to Data Format
               data = rawList.map((subj, index) => {
                   let details = {};
                   if (subj.grades) {
@@ -652,7 +781,6 @@
           }
       });
   }
-  // --- ACHIEVEMENTS LOGIC ---
   const ACHIEVEMENTS_DB = [
       { id: 'nerd_supremo', icon: '📘', name: 'Nerd Supremo', desc: 'Tirar 10 em qualquer disciplina',
         check: (d) => d.some(c => hasGradeVal(c, 10)) },
@@ -702,12 +830,11 @@
           list.appendChild(div);
       });
   }
-  // --- RENDERIZAÇÃO DA UI ---
   function getStatusColor(status){
     if(status === 'Aprovado' || status === 'Concluído') return 'bd-ok';
     if(status === 'Reprovado') return 'bd-danger';
     if(status === 'Cursando' || status === 'Indefinido') return 'bd-info';
-    return 'bd-warn'; // Final/Recovery
+    return 'bd-warn';
   }
   function updateHeader(){
     const valid = data.filter(d => !d.isLoading && d.status);
@@ -720,21 +847,12 @@
   function renderList(){
     const container = document.getElementById('cards-container');
     const existingCards = container.querySelectorAll('.card:not(.support-card)');
-    // Create map of existing cards by ID to check for refreshing state
     const refreshingIds = new Set();
     existingCards.forEach(card => {
         const btn = card.querySelector('.btn-refresh');
         if (btn && btn.classList.contains('loading')) {
-             // Find ID? The button has onclick="refreshCourse(event, ID)"
-             // We can extract it or use data attribute if we added one.
-             // But simpler: We rebuild list.
-             // The refreshCourse function sets loading class.
         }
     });
-    // We will clear and rebuild. But we want to preserve refreshing state if possible?
-    // Actually, `renderList` is called after data update.
-    // If we are just refreshing one card, we probably shouldn't rebuild ALL cards if not needed.
-    // But keeping it simple: rebuild.
     existingCards.forEach(card => card.remove());
     const sorted = [...data].sort((a,b) => {
         if (a.isLoading && !b.isLoading) return 1;
@@ -748,7 +866,7 @@
     sorted.forEach(item => {
       const div = document.createElement('div');
       div.className = 'card';
-      if (item.isRefreshing) div.classList.add('refreshing'); // Add visual indicator
+      if (item.isRefreshing) div.classList.add('refreshing');
       if (item.isLoading) {
           div.className += ' skeleton';
           div.innerHTML = `
@@ -768,7 +886,6 @@
       const scoreColor = isApproved ? 'var(--success)' : (isCritical ? 'var(--danger)' : '#fff');
       let scoreLabel = 'Status';
       let scoreDisplay = st.status;
-      // APPROVED TEXT LOGIC
       if (isApproved) {
           scoreLabel = '';
           scoreDisplay = `Aprovado ${st.average.toFixed(1)}`;
@@ -778,14 +895,11 @@
       }
       let extraBadges = '';
       if(item.isNew) extraBadges += `<span class="tag-new">ATUALIZADO</span>`;
-      // Dynamic details badges
       let detailsHtml = '';
       if (st.details) {
           const styling = st.details.styling || {};
-          // Define standard order for keys
           const orderedKeys = ['b1', 'b2', 'r1', 'b3', 'b4', 'r2', 'av1', 'av2', 'reav', 'final'];
           const allKeys = Object.keys(st.details).filter(k => st.details[k] !== null && typeof st.details[k] === 'number');
-          // Sort keys based on standard order, putting unknown keys at the end
           allKeys.sort((a, b) => {
               const idxA = orderedKeys.indexOf(a.toLowerCase());
               const idxB = orderedKeys.indexOf(b.toLowerCase());
@@ -796,7 +910,6 @@
           });
           allKeys.forEach(k => {
               let disp = k.toUpperCase();
-              // Format recovery to R1, R2
               if (k === 'r1') disp = 'R1';
               if (k === 'r2') disp = 'R2';
               let badgeClass = styling[`${k}_class`] || 'bd-info';
@@ -837,7 +950,6 @@
       event.stopPropagation();
       const btn = event.currentTarget;
       if (btn.classList.contains('loading')) return;
-      // Set refreshing state in data
       const idx = data.findIndex(d => d.id === id);
       if (idx !== -1) {
           data[idx].isRefreshing = true;
@@ -853,7 +965,6 @@
           const i = data.findIndex(d => d.id === result.id);
           if (i !== -1) {
               const oldData = data[i];
-              // Fix: Use Deep Equality for check
               const isNew = oldData.grades ? !deepEqual(oldData.grades, result.data.grades) : true;
               data[i] = { ...oldData, ...result.data, isNew: isNew, isRefreshing: false };
               if (result.frequency) data[i].frequency = result.frequency;
@@ -871,7 +982,6 @@
           }
       }
   }
-  // --- FREQUÊNCIA ---
   function renderFrequency() {
       const container = document.getElementById('frequency-container');
       container.innerHTML = '';
@@ -1034,7 +1144,6 @@
                 grDiv.className = 'grade-item';
                 let valsHtml = '';
                 if (g.type === 'group' && g.grades) {
-                     // Check if subgrades exist
                      g.grades.forEach(sg => {
                          if(sg.value !== null) {
                             valsHtml += `<div class="grade-val-box">${sg.value.toFixed(1)}</div>`;

@@ -420,33 +420,98 @@ def stream_grades():
                 calculator = CalculatorFactory.get_calculator(inst_type)
                 for bond in account.active_bonds:
                     courses = await bond.get_courses()
-                    if courses:
-                        course_list_with_ids = []
-                        for i, course in enumerate(courses):
-                            course_list_with_ids.append({'id': i + 1, 'course': course})
-                        if priority_ids:
-                            prioritized = [c for c in course_list_with_ids if c['id'] in priority_ids]
-                            others = [c for c in course_list_with_ids if c['id'] not in priority_ids]
-                            course_list_with_ids = prioritized + others
-                        for item in course_list_with_ids:
+                    if not courses:
+                        continue
+                    course_list_with_ids = []
+                    for i, course in enumerate(courses):
+                        course_list_with_ids.append({'id': i + 1, 'course': course})
+                    if priority_ids:
+                        prioritized = [c for c in course_list_with_ids if c['id'] in priority_ids]
+                        others = [c for c in course_list_with_ids if c['id'] not in priority_ids]
+                        course_list_with_ids = prioritized + others
+                    for item in course_list_with_ids:
+                        course_id = item['id']
+                        course = item['course']
+                        yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": bond.program}) + "\n"
+
+                    try:
+                        history = await bond.get_history()
+                    except Exception as e:
+                        logger.error(f"Error fetching history: {e}")
+                        history = {}
+
+                    total_grades = []
+                    best_grade = 0
+                    best_subject = "-"
+                    semesters_data = []
+                    for sem, subjects in history.items():
+                        sem_grades = []
+                        for subj in subjects:
+                            grade = subj.get('final_grade')
+                            if grade is not None:
+                                sem_grades.append(grade)
+                                total_grades.append(grade)
+                                if grade > best_grade:
+                                    best_grade = grade
+                                    best_subject = subj.get('name')
+                        sem_avg = sum(sem_grades)/len(sem_grades) if sem_grades else 0
+                        if sem_grades:
+                            semesters_data.append({
+                                "semester": sem,
+                                "average": round(sem_avg, 2),
+                                "count": len(sem_grades)
+                            })
+                    general_avg = sum(total_grades)/len(total_grades) if total_grades else 0
+                    profile_data = {
+                        "general_average": round(general_avg, 2),
+                        "best_subject": best_subject,
+                        "best_grade": best_grade,
+                        "semesters": semesters_data,
+                        "history_raw": history
+                    }
+                    yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
+
+                    current_sem = None
+                    if history:
+                        sorted_sems = sorted(history.keys())
+                        current_sem = sorted_sems[-1]
+
+                    current_subjects = history.get(current_sem, []) if current_sem else []
+
+                    semaphore = asyncio.Semaphore(1)
+
+                    async def fetch_parallel(item):
+                        async with semaphore:
+                            output = []
                             course_id = item['id']
                             course = item['course']
-                            yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": bond.program}) + "\n"
-                            raw_grades = []
+
                             try:
                                 raw_grades = await course.get_grades()
-                            except Exception: pass
-                            course_result = calculator.calculate(raw_grades)
-                            result_data = {
-                                "grades": raw_grades,
-                                "status": course_result.to_dict()
-                            }
-                            yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
+                                course_result = calculator.calculate(raw_grades)
+                                result_data = {
+                                    "grades": raw_grades,
+                                    "status": course_result.to_dict()
+                                }
+                                output.append(json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n")
+                            except Exception:
+                                pass
+
                             if is_supporter:
                                 try:
                                     freq_data = await course.get_frequency()
-                                    if freq_data: yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
-                                except Exception: pass
+                                    if freq_data:
+                                        output.append(json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n")
+                                except Exception:
+                                    pass
+
+                            return output
+
+                    tasks = [fetch_parallel(item) for item in course_list_with_ids]
+                    for future in asyncio.as_completed(tasks):
+                        results = await future
+                        for res in results:
+                            yield res
         except Exception as e:
             logger.error(f"Stream error: {e}")
             yield json.dumps({"error": "Erro no carregamento dos dados."}) + "\n"

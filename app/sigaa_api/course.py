@@ -98,17 +98,45 @@ class Course:
             return []
         main_headers = header_rows[0].find_all('th')
         sub_headers_row = header_rows[1] if len(header_rows) > 1 else None
-        sub_headers_clean = []
+
+        # Build queue of non-empty subheaders
+        sub_headers_queue = []
         if sub_headers_row:
             all_sub_headers = sub_headers_row.find_all('th')
-            for idx, sh in enumerate(all_sub_headers):
+            for sh in all_sub_headers:
                 text = sh.get_text(strip=True)
                 if text:
-                    sub_headers_clean.append({
-                        'index': idx,
+                    sub_headers_queue.append({
                         'text': text,
                         'id': sh.get('id', '')
                     })
+
+        # Pre-calculate column mapping based on Main Headers logic to skip ghost headers
+        col_to_subheader = {}
+        sh_ptr = 0
+        current_map_col = 0
+        ignore_names = ['', 'Matrícula', 'Nome', 'Sit.', 'Faltas', 'Resultado', 'Situação']
+        single_grade_names = ['Reposição', 'Recuperação']
+
+        for header in main_headers:
+            header_text = header.get_text(strip=True)
+            colspan = int(header.get('colspan') or 1)
+
+            # Matrícula, Nome, etc. OR single grade columns (Reposição)
+            # usually don't have subheaders (or have empty ones in Row 2)
+            # so we assume they don't consume from the queue.
+            if header_text in ignore_names or (header_text in single_grade_names and colspan == 1):
+                current_map_col += colspan
+                continue
+
+            # For Group Headers (Units, etc.), we consume `colspan` items from the queue
+            # This handles cases where Row 2 has extra empty headers for Reposição/etc.
+            for _ in range(colspan):
+                if sh_ptr < len(sub_headers_queue):
+                    col_to_subheader[current_map_col] = sub_headers_queue[sh_ptr]
+                    sh_ptr += 1
+                current_map_col += 1
+
         student_row = None
         for row in tbody.find_all('tr'):
             cells = row.find_all('td')
@@ -121,14 +149,17 @@ class Course:
             return []
         value_cells = student_row.find_all('td')
         current_cell_idx = 0
-        ignore_names = ['', 'Matrícula', 'Nome', 'Sit.', 'Faltas', 'Resultado', 'Situação']
+
         for i, header in enumerate(main_headers):
             header_text = header.get_text(strip=True)
             colspan = int(header.get('colspan') or 1)
+
             if header_text in ignore_names:
                 current_cell_idx += colspan
                 continue
+
             group_name = header_text
+
             if colspan == 1:
                 if current_cell_idx < len(value_cells):
                     val_text = value_cells[current_cell_idx].get_text(strip=True)
@@ -146,19 +177,21 @@ class Course:
                     cell_idx = current_cell_idx + j
                     if cell_idx >= len(value_cells):
                         break
+
                     val_text = value_cells[cell_idx].get_text(strip=True)
                     val = self._parse_float(val_text)
+
                     sub_name = "Nota"
-                    for sh in sub_headers_clean:
-                        if sh['index'] == cell_idx:
-                            sub_name = sh['text']
-                            sub_id = sh['id']
-                            if sub_id and sub_id.startswith('aval_'):
-                                grade_id = sub_id[5:]
-                                name_input = page.soup.find('input', id=f'denAval_{grade_id}')
-                                if name_input and name_input.get('value'):
-                                    sub_name = name_input.get('value')
-                            break
+                    if cell_idx in col_to_subheader:
+                        mapped = col_to_subheader[cell_idx]
+                        sub_name = mapped['text']
+                        sub_id = mapped['id']
+                        if sub_id and sub_id.startswith('aval_'):
+                            grade_id = sub_id[5:]
+                            name_input = page.soup.find('input', id=f'denAval_{grade_id}')
+                            if name_input and name_input.get('value'):
+                                sub_name = name_input.get('value')
+
                     if val_text:
                         sub_grades.append({
                             'name': sub_name,
