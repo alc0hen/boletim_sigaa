@@ -27,7 +27,7 @@ O Boletim App é uma aplicação Flask que atua como interface para o sistema ac
 ### Dashboard e Funcionalidades
 - `/dashboard`: Painel principal. Renderiza o `dashboard.html`.
 - `/profile`: Gerenciamento de contas vinculadas e perfil.
-- `/api/stream_grades`: **Endpoint Sensível**. Retorna um stream de eventos (Server-Sent Events style, mas NDJSON) com os dados das disciplinas em tempo real. Utiliza as credenciais da sessão para fazer scraping no SIGAA.
+- `/api/stream_grades`: **Endpoint Sensível**. Retorna um stream de eventos (Server-Sent Events style, mas NDJSON) com os dados das disciplinas em tempo real. Utiliza as credenciais da sessão para fazer scraping no SIGAA. **Atualização em Paralelo:** As notas de todas as turmas são obtidas concorrentemente (com limite de conexões simultâneas) para agilizar o carregamento.
 - `/api/update_course/<id>`: Atualiza os dados de uma disciplina específica.
 - `/api/academic_profile`: Retorna o histórico escolar completo (notas passadas).
 
