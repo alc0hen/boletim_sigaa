@@ -10,6 +10,7 @@ import os
 import aiohttp
 import logging
 import time
+import unicodedata
 from datetime import datetime, timedelta
 bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
@@ -478,6 +479,31 @@ def stream_grades():
 
                     current_subjects = history.get(current_sem, []) if current_sem else []
 
+                    # Fast Path: match current subjects with course list
+                    def normalize_name(s):
+                        return unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('utf-8').lower().strip()
+
+                    current_subjects_map = {normalize_name(s['name']): s for s in current_subjects}
+
+                    for item in course_list_with_ids:
+                        course_id = item['id']
+                        course = item['course']
+                        norm_title = normalize_name(course.title)
+
+                        if norm_title in current_subjects_map:
+                            subject = current_subjects_map[norm_title]
+                            raw_grades = subject['grades']
+                            # Use existing calculator instance
+                            course_result = calculator.calculate(raw_grades)
+
+                            result_data = {
+                                "grades": raw_grades,
+                                "status": course_result.to_dict()
+                            }
+                            yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
+
+                    # Parallel fetching with semaphore limit 1 to avoid race conditions on SIGAA session state
+                    # SIGAA uses server-side JSF state (ViewState) which can be invalidated by concurrent POST requests
                     semaphore = asyncio.Semaphore(1)
 
                     async def fetch_parallel(item):
@@ -486,6 +512,7 @@ def stream_grades():
                             course_id = item['id']
                             course = item['course']
 
+                            # Always fetch grades from individual page
                             try:
                                 raw_grades = await course.get_grades()
                                 course_result = calculator.calculate(raw_grades)
@@ -497,6 +524,7 @@ def stream_grades():
                             except Exception:
                                 pass
 
+                            # If supporter, fetch frequency
                             if is_supporter:
                                 try:
                                     freq_data = await course.get_frequency()

@@ -163,7 +163,8 @@ class StudentBond:
                 rows = table.find_all('tr')
                 headers_row = table.find('th').parent if table.find('th') else None
                 if not headers_row: continue
-                headers = [th.get_text(strip=True).lower() for th in headers_row.find_all('th')]
+                raw_headers = [th.get_text(strip=True) for th in headers_row.find_all('th')]
+                headers = [h.lower() for h in raw_headers]
                 idx_name = -1
                 idx_final_grade = -1
                 idx_status = -1
@@ -181,7 +182,7 @@ class StudentBond:
                      if i == idx_final_grade and ('resultado' in h.lower() or 'média' in h.lower() or 'nota final' in h.lower()): continue
                      h_lower = h.lower()
                      if h_lower in ['créditos', 'ch', 'turma', 'tipo', 'código', 'ano', 'período']: continue
-                     grade_indices.append((i, h))
+                     grade_indices.append((i, raw_headers[i]))
                 if idx_name == -1: continue
                 for row in rows:
                     if 'class' in row.attrs and ('agrupador' in row['class'] or 'titulo' in row['class']): continue
