@@ -20,7 +20,7 @@ class SigaaSession:
 
     async def _get_session(self):
         if self._session is None:
-            cookie_jar = aiohttp.CookieJar(unsafe=True)
+            cookie_jar = aiohttp.CookieJar()
             if self._initial_cookies:
                 cookie_jar.update_cookies(self._initial_cookies)
             self._session = aiohttp.ClientSession(

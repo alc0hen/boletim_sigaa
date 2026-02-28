@@ -211,7 +211,7 @@
 <body>
   <nav>
       <div class="container nav-content">
-          <div style="display:flex; align-items:center;">
+          <div style="display:flex; align-items:center; flex-wrap: wrap; gap: 10px;">
             {% if user or request.path == '/demo' %}
             <div class="account-dropdown" id="accDropdown">
                 <div onclick="toggleAccountMenu()" style="cursor:pointer; display:flex; align-items:center; gap:6px;">
@@ -247,7 +247,7 @@
             <div class="logo" style="display:block; line-height:1.2">SIGAA</div>
             {% endif %}
 
-            <div class="account-dropdown" id="semDropdown" style="display:none; margin-left: 12px;">
+            <div class="account-dropdown" id="semDropdown" style="display:none; margin-left: 0;">
                 <div onclick="toggleSemesterMenu()" style="cursor:pointer; display:flex; align-items:center; gap:6px; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <div class="logo" style="display:block; line-height:1.2; font-size: 0.9rem;">
                         <span id="currentSemesterLabel">Atual</span>
@@ -258,7 +258,7 @@
                 </div>
             </div>
 
-            <span class="app-subtitle" id="totalResume" style="font-size: 0.8rem; color: var(--text-muted); margin-left: 16px; display:block;">Conectando...</span>
+            <span class="app-subtitle" id="totalResume" style="font-size: 0.8rem; color: var(--text-muted); display:block; width: 100%;">Conectando...</span>
           </div>
           <div style="display:flex; align-items:center; gap:16px;">
               {% if not user %}
@@ -351,6 +351,7 @@
   let supportCardShown = false;
   let isSupporter = false;
   let profileData = null;
+  const seenIds = new Set();
   const CURRENT_USER = "{{ session['username']|default('guest') }}";
   const CACHE_KEY = `grades_${CURRENT_USER}`;
   function toggleAccountMenu() {
@@ -582,7 +583,7 @@
                             data[i].isNew = false;
                             renderList();
                         }
-                    }, 15000);
+                    }, 2000);
                 }
             }
         }
@@ -866,6 +867,10 @@
     sorted.forEach(item => {
       const div = document.createElement('div');
       div.className = 'card';
+      if (!seenIds.has(item.id)) {
+          div.classList.add('animate-entry');
+          seenIds.add(item.id);
+      }
       if (item.isRefreshing) div.classList.add('refreshing');
       if (item.isLoading) {
           div.className += ' skeleton';

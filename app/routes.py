@@ -522,7 +522,12 @@ def stream_grades():
                                 }
                                 output.append(json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n")
                             except Exception:
-                                pass
+                                empty_result = calculator.calculate([])
+                                fallback_data = {
+                                    "grades": [],
+                                    "status": empty_result.to_dict()
+                                }
+                                output.append(json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n")
 
                             # If supporter, fetch frequency
                             if is_supporter:
