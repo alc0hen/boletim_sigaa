@@ -354,6 +354,14 @@ footer {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     padding: 1.25rem;
 }
+.animate-entry {
+    animation: slideIn 0.4s ease-out forwards;
+    opacity: 0;
+}
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 .subj-name {
     font-size: 1.1rem;
     letter-spacing: -0.02em;
@@ -630,3 +638,44 @@ footer {
     width: auto;
 }
 .modal-close:hover { color: var(--text-main); }
+
+/* --- MOBILE RESPONSIVE TWEAKS --- */
+@media (max-width: 768px) {
+    nav {
+        height: auto;
+        padding: 15px 0;
+    }
+    .nav-content {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    .container {
+        padding: 0 1.5rem;
+    }
+    .tabs {
+        top: 0;
+        margin-top: 0;
+        padding: 10px 0;
+        overflow-x: auto;
+        white-space: nowrap;
+        grid-template-columns: repeat(4, minmax(100px, 1fr));
+    }
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+    .card {
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .auth-card {
+        padding: 1.5rem;
+    }
+    h2 { font-size: 1.5rem; }
+    .score-val { font-size: 1.2rem; }
+    .subj-name { font-size: 1rem; }
+    .modal-content {
+        height: 85vh;
+        border-radius: 16px 16px 0 0;
+    }
+}
