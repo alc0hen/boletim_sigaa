@@ -71,14 +71,33 @@ class Course:
         total_match = re.search(r'Total de Faltas:\s*(\d+)', text_content)
         if total_match:
             data['total_faltas'] = int(total_match.group(1))
-        max_match = re.search(r'Máximo de Faltas Permitido:\s*(\d+)', text_content)
-        if max_match:
-            data['max_faltas'] = int(max_match.group(1))
-        if data['max_faltas'] > 0:
-            total_classes = data['max_faltas'] * 4
-            data['percent'] = (data['total_faltas'] / total_classes) * 100
+            max_match = re.search(r'Máximo de Faltas Permitido:\s*(\d+)', text_content)
+            if max_match:
+                data['max_faltas'] = int(max_match.group(1))
+            if data['max_faltas'] > 0:
+                total_classes = data['max_faltas'] * 4
+                data['percent'] = (data['total_faltas'] / total_classes) * 100
+            else:
+                data['percent'] = 0.0
         else:
-            data['percent'] = 0.0
+            # UFAL Layout Fallback
+            presencas_match = re.search(r'Presenças Registradas:\s*(\d+)', text_content)
+            aulas_registradas_match = re.search(r'Número de Aulas com Registro de Frequência:\s*(\d+)', text_content)
+            ch_match = re.search(r'Número de Aulas definidas pela CH do Componente:\s*(\d+)', text_content)
+
+            if presencas_match and aulas_registradas_match and ch_match:
+                presencas = int(presencas_match.group(1))
+                aulas_registradas = int(aulas_registradas_match.group(1))
+                ch = int(ch_match.group(1))
+
+                data['total_faltas'] = aulas_registradas - presencas
+                data['max_faltas'] = int(ch * 0.25)
+
+                if ch > 0:
+                    data['percent'] = (data['total_faltas'] / ch) * 100
+                else:
+                    data['percent'] = 0.0
+
         return data
     def _parse_grades(self, page):
         """
