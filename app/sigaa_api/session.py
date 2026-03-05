@@ -23,9 +23,12 @@ class SigaaSession:
             cookie_jar = aiohttp.CookieJar()
             if self._initial_cookies:
                 cookie_jar.update_cookies(self._initial_cookies)
+
+            timeout = aiohttp.ClientTimeout(total=30)
             self._session = aiohttp.ClientSession(
                 headers=self.headers,
-                cookie_jar=cookie_jar
+                cookie_jar=cookie_jar,
+                timeout=timeout
             )
         return self._session
 

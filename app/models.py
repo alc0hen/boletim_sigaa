@@ -1,17 +1,40 @@
 from .extensions import db
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import os
 import base64
+import logging
+
 def get_cipher_suite():
     key = os.environ.get('ENCRYPTION_KEY')
     if not key:
         is_prod = os.environ.get('Render') or os.environ.get('FLASK_ENV') == 'production'
         if is_prod:
             raise ValueError("ENCRYPTION_KEY environment variable is required in production!")
+        logging.warning("Using an insecure fallback encryption key. Do NOT use this in production!")
         key = base64.urlsafe_b64encode(b'0'*32)
+
     if isinstance(key, str):
         key = key.encode('utf-8')
-    return Fernet(key)
+
+    if len(key) == 44:
+        try:
+            decoded = base64.urlsafe_b64decode(key)
+            if len(decoded) == 32:
+                return Fernet(key)
+        except Exception:
+            pass
+
+    salt = b'sigaa-api-static-salt-v1'
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=480000,
+    )
+    derived_key = base64.urlsafe_b64encode(kdf.derive(key))
+    return Fernet(derived_key)
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)

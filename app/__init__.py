@@ -2,6 +2,8 @@ from flask import Flask
 from .extensions import db, csrf, oauth
 import os
 import logging
+from datetime import timedelta
+from flask import request
 from dotenv import load_dotenv
 load_dotenv()
 def create_app():
@@ -12,11 +14,14 @@ def create_app():
             raise ValueError("SECRET_KEY environment variable is required in production!")
         app.secret_key = os.environ.get('SECRET_KEY')
         app.config['SESSION_COOKIE_SECURE'] = True
+        app.config['REMEMBER_COOKIE_SECURE'] = True
     else:
         app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key')
         app.config['SESSION_COOKIE_SECURE'] = False
+        app.config['REMEMBER_COOKIE_SECURE'] = False
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
@@ -41,5 +46,15 @@ def create_app():
     with app.app_context():
         from . import models
         db.create_all()
+
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self';"
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        return response
+
     logging.basicConfig(level=logging.INFO)
     return app
