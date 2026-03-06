@@ -42,6 +42,7 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     name = db.Column(db.String(255), nullable=True)
     profile_pic = db.Column(db.String(1024), nullable=True)
+    is_admin = db.Column(db.Boolean, default=False)
     linked_accounts = db.relationship('LinkedAccount', backref='user', lazy=True)
     def __repr__(self):
         return f'<User {self.email}>'
