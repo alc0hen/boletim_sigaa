@@ -7,7 +7,7 @@ class Sigaa:
         self.url = url
         self.institution = institution
         self.session = SigaaSession(url, cookies=cookies)
-        if institution in [InstitutionType.IFSC, InstitutionType.IFAL, InstitutionType.UFAL]:
+        if institution in [InstitutionType.IFSC, InstitutionType.IFAL, InstitutionType.UFAL, InstitutionType.UFPE]:
             self.login_controller = SigaaLoginImpl(self.session)
         else:
             raise NotImplementedError(f"Institution {institution} not implemented yet.")

@@ -49,7 +49,12 @@
         {% endif %}
         <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">{{ user.name }}</h2>
         <p style="margin-bottom: 1.5rem;">{{ user.email }}</p>
-        <a href="{{ url_for('main.logout') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px;">Sair da Conta</a>
+        <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+            <a href="{{ url_for('main.logout') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block;">Sair da Conta</a>
+            {% if user.is_admin %}
+            <a href="{{ url_for('main.admin') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block; background: var(--success); color: #fff; padding: 4px 8px; border-radius: 4px;">Painel Admin</a>
+            {% endif %}
+        </div>
     </div>
     <section class="accounts-section" style="margin-top: 2rem;">
         <h3 style="font-size: 1.1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
@@ -106,12 +111,12 @@
         {% endif %}
         <form method="POST" action="{{ url_for('main.link_account') }}" onsubmit="startLinkAnimation()">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <div class="inst-selector-container" style="margin-bottom: 1rem;">
-                <input type="radio" name="institution" value="IFAL" id="ifal" class="inst-radio" checked>
-                <label for="ifal" class="inst-label">IFAL</label>
-                <input type="radio" name="institution" value="UFAL" id="ufal" class="inst-radio">
-                <label for="ufal" class="inst-label">UFAL</label>
-            </div>
+            <select name="institution" class="inst-dropdown" required style="margin-bottom: 1rem;">
+                <option value="" disabled>Selecione a Instituição</option>
+                <option value="IFAL" selected>IFAL - Instituto Federal de Alagoas</option>
+                <option value="UFAL">UFAL - Universidade Federal de Alagoas</option>
+                <option value="UFPE">UFPE - Universidade Federal de Pernambuco</option>
+            </select>
             <input type="text" name="username" placeholder="Username" required style="margin-bottom: 1rem;">
             <input type="password" name="password" placeholder="Senha do SIGAA" required style="margin-bottom: 1rem;">
             <button type="submit" id="btn-submit-link">Conectar</button>

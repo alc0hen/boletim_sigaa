@@ -14,7 +14,7 @@
             background-color: #fff;
             color: #757575;
             border: 1px solid #ddd;
-            border-radius: 8px; /* Adjusted to match theme */
+            border-radius: 8px;
             padding: 12px;
             font-size: 14px;
             font-weight: 500;
@@ -57,6 +57,7 @@
         }
         .divider::before { margin-right: .5em; }
         .divider::after { margin-left: .5em; }
+
         /* Loading Overlay */
         #login-overlay {
             display: none;
@@ -78,6 +79,211 @@
             animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── CUSTOM DROPDOWN ── */
+        .inst-dropdown-wrapper {
+            position: relative;
+            width: 100%;
+            margin-bottom: 1rem;
+            user-select: none;
+        }
+
+        .inst-dropdown-trigger {
+            width: 100%;
+            padding: 11px 40px 11px 14px;
+            background: #1a1e1c;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            position: relative;
+            text-align: left;
+            outline: none;
+        }
+        .inst-dropdown-trigger:hover {
+            background: #1e2220;
+            border-color: #3d4345;
+        }
+        .inst-dropdown-wrapper.open .inst-dropdown-trigger,
+        .inst-dropdown-trigger:focus-visible {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(220, 102, 45, 0.2);
+            background: #1e2220;
+        }
+
+        .inst-badge {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 9px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .inst-dropdown-trigger .trigger-label {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .inst-dropdown-trigger .trigger-label.placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .inst-chevron {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%) rotate(0deg);
+            transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+        .inst-dropdown-wrapper.open .inst-chevron {
+            transform: translateY(-50%) rotate(180deg);
+            color: var(--accent);
+        }
+
+        .inst-dropdown-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #1c2020;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+            z-index: 200;
+            opacity: 0;
+            transform: translateY(-6px) scaleY(0.97);
+            transform-origin: top;
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.4,0,0.2,1);
+        }
+        .inst-dropdown-wrapper.open .inst-dropdown-panel {
+            opacity: 1;
+            transform: translateY(0) scaleY(1);
+            pointer-events: all;
+        }
+
+        .inst-search-wrap {
+            padding: 10px 10px 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        .inst-search-inner { position: relative; }
+        .inst-search-icon {
+            position: absolute;
+            left: 9px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+        .inst-search-input {
+            width: 100%;
+            background: #141618;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 10px 7px 30px;
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 0;
+        }
+        .inst-search-input::placeholder { color: var(--text-muted); }
+        .inst-search-input:focus { border-color: var(--accent); box-shadow: none; }
+
+        .inst-options {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 6px;
+            scrollbar-width: thin;
+            scrollbar-color: #3d4345 transparent;
+        }
+        .inst-options::-webkit-scrollbar { width: 4px; }
+        .inst-options::-webkit-scrollbar-thumb { background: #3d4345; border-radius: 4px; }
+
+        .inst-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.12s;
+            color: var(--text-main);
+            font-size: 13px;
+        }
+        .inst-option:hover { background: rgba(255,255,255,0.05); }
+        .inst-option.selected {
+            background: rgba(220, 102, 45, 0.12);
+            color: #f08050;
+            font-weight: 500;
+        }
+        .inst-option .opt-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: -0.5px;
+            flex-shrink: 0;
+        }
+        .inst-option .opt-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 0;
+        }
+        .inst-option .opt-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 13px;
+        }
+        .inst-option .opt-full {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 1px;
+        }
+        .inst-option.selected .opt-full { color: rgba(240,128,80,0.6); }
+        .opt-check {
+            color: var(--accent);
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .inst-option.selected .opt-check { opacity: 1; }
+        .inst-no-results {
+            padding: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -86,24 +292,50 @@
             <div class="logo">Boletim App</div>
         </div>
     </nav>
+
     <div class="container" style="display:flex; justify-content:center; align-items:center; min-height:80vh;">
         <div class="card" style="width:100%; max-width:350px; padding:1.5rem;">
+
             {% if error %}
                 <div class="alert-error">{{ error }}</div>
             {% endif %}
-            <form method="POST" action="{{ url_for('main.login') }}" onsubmit="startLogin()">
+
+            <form method="POST" action="{{ url_for('main.login') }}" onsubmit="startLogin()" id="login-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="inst-selector-container" style="margin-top: 0.5rem;">
-                    <input type="radio" name="institution" value="IFAL" id="ifal" class="inst-radio" checked>
-                    <label for="ifal" class="inst-label">IFAL</label>
-                    <input type="radio" name="institution" value="UFAL" id="ufal" class="inst-radio">
-                    <label for="ufal" class="inst-label">UFAL</label>
+
+                <!-- Hidden input that actually submits the value -->
+                <input type="hidden" name="institution" id="institution-value" required>
+
+                <!-- Custom dropdown -->
+                <div class="inst-dropdown-wrapper" id="instDropdown">
+                    <button type="button" class="inst-dropdown-trigger" id="dropdownTrigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="inst-badge" id="triggerBadge" style="background: var(--accent)">—</span>
+                        <span class="trigger-label placeholder" id="triggerLabel">Selecione a Instituição</span>
+                        <svg class="inst-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+
+                    <div class="inst-dropdown-panel" role="listbox" id="dropdownPanel">
+                        <div class="inst-search-wrap">
+                            <div class="inst-search-inner">
+                                <svg class="inst-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                <input class="inst-search-input" type="text" id="instSearch" placeholder="Buscar instituição..." autocomplete="off" spellcheck="false">
+                            </div>
+                        </div>
+                        <div class="inst-options" id="optionsList"></div>
+                    </div>
                 </div>
+
                 <input type="text" name="username" placeholder="Username" required style="margin-bottom: 1rem;">
                 <input type="password" name="password" placeholder="Sua senha do SIGAA" required style="margin-bottom: 1rem;">
                 <button type="submit">Entrar</button>
             </form>
+
             <div class="divider">OU</div>
+
             <a href="{{ url_for('main.login_google') }}" class="btn-google">
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
                     <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
@@ -113,24 +345,155 @@
                 </svg>
                 Entrar com Google
             </a>
+
             <div style="margin-top: 20px; text-align: center; font-size: 12px;">
                 <a href="{{ url_for('main.privacy') }}" style="color: var(--text-muted); text-decoration: none;">Política de Privacidade e Transparência</a>
             </div>
         </div>
     </div>
+
     <div id="login-overlay">
         <div class="spinner"></div>
         <p id="login-msg" style="margin-top:20px; color:#fff; font-size:1.1rem; text-align:center; padding:0 20px;">Fazendo login no sigaa...</p>
     </div>
+
     <script>
+        // ── Institutions data ──
+        const INSTITUTIONS = [
+            { value: 'IFAL', acronym: 'IFAL', name: 'IFAL', full: 'Instituto Federal de Alagoas',          color: '#1a7f4b' },
+            { value: 'UFAL', acronym: 'UFAL', name: 'UFAL', full: 'Universidade Federal de Alagoas',       color: '#1a5fa8' },
+            { value: 'UFPE', acronym: 'UFPE', name: 'UFPE', full: 'Universidade Federal de Pernambuco',    color: '#7b2d8b' },
+        ];
+
+        // ── State ──
+        let selectedInst = null;
+        let searchQuery  = '';
+
+        // ── DOM refs ──
+        const wrapper    = document.getElementById('instDropdown');
+        const trigger    = document.getElementById('dropdownTrigger');
+        const badgeEl    = document.getElementById('triggerBadge');
+        const labelEl    = document.getElementById('triggerLabel');
+        const searchEl   = document.getElementById('instSearch');
+        const listEl     = document.getElementById('optionsList');
+        const hiddenInput = document.getElementById('institution-value');
+
+        // ── Render options ──
+        function renderOptions() {
+            const q = searchQuery.toLowerCase();
+            const filtered = q
+                ? INSTITUTIONS.filter(i => i.acronym.toLowerCase().includes(q) || i.full.toLowerCase().includes(q))
+                : INSTITUTIONS;
+
+            listEl.innerHTML = '';
+
+            if (!filtered.length) {
+                listEl.innerHTML = '<div class="inst-no-results">Nenhuma instituição encontrada</div>';
+                return;
+            }
+
+            filtered.forEach(inst => {
+                const opt = document.createElement('div');
+                opt.className = 'inst-option' + (selectedInst?.value === inst.value ? ' selected' : '');
+                opt.setAttribute('role', 'option');
+                opt.setAttribute('aria-selected', selectedInst?.value === inst.value);
+                opt.innerHTML = `
+                    <div class="opt-badge" style="background:${inst.color}">${inst.acronym.slice(0,2)}</div>
+                    <div class="opt-info">
+                        <span class="opt-name">${inst.name}</span>
+                        <span class="opt-full">${inst.full}</span>
+                    </div>
+                    <svg class="opt-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>`;
+                opt.addEventListener('click', () => selectOption(inst));
+                listEl.appendChild(opt);
+            });
+        }
+
+        function selectOption(inst) {
+            selectedInst = inst;
+            hiddenInput.value = inst.value;
+            badgeEl.textContent = inst.acronym.slice(0, 2);
+            badgeEl.style.background = inst.color;
+            labelEl.textContent = `${inst.name} — ${inst.full}`;
+            labelEl.classList.remove('placeholder');
+            closeDropdown();
+        }
+
+        function openDropdown() {
+            wrapper.classList.add('open');
+            trigger.setAttribute('aria-expanded', 'true');
+            searchEl.value = '';
+            searchQuery = '';
+            renderOptions();
+            requestAnimationFrame(() => searchEl.focus());
+        }
+
+        function closeDropdown() {
+            wrapper.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        // ── Events ──
+        trigger.addEventListener('click', () =>
+            wrapper.classList.contains('open') ? closeDropdown() : openDropdown()
+        );
+
+        trigger.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDropdown(); }
+            if (e.key === 'Escape') closeDropdown();
+        });
+
+        searchEl.addEventListener('input', e => {
+            searchQuery = e.target.value;
+            renderOptions();
+        });
+
+        searchEl.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeDropdown();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const q = searchQuery.toLowerCase();
+                const first = INSTITUTIONS.find(i =>
+                    i.acronym.toLowerCase().includes(q) || i.full.toLowerCase().includes(q)
+                );
+                if (first) selectOption(first);
+            }
+        });
+
+        document.addEventListener('click', e => {
+            if (!wrapper.contains(e.target)) closeDropdown();
+        });
+
+        // ── Form validation: require institution ──
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            if (!hiddenInput.value) {
+                e.preventDefault();
+                wrapper.querySelector('.inst-dropdown-trigger').focus();
+                wrapper.querySelector('.inst-dropdown-trigger').style.borderColor = 'var(--danger)';
+                setTimeout(() => {
+                    wrapper.querySelector('.inst-dropdown-trigger').style.borderColor = '';
+                }, 1500);
+                return;
+            }
+            startLogin();
+        });
+
+        // ── Loading overlay ──
         function startLogin() {
             const overlay = document.getElementById('login-overlay');
-            const msg = document.getElementById('login-msg');
+            const msg     = document.getElementById('login-msg');
             overlay.style.display = 'flex';
             setTimeout(() => {
                 msg.textContent = "Trabalhando no seu login, o sigaa pode estar congestionado...";
             }, 5000);
         }
+
+        // Pre-select IFAL by default (matching original behaviour)
+        selectOption(INSTITUTIONS[0]);
+
+        renderOptions();
     </script>
 </body>
 </html>

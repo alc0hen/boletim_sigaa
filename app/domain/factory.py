@@ -5,6 +5,8 @@ class CalculatorFactory:
     def get_calculator(institution: InstitutionType) -> AcademicCalculator:
         if institution == InstitutionType.UFAL:
             return UFAcademicCalculator()
+        elif institution == InstitutionType.UFPE:
+            return UFAcademicCalculator()
         elif institution == InstitutionType.IFAL:
             return IFAcademicCalculator()
         else:

@@ -30,6 +30,9 @@ async def login():
         if institution_str == 'UFAL':
             inst_type = InstitutionType.UFAL
             url = "https://sigaa.sig.ufal.br"
+        elif institution_str == 'UFPE':
+            inst_type = InstitutionType.UFPE
+            url = "https://sigaa.ufpe.br"
         else:
             inst_type = InstitutionType.IFAL
             url = SIGAA_URL
@@ -113,6 +116,9 @@ async def link_account():
     if institution_str == 'UFAL':
         inst_type = InstitutionType.UFAL
         url = "https://sigaa.sig.ufal.br"
+    elif institution_str == 'UFPE':
+        inst_type = InstitutionType.UFPE
+        url = "https://sigaa.ufpe.br"
     else:
         inst_type = InstitutionType.IFAL
         url = SIGAA_URL
@@ -188,6 +194,9 @@ async def dashboard():
         if account.institution == 'UFAL':
             inst_type = InstitutionType.UFAL
             url = "https://sigaa.sig.ufal.br"
+        elif account.institution == 'UFPE':
+            inst_type = InstitutionType.UFPE
+            url = "https://sigaa.ufpe.br"
         else:
             inst_type = InstitutionType.IFAL
             url = SIGAA_URL
@@ -565,3 +574,60 @@ def stream_grades():
 def logout():
     session.clear()
     return redirect(url_for('main.login'))
+
+@bp.route('/admin')
+def admin():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user = User.query.get(session['user_id'])
+    if not user or not user.is_admin:
+        return redirect(url_for('main.dashboard'))
+
+    total_users = User.query.count()
+    total_linked_accounts = LinkedAccount.query.count()
+
+    # Users with at least one linked account
+    users_with_accounts = db.session.query(LinkedAccount.user_id).distinct().count()
+
+    # Percentage of active users (users with accounts)
+    active_percentage = round((users_with_accounts / total_users * 100) if total_users > 0 else 0, 1)
+
+    # Average accounts per user (only counting users who have at least one account)
+    avg_accounts = round((total_linked_accounts / users_with_accounts) if users_with_accounts > 0 else 0, 1)
+
+    # Count by institution
+    inst_counts = db.session.query(
+        LinkedAccount.institution,
+        db.func.count(LinkedAccount.id)
+    ).group_by(LinkedAccount.institution).all()
+
+    stats = {
+        'total_users': total_users,
+        'total_linked_accounts': total_linked_accounts,
+        'users_with_accounts': users_with_accounts,
+        'active_percentage': active_percentage,
+        'avg_accounts': avg_accounts,
+        'institutions': dict(inst_counts)
+    }
+
+    # Fetch all users for the detailed list, masking sensitive data
+    all_users = User.query.order_by(User.id.desc()).all()
+    user_list = []
+    for u in all_users:
+        accounts = []
+        for acc in u.linked_accounts:
+            # Mask username (e.g., show only first 3 and last 2 characters)
+            masked_username = acc.username[:3] + "***" + acc.username[-2:] if len(acc.username) > 5 else "***"
+            accounts.append({
+                'institution': acc.institution,
+                'username_masked': masked_username,
+                'history_updated': acc.history_updated_at.strftime('%d/%m/%Y %H:%M') if acc.history_updated_at else 'Nunca'
+            })
+
+        user_list.append({
+            'id': u.id,
+            'name': u.name if u.name else 'Usuário Anônimo',
+            'accounts': accounts
+        })
+
+    return render_template('admin.html', user=user, stats=stats, user_list=user_list)
