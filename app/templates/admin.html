@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administração | Boletim App</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .admin-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .admin-val {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+        .admin-lbl {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="container nav-content">
+        <div class="logo">Painel de Administração</div>
+        <a href="{{ url_for('main.profile') }}" class="btn-secondary" style="width:auto; padding:8px 16px; margin-top:0;">Voltar</a>
+    </div>
+</nav>
+
+<div class="container" style="margin-top: 2rem; max-width: 800px;">
+    <h2 style="margin-bottom: 1.5rem;">Estatísticas do Sistema</h2>
+
+    <div class="grid-2">
+        <div class="admin-card">
+            <div class="admin-val">{{ stats.total_users }}</div>
+            <div class="admin-lbl">Total de Usuários</div>
+        </div>
+        <div class="admin-card">
+            <div class="admin-val">{{ stats.total_linked_accounts }}</div>
+            <div class="admin-lbl">Total de Contas Vinculadas</div>
+        </div>
+        <div class="admin-card">
+            <div class="admin-val">{{ stats.users_with_accounts }}</div>
+            <div class="admin-lbl">Usuários Ativos ({{ stats.active_percentage }}%)</div>
+        </div>
+        <div class="admin-card">
+            <div class="admin-val">{{ stats.avg_accounts }}</div>
+            <div class="admin-lbl">Média de Contas por Usuário Ativo</div>
+        </div>
+    </div>
+
+    <h3 style="margin: 2rem 0 1rem 0;">Por Instituição</h3>
+    <div class="grid-2">
+        {% for inst, count in stats.institutions.items() %}
+        <div class="admin-card" style="padding: 1rem;">
+            <div class="admin-val" style="font-size: 1.8rem; color: var(--success);">{{ count }}</div>
+            <div class="admin-lbl">{{ inst }}</div>
+        </div>
+        {% else %}
+        <div class="admin-card">
+            Nenhuma instituição encontrada
+        </div>
+        {% endfor %}
+    </div>
+
+    <h3 style="margin: 3rem 0 1.5rem 0; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Detalhamento de Usuários</h3>
+
+    <div class="account-list" style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for u in user_list %}
+        <div class="card" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="margin: 0;">{{ u.name }} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(ID: {{ u.id }})</span></h4>
+                <span class="badge bd-info" style="font-size: 0.8rem;">{{ u.accounts|length }} Conta(s)</span>
+            </div>
+
+            {% if u.accounts %}
+            <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem;">
+                {% for acc in u.accounts %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div>
+                        <span class="inst-badge" style="font-size: 0.7rem; padding: 2px 6px;">{{ acc.institution }}</span>
+                        <span style="font-family: monospace; color: var(--text-muted); margin-left: 8px;">{{ acc.username_masked }}</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">
+                        Atualizado: {{ acc.history_updated }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="font-size: 0.9rem; color: var(--text-muted);">Usuário sem contas vinculadas.</div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="card" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            Nenhum usuário cadastrado.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>
