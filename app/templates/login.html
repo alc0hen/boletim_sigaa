@@ -486,8 +486,11 @@
             const msg     = document.getElementById('login-msg');
             overlay.style.display = 'flex';
             setTimeout(() => {
-                msg.textContent = "Trabalhando no seu login, o sigaa pode estar congestionado...";
-            }, 5000);
+                msg.textContent = "Trabalhando no seu login, o SIGAA pode estar congestionado...";
+            }, 2000);
+            setTimeout(() => {
+                msg.textContent = "Ainda conectando... Alguns sistemas demoram a responder.";
+            }, 8000);
         }
 
         // Pre-select IFAL by default (matching original behaviour)

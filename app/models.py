@@ -5,7 +5,9 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import os
 import base64
 import logging
+from functools import lru_cache
 
+@lru_cache(maxsize=1)
 def get_cipher_suite():
     key = os.environ.get('ENCRYPTION_KEY')
     if not key:

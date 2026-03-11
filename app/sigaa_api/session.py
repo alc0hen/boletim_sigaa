@@ -1,3 +1,4 @@
+import os
 import aiohttp
 import asyncio
 from .types import HTTPMethod
@@ -42,6 +43,11 @@ class SigaaSession:
 
         # Enforce manual redirect handling for security check
         kwargs['allow_redirects'] = False
+
+        proxy_url = os.environ.get('SIGAA_PROXY')
+        if proxy_url:
+            kwargs['proxy'] = proxy_url
+
 
         if path.startswith('http'):
             url = path
