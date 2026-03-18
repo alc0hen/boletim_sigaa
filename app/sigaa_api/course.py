@@ -1,30 +1,38 @@
 from .exceptions import SigaaConnectionError
+from .schedule_parser import parse_schedule_code
 import re
+
 class Course:
-    def __init__(self, session, title, form_data):
+    def __init__(self, session, title, form_data, schedule_code: str = ''):
         self.session = session
         self.title = title
         self.form_data = form_data
         self.id = form_data['post_values'].get('idTurma')
         self.grades = []
+        self.schedule_code = schedule_code  # e.g. "2N1234", "4T6 4N1234"
+
     def __repr__(self):
         return f"<Course title='{self.title}'>"
+
     async def get_grades(self):
         course_page = await self._enter_course()
         grades_page = await self._navigate_to_grades(course_page)
         self.grades = self._parse_grades(grades_page)
         return self.grades
+
     async def get_frequency(self):
         course_page = await self._enter_course()
         freq_page = await self._navigate_to_frequency(course_page)
         self.frequency = self._parse_frequency(freq_page)
         return self.frequency
+
     async def _enter_course(self):
         page = await self.session.post(
             self.form_data['action'],
             data=self.form_data['post_values']
         )
         return page
+
     async def _navigate_to_grades(self, course_page):
         menu_items = course_page.soup.find_all(string="Ver Notas")
         for item in menu_items:
@@ -42,6 +50,7 @@ class Course:
                 if not parent or parent.name == 'body':
                     break
         raise ValueError("Could not find 'Ver Notas' menu item.")
+
     async def _navigate_to_frequency(self, course_page):
         menu_items = course_page.soup.find_all(lambda text: text and "Frequência" in text)
         if not menu_items:
@@ -61,44 +70,135 @@ class Course:
                 if not parent or parent.name == 'body':
                     break
         raise ValueError("Could not find 'Frequência' menu item.")
+
     def _parse_frequency(self, page):
+        """
+        Parse the Mapa de Frequências page, row by row.
+
+        Each row has a date and a status:
+          - "Presente"        → student attended (multiply by aulas_per_session)
+          - "X Falta(s)"      → X already counts individual aula slots (no extra multiply)
+          - "Não Registrada"  → professor did not submit attendance (yellow zone)
+
+        Also extracts "Aulas (Ministradas/Total): X / Y" for the real denominator.
+        Falls back gracefully to summary-text parsing when the individual table is absent.
+        """
+        aulas_per_session = parse_schedule_code(self.schedule_code)
+
+        text_full = page.soup.get_text()
+
+        # ── 0. Early-exit: frequency not yet released ───────────────────────
+        if 'frequência ainda não foi lançada' in text_full.lower() or \
+           'frequencia ainda nao foi lancada' in text_full.lower():
+            return {'nao_lancada': True}
+
         data = {
-            'total_faltas': 0,
-            'max_faltas': 0,
-            'percent': 0.0
+            'total_faltas':      0,
+            'max_faltas':        0,
+            'percent':           0.0,
+            'presencas':         0,
+            'ausencias':         0,
+            'nao_registradas':   0,
+            'aulas_ministradas': None,
+            'aulas_total':       None,
         }
-        text_content = page.soup.get_text()
-        total_match = re.search(r'Total de Faltas:\s*(\d+)', text_content)
+
+        # ── 1. "Aulas (Ministradas/Total): X / Y" ──────────────────────────
+        text_full = page.soup.get_text()
+        min_total_match = re.search(
+            r'Aulas\s*\(Ministradas/Total\)\s*[:\-]?\s*(\d+)\s*/\s*(\d+)',
+            text_full, re.IGNORECASE
+        )
+        if min_total_match:
+            data['aulas_ministradas'] = int(min_total_match.group(1))
+            data['aulas_total']       = int(min_total_match.group(2))
+
+        # ── 2. Individual date rows ─────────────────────────────────────────
+        freq_table = None
+        for tbl in page.soup.find_all('table'):
+            # Look for a table whose headers contain Data / Situação
+            headers = [th.get_text(strip=True).lower() for th in tbl.find_all('th')]
+            if any('data' in h for h in headers) and any('situa' in h for h in headers):
+                freq_table = tbl
+                break
+
+        if freq_table:
+            rows = freq_table.find_all('tr')
+            presencas_count = 0
+            ausencias_aulas = 0
+            nao_reg_count   = 0
+
+            for row in rows:
+                cells = row.find_all('td')
+                if len(cells) < 2:
+                    continue
+                status_text = cells[-1].get_text(strip=True).lower()
+
+                if 'presente' in status_text:
+                    presencas_count += 1
+                elif 'falta' in status_text:
+                    # "4 Falta(s)" — the number is already in individual aulas
+                    falta_num = re.search(r'(\d+)', status_text)
+                    ausencias_aulas += int(falta_num.group(1)) if falta_num else aulas_per_session
+                elif 'não registrada' in status_text or 'nao registrada' in status_text:
+                    nao_reg_count += 1
+
+            data['presencas']       = presencas_count * aulas_per_session
+            data['ausencias']       = ausencias_aulas
+            data['total_faltas']    = ausencias_aulas
+            data['nao_registradas'] = nao_reg_count * aulas_per_session
+
+            # ── 3. max_faltas and percent ───────────────────────────────────
+            total_ref = data['aulas_total'] or 0
+            if total_ref == 0:
+                # Fallback: infer from max_faltas text
+                max_m = re.search(r'Máximo de Faltas Permitido:\s*(\d+)', text_full)
+                if max_m:
+                    data['max_faltas'] = int(max_m.group(1))
+                    total_ref = data['max_faltas'] * 4
+                else:
+                    data['max_faltas'] = 0
+            else:
+                data['max_faltas'] = int(total_ref * 0.25)
+
+            if total_ref > 0:
+                data['percent'] = (data['total_faltas'] / total_ref) * 100.0
+
+            return data
+
+        # ── 4. Fallback: summary-text parsing (old behaviour) ───────────────
+        total_match = re.search(r'Total de Faltas:\s*(\d+)', text_full)
         if total_match:
             data['total_faltas'] = int(total_match.group(1))
-            max_match = re.search(r'Máximo de Faltas Permitido:\s*(\d+)', text_content)
-            if max_match:
-                data['max_faltas'] = int(max_match.group(1))
-            if data['max_faltas'] > 0:
+            data['ausencias']    = data['total_faltas']
+            max_m = re.search(r'Máximo de Faltas Permitido:\s*(\d+)', text_full)
+            if max_m:
+                data['max_faltas'] = int(max_m.group(1))
                 total_classes = data['max_faltas'] * 4
-                data['percent'] = (data['total_faltas'] / total_classes) * 100
-            else:
-                data['percent'] = 0.0
-        else:
-            # UFAL Layout Fallback
-            presencas_match = re.search(r'Presenças Registradas:\s*(\d+)', text_content)
-            aulas_registradas_match = re.search(r'Número de Aulas com Registro de Frequência:\s*(\d+)', text_content)
-            ch_match = re.search(r'Número de Aulas definidas pela CH do Componente:\s*(\d+)', text_content)
+                data['aulas_total'] = total_classes
+                if total_classes > 0:
+                    data['percent'] = (data['total_faltas'] / total_classes) * 100
+            return data
 
-            if presencas_match and aulas_registradas_match and ch_match:
-                presencas = int(presencas_match.group(1))
-                aulas_registradas = int(aulas_registradas_match.group(1))
-                ch = int(ch_match.group(1))
-
-                data['total_faltas'] = aulas_registradas - presencas
-                data['max_faltas'] = int(ch * 0.25)
-
-                if ch > 0:
-                    data['percent'] = (data['total_faltas'] / ch) * 100
-                else:
-                    data['percent'] = 0.0
-
+        # UFAL summary
+        presencas_m   = re.search(r'Presenças Registradas:\s*(\d+)', text_full)
+        aulas_reg_m   = re.search(r'Número de Aulas com Registro de Frequência:\s*(\d+)', text_full)
+        ch_m          = re.search(r'Número de Aulas definidas pela CH do Componente:\s*(\d+)', text_full)
+        if presencas_m and aulas_reg_m and ch_m:
+            presencas      = int(presencas_m.group(1))
+            aulas_reg      = int(aulas_reg_m.group(1))
+            ch             = int(ch_m.group(1))
+            data['total_faltas']    = aulas_reg - presencas
+            data['max_faltas']      = int(ch * 0.25)
+            data['presencas']       = presencas
+            data['ausencias']       = data['total_faltas']
+            data['nao_registradas'] = max(0, ch - aulas_reg)
+            data['aulas_total']     = ch
+            data['aulas_ministradas'] = aulas_reg
+            if ch > 0:
+                data['percent'] = (data['total_faltas'] / ch) * 100.0
         return data
+
     def _parse_grades(self, page):
         """
         Parses the grades table generically, extracting all columns not in the ignore list.

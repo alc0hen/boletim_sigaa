@@ -80,7 +80,12 @@ class StudentBond:
                         js_code = access_link['onclick']
                         try:
                             form_data = page.parse_jsfcljs(js_code)
-                            courses.append(Course(self.session, title, form_data))
+                            # Extract schedule code from td.info in same row (e.g. "2N1234")
+                            schedule_code = ''
+                            info_td = row.find('td', class_='info')
+                            if info_td:
+                                schedule_code = info_td.get_text(strip=True)
+                            courses.append(Course(self.session, title, form_data, schedule_code=schedule_code))
                         except Exception: pass
         except Exception as e:
             logger.error(f"Error parsing courses: {e}")

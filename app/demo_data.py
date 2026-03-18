@@ -32,7 +32,12 @@ def get_demo_data():
         "data": {
             "total_faltas": 2,
             "max_faltas": 20,
-            "percent": 2.5
+            "percent": 2.5,
+            "presencas": 10,
+            "ausencias": 2,
+            "nao_registradas": 4,
+            "aulas_ministradas": 16,
+            "aulas_total": 80
         }
     }
     c2_id = 2
@@ -59,7 +64,12 @@ def get_demo_data():
         "data": {
             "total_faltas": 12,
             "max_faltas": 20,
-            "percent": 15.0
+            "percent": 15.0,
+            "presencas": 60,
+            "ausencias": 12,
+            "nao_registradas": 0,
+            "aulas_ministradas": 72,
+            "aulas_total": 80
         }
     }
     c3_id = 3
@@ -85,7 +95,12 @@ def get_demo_data():
         "data": {
             "total_faltas": 25,
             "max_faltas": 20,
-            "percent": 31.2
+            "percent": 31.2,
+            "presencas": 20,
+            "ausencias": 25,
+            "nao_registradas": 15,
+            "aulas_ministradas": 60,
+            "aulas_total": 80
         }
     }
     c4_id = 4
@@ -111,6 +126,11 @@ def get_demo_data():
         "data": {
             "total_faltas": 8,
             "max_faltas": 20,
-            "percent": 10.0
+            "percent": 10.0,
+            "presencas": 40,
+            "ausencias": 8,
+            "nao_registradas": 8,
+            "aulas_ministradas": 56,
+            "aulas_total": 80
         }
     }

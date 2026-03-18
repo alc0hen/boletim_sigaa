@@ -538,14 +538,13 @@ def stream_grades():
                                 }
                                 output.append(json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n")
 
-                            # If supporter, fetch frequency
-                            if is_supporter:
-                                try:
-                                    freq_data = await course.get_frequency()
-                                    if freq_data:
-                                        output.append(json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n")
-                                except Exception:
-                                    pass
+                            # Fetch frequency for everyone
+                            try:
+                                freq_data = await course.get_frequency()
+                                if freq_data:
+                                    output.append(json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n")
+                            except Exception:
+                                pass
 
                             return output
 
