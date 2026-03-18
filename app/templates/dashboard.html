@@ -583,7 +583,7 @@
   let isSupporter = false;
   let profileData = null;
   const seenIds = new Set();
-  const CURRENT_USER = "{{ session['username']|default('guest') }}";
+  const CURRENT_USER = {{ session['username']|default('guest')|tojson }};
   const CACHE_KEY = `grades_${CURRENT_USER}`;
 
 
@@ -1212,26 +1212,8 @@
   function renderFrequency() {
     const container = document.getElementById('frequency-container');
     container.innerHTML = '';
-    if (!isSupporter) {
-      const lockedCard = document.createElement('div');
-      lockedCard.className = 'card support-card';
-      lockedCard.onclick = () => window.location.href = "{{ url_for('main.support') }}";
-      lockedCard.style.padding = '32px 20px'; lockedCard.style.textAlign = 'center';
-      lockedCard.innerHTML = `
-        <div class="card-indicator" style="background:rgba(255,255,255,0.3)"></div>
-        <h3 style="margin:0 0 10px 0; font-size:20px; color:#fff;">🔒 Recurso Premium</h3>
-        <p style="font-size:14px; color:rgba(255,255,255,0.8); margin-bottom:20px;">
-          A análise detalhada de frequência é exclusiva para apoiadores do projeto.
-        </p>
-        <div style="background:rgba(0,0,0,0.2); padding:10px 20px; border-radius:12px; display:inline-block; font-weight:600; color:#ffd700;">
-          ✨ Tornar-se Apoiador
-        </div>
-      `;
-      container.appendChild(lockedCard);
-      return;
-    }
     const items = data.filter(d => !d.isLoading);
-    const itemsWithFreq = items.filter(d => d.frequency);
+    const itemsWithFreq = items.filter(d => d.frequency && !d.frequency.nao_lancada);
     let overallAvg = 0, sumTotalFaltas = 0, sumMaxFaltas = 0;
     if (itemsWithFreq.length > 0) {
       overallAvg = itemsWithFreq.reduce((s, d) => s + d.frequency.percent, 0) / itemsWithFreq.length;
@@ -1254,9 +1236,59 @@
       div.className = 'card';
       let freqContent = '';
       if (item.frequency) {
-        const { total_faltas, max_faltas, percent } = item.frequency;
-        const isFailed = total_faltas > max_faltas;
+        // ── Early-exit: frequency not yet released in SIGAA ─────────────────
+        if (item.frequency.nao_lancada) {
+          freqContent = `
+            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;
+                        color:var(--text-muted); font-size:12px; padding:8px 0;">
+              <span style="font-size:16px;">🕐</span>
+              <span>Frequência ainda não foi lançada no SIGAA.</span>
+            </div>
+          `;
+        } else {
+        const { total_faltas, max_faltas, percent, presencas, ausencias,
+                nao_registradas, aulas_total } = item.frequency;
+        const isFailed    = total_faltas > max_faltas;
         const statusColor = isFailed ? 'var(--danger)' : 'var(--success)';
+
+        let progressBarHtml = '';
+        const safePresencas  = presencas       ?? 0;
+        const safeAusencias  = ausencias       ?? total_faltas ?? 0;
+        const safeNaoReg     = nao_registradas ?? 0;
+        const safeTotalAulas = (aulas_total    ?? (max_faltas * 4)) || 1;
+
+        // ── 4-state bar ──────────────────────────────────────────────────────
+        // green=presente | red=falta | yellow=não lançado | dark bg=futuro
+        const p_pct  = Math.min(100,         (safePresencas  / safeTotalAulas) * 100);
+        const a_pct  = Math.min(100 - p_pct, (safeAusencias  / safeTotalAulas) * 100);
+        const y_pct  = Math.min(100 - p_pct - a_pct, (safeNaoReg / safeTotalAulas) * 100);
+        const p2 = p_pct.toFixed(2);
+        const a2 = (p_pct + a_pct).toFixed(2);
+        const y2 = (p_pct + a_pct + y_pct).toFixed(2);
+
+        const barGradient = `linear-gradient(to right,
+          var(--success) 0% ${p2}%,
+          var(--danger)  ${p2}% ${a2}%,
+          #b59a00        ${a2}% ${y2}%,
+          transparent    ${y2}% 100%)`;
+
+        const aulas_futuras = Math.max(0, safeTotalAulas - safePresencas - safeAusencias - safeNaoReg);
+
+        progressBarHtml = `
+          <div style="margin-top:12px;">
+            <div style="height:8px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden;">
+              <div style="height:100%; background:${barGradient};"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;
+                        font-size:10px; color:var(--text-muted); margin-top:6px; font-weight:600;">
+              <span style="color:var(--success)">✅ Presenças: ${safePresencas}</span>
+              <span style="color:var(--danger)">❌ Faltas: ${safeAusencias}</span>
+              ${safeNaoReg > 0 ? `<span style="color:#d4a800">⚠️ Não lançado: ${safeNaoReg}</span>` : ''}
+              ${aulas_futuras > 0 ? `<span style="color:#666">⬜ Futuras: ${aulas_futuras}</span>` : ''}
+            </div>
+          </div>
+        `;
+
         freqContent = `
           <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:8px;">
             <div>
@@ -1268,12 +1300,19 @@
               <div style="font-size:24px; font-weight:800; color:${statusColor}">${percent.toFixed(1)}%</div>
             </div>
           </div>
-          <div style="margin-top:4px; font-size:10px; color:${statusColor}; text-align:right; font-weight:700; text-transform:uppercase;">
+          ${progressBarHtml}
+          <div style="margin-top:8px; font-size:10px; color:${statusColor}; text-align:right; font-weight:700; text-transform:uppercase;">
             ${isFailed ? 'Limite indicado ultrapassado' : 'Dentro do Limite'}
           </div>
         `;
+        } // end: else (not nao_lancada)
       } else {
-        freqContent = `<div style="margin-top:8px; font-size:12px; color:var(--text-muted)">Carregando frequência...</div>`;
+        freqContent = `
+          <div style="margin-top:16px; display:flex; flex-direction:column; align-items:center; color:var(--text-muted); padding:10px;">
+            <div style="width:20px; height:20px; border:2px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:8px;"></div>
+            <div style="font-size:12px;">Atualizando frequência...</div>
+          </div>
+        `;
       }
       div.innerHTML = `<div class="row-top"><div class="subj-name">${escapeHtml(item.name)}</div></div>${freqContent}`;
       container.appendChild(div);
