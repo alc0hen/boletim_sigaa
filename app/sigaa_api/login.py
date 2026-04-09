@@ -33,8 +33,42 @@ class SigaaLoginImpl(SigaaLogin):
         post_values['user.login'] = username
         post_values['user.senha'] = password
         page = await self.session.post(action_url, data=post_values)
-        if '/sigaa/questionarios.jsf' in str(page.url):
-             page = await self.session.get('/sigaa/verPortalDiscente.do')
+        # Handle intermediate screens (like CPA evaluation questionnaires or notices)
+        max_skips = 3
+        while max_skips > 0:
+            if '/sigaa/questionarios.jsf' in str(page.url):
+                page = await self.session.get('/sigaa/verPortalDiscente.do')
+                max_skips -= 1
+                continue
+                
+            # Check for generic "Continuar >>" button
+            btn_continuar = page.soup.find('input', attrs={'value': lambda v: v and 'Continuar' in v and '>>' in v})
+            if btn_continuar:
+                form = btn_continuar.find_parent('form')
+                if form and form.get('action'):
+                    submit_url = urljoin(str(page.url), form.get('action'))
+                    submit_data = {}
+                    for input_el in form.find_all('input'):
+                        name = input_el.get('name')
+                        if name:
+                            # Skip other submit/button inputs
+                            if input_el.get('type') in ['submit', 'button'] and input_el != btn_continuar:
+                                continue
+                            submit_data[name] = input_el.get('value', '')
+                            
+                    if btn_continuar.get('name'):
+                        submit_data[btn_continuar.get('name')] = btn_continuar.get('value')
+                        
+                    page = await self.session.post(submit_url, data=submit_data)
+                    max_skips -= 1
+                    continue
+            
+            break
+
+        if 'Questionários de Avaliação' in page.soup.text or '/sigaa/questionarios.jsf' in str(page.url):
+            from .exceptions import SigaaQuestionnaireError
+            raise SigaaQuestionnaireError("Acesso bloqueado por Questionário de Avaliação obrigatório no SIGAA.")
+
         if 'Entrar no Sistema' in page.body or 'Usuário e/ou senha inválidos' in page.body:
              if 'Usuário e/ou senha inválidos' in page.body:
                  raise SigaaInvalidCredentials('SIGAA: Invalid credentials.')

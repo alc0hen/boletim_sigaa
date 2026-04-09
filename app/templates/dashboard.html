@@ -83,6 +83,18 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    #global-sync-indicator {
+      display: none; position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent); z-index: 10000;
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulseSync 1.5s infinite;
+    }
+    @keyframes pulseSync {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
 
 
 
@@ -220,8 +232,8 @@
       padding: 9px 12px;
       font-size: 12px; color: var(--danger); font-weight: 600;
     }
-    .mobile-layout .m-alert-strip { display: none; }
     .m-alert-strip.visible { display: block !important; }
+
 
 
     .mobile-layout .view-section { padding-bottom: 80px; }
@@ -310,7 +322,8 @@
 
     @media (min-width: 769px) {
       .m-topbar, .m-status-line, .m-seg-ctrl,
-      .m-group, .m-bottom-nav, .m-alert-strip { display: none !important; }
+      .m-group, .m-bottom-nav { display: none !important; }
+      .m-alert-strip { margin: 20px auto 0; max-width: 800px; border-radius: 8px; border-left: 4px solid var(--danger); }
     }
     #account-switch-overlay {
       display: none;
@@ -343,6 +356,7 @@
   </style>
 </head>
 <body>
+  <div id="global-sync-indicator"></div>
 
 
   <div class="m-topbar">
@@ -764,6 +778,7 @@
       priorityIndices = liveData.map(d => (d.status && d.status.is_critical) ? d.id : null).filter(id => id !== null);
     }
     isStreamActive = true;
+    document.getElementById('global-sync-indicator').style.display = 'block';
     const updatedCourseIds = new Set();
     try {
       let endpoint = isDemo ? '/api/stream_demo' : '/api/stream_grades';
@@ -790,6 +805,7 @@
       document.getElementById('totalResume').textContent = "Erro na conexão.";
     } finally {
       isStreamActive = false;
+      document.getElementById('global-sync-indicator').style.display = 'none';
       saveGradesState();
     }
   }
@@ -810,6 +826,16 @@
   function handleStreamMessage(msg, updatedCourseIds) {
     if (msg.error) {
       if (msg.error === "Session expired") window.location.href = "/login";
+      else if (msg.is_questionnaire) {
+        const strip = document.getElementById('m-alert-strip');
+        if (strip) {
+          strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${msg.error}`;
+          strip.style.background = 'rgba(250,204,21,0.1)';
+          strip.style.borderLeftColor = '#facc15';
+          strip.style.color = '#facc15';
+          strip.classList.add('visible');
+        }
+      }
       return;
     }
     if (msg.id !== undefined && updatedCourseIds) updatedCourseIds.add(msg.id);
@@ -1185,7 +1211,10 @@
       const resp = await fetch(`/api/update_course/${id}`, {
         method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token() }}'}
       });
-      if (!resp.ok) throw new Error("Update failed");
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(JSON.stringify(errData || {}));
+      }
       const result = await resp.json();
       const i = data.findIndex(d => d.id === result.id);
       if (i !== -1) {
@@ -1202,7 +1231,22 @@
       }
     } catch (e) {
       console.error(e);
-      alert("Falha ao atualizar disciplina.");
+      let erroMsg = "Falha ao atualizar disciplina.";
+      try {
+        const j = JSON.parse(e.message);
+        if (j.is_questionnaire) {
+          erroMsg = j.error;
+          const strip = document.getElementById('m-alert-strip');
+          if (strip) {
+            strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${erroMsg}`;
+            strip.style.background = 'rgba(250,204,21,0.1)';
+            strip.style.borderLeftColor = '#facc15';
+            strip.style.color = '#facc15';
+            strip.classList.add('visible');
+          }
+        } else if (j.error) erroMsg = j.error;
+      } catch (ex) {}
+      alert(erroMsg);
       const idx2 = data.findIndex(d => d.id === id);
       if (idx2 !== -1) { data[idx2].isRefreshing = false; renderList(); }
     }
@@ -1384,7 +1428,20 @@
         profileData = { general_average: 8.7, best_grade: 10.0, best_subject: "Programação Web", semesters: [{ semester: "2023.1", average: 7.5, count: 5 }, { semester: "2023.2", average: 8.2, count: 5 }, { semester: "2024.1", average: 8.5, count: 6 }], history_raw: {} };
       } else {
         const resp = await fetch(force ? '/api/academic_profile?force=true' : '/api/academic_profile');
-        if (!resp.ok) throw new Error("Failed");
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({}));
+          if (errData.is_questionnaire) {
+            const strip = document.getElementById('m-alert-strip');
+            if (strip) {
+              strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${errData.error}`;
+              strip.style.background = 'rgba(250,204,21,0.1)';
+              strip.style.borderLeftColor = '#facc15';
+              strip.style.color = '#facc15';
+              strip.classList.add('visible');
+            }
+          }
+          throw new Error(errData.error || "Failed");
+        }
         profileData = await resp.json();
       }
       // populate dropdowns

@@ -1,3 +1,4 @@
+
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from .models import Grade, CourseStatus, CourseResult, GradeType
@@ -78,9 +79,9 @@ class IFAcademicCalculator(AcademicCalculator):
             status = CourseStatus.APPROVED
             needed = 0.0
         else:
-             remaining_b = sum(1 for x in b_grades if x is None)
-             if remaining_b == 0 and needed > 0:
-                 status = CourseStatus.FAILED
+            remaining_b = sum(1 for x in b_grades if x is None)
+            if remaining_b == 0 and needed > 0:
+                status = CourseStatus.FAILED
         styling = {}
         def get_badge_class(grade_val, compensated):
             if grade_val is None: return "bd-info"
@@ -141,7 +142,7 @@ class UFAcademicCalculator(AcademicCalculator):
                     message = "Reprovado matematicamente"
                     status = CourseStatus.FAILED
             else:
-                 message = "Aguardando notas"
+                message = "Aguardando notas"
         else:
             if nf >= 7.0:
                 status = CourseStatus.APPROVED
