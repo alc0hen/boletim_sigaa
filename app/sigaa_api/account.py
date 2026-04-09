@@ -12,6 +12,10 @@ class Account:
         self.inactive_bonds = []
         self._parse_homepage(homepage)
     def _parse_homepage(self, homepage):
+        if 'Questionários de Avaliação' in homepage.soup.text or '/sigaa/questionarios.jsf' in str(homepage.url) or 'Question&#225;rios de Avalia&#231;&#227;o' in homepage.body:
+            from .exceptions import SigaaQuestionnaireError
+            raise SigaaQuestionnaireError("Acesso bloqueado por Questionário de Avaliação obrigatório no SIGAA.")
+
         if 'O sistema comportou-se de forma inesperada' in homepage.body:
              raise ValueError('SIGAA: Invalid homepage, system error.')
         url_str = str(homepage.url)

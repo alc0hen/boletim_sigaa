@@ -4,6 +4,7 @@ from .domain.factory import CalculatorFactory
 from .demo_data import get_demo_data
 from .extensions import db, oauth
 from .models import User, LinkedAccount, get_cipher_suite
+from .sigaa_api.exceptions import SigaaQuestionnaireError
 import asyncio
 import json
 import os
@@ -306,6 +307,9 @@ async def academic_profile():
             except Exception as e:
                 logger.error(f"Cache encryption failed: {e}")
         return jsonify(final_data)
+    except SigaaQuestionnaireError as e:
+        logger.warning(f"Profile error - questionnaire: {e}")
+        return jsonify({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}), 403
     except Exception as e:
         logger.error(f"Profile error: {e}")
         return jsonify({"error": "Failed to fetch profile"}), 500
@@ -385,6 +389,9 @@ async def update_course(course_id):
                 response_data['frequency'] = freq_data
         except Exception: pass
         return Response(json.dumps(response_data), mimetype='application/json')
+    except SigaaQuestionnaireError as e:
+        logger.warning(f"Single update error - questionnaire: {e}")
+        return Response(json.dumps({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}), status=403, mimetype='application/json')
     except Exception as e:
         logger.error(f"Single update error: {e}")
         return Response(json.dumps({"error": "Internal Server Error"}), status=500, mimetype='application/json')
@@ -553,6 +560,9 @@ def stream_grades():
                         results = await future
                         for res in results:
                             yield res
+        except SigaaQuestionnaireError as e:
+            logger.warning(f"Stream blocked by questionnaire: {e}")
+            yield json.dumps({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}) + "\n"
         except Exception as e:
             logger.error(f"Stream error: {e}")
             yield json.dumps({"error": "Erro no carregamento dos dados."}) + "\n"

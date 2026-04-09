@@ -10,3 +10,7 @@ class SigaaInvalidCredentials(SigaaException):
 class SigaaConnectionError(SigaaException):
     """Raised when connection fails."""
     pass
+
+class SigaaQuestionnaireError(SigaaException):
+    """Raised when an unskippable questionnaire blocks access."""
+    pass
