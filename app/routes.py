@@ -451,6 +451,45 @@ def stream_grades():
                         course = item['course']
                         yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": bond.program}) + "\n"
 
+
+
+                    for item in course_list_with_ids:
+                        course_id = item['id']
+                        course = item['course']
+
+                        # Signal UI that we started downloading grades
+                        yield json.dumps({"type": "course_loading", "id": course_id, "step": "notas"}) + "\n"
+
+                        try:
+                            raw_grades = await course.get_grades()
+                            course_result = calculator.calculate(raw_grades)
+                            result_data = {
+                                "grades": raw_grades,
+                                "status": course_result.to_dict()
+                            }
+                            yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
+                        except Exception:
+                            empty_result = calculator.calculate([])
+                            fallback_data = {
+                                "grades": [],
+                                "status": empty_result.to_dict()
+                            }
+                            yield json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n"
+
+                        # Signal UI that we started downloading frequency
+                        yield json.dumps({"type": "course_loading", "id": course_id, "step": "frequencia"}) + "\n"
+
+                        try:
+                            freq_data = await course.get_frequency()
+                            if freq_data:
+                                yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
+                        except Exception:
+                            pass
+                        
+                        # Signal completion for this course
+                        yield json.dumps({"type": "course_loading", "id": course_id, "step": "done"}) + "\n"
+
+                    # Now that current semester courses are fully fetched, fetch the full history slowly
                     try:
                         history = await bond.get_history()
                     except Exception as e:
@@ -487,79 +526,6 @@ def stream_grades():
                         "history_raw": history
                     }
                     yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
-
-                    current_sem = None
-                    if history:
-                        sorted_sems = sorted(history.keys())
-                        current_sem = sorted_sems[-1]
-
-                    current_subjects = history.get(current_sem, []) if current_sem else []
-
-                    # Fast Path: match current subjects with course list
-                    def normalize_name(s):
-                        return unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('utf-8').lower().strip()
-
-                    current_subjects_map = {normalize_name(s['name']): s for s in current_subjects}
-
-                    for item in course_list_with_ids:
-                        course_id = item['id']
-                        course = item['course']
-                        norm_title = normalize_name(course.title)
-
-                        if norm_title in current_subjects_map:
-                            subject = current_subjects_map[norm_title]
-                            raw_grades = subject['grades']
-                            # Use existing calculator instance
-                            course_result = calculator.calculate(raw_grades)
-
-                            result_data = {
-                                "grades": raw_grades,
-                                "status": course_result.to_dict()
-                            }
-                            yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
-
-                    # Parallel fetching with semaphore limit 1 to avoid race conditions on SIGAA session state
-                    # SIGAA uses server-side JSF state (ViewState) which can be invalidated by concurrent POST requests
-                    semaphore = asyncio.Semaphore(1)
-
-                    async def fetch_parallel(item):
-                        async with semaphore:
-                            output = []
-                            course_id = item['id']
-                            course = item['course']
-
-                            # Always fetch grades from individual page
-                            try:
-                                raw_grades = await course.get_grades()
-                                course_result = calculator.calculate(raw_grades)
-                                result_data = {
-                                    "grades": raw_grades,
-                                    "status": course_result.to_dict()
-                                }
-                                output.append(json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n")
-                            except Exception:
-                                empty_result = calculator.calculate([])
-                                fallback_data = {
-                                    "grades": [],
-                                    "status": empty_result.to_dict()
-                                }
-                                output.append(json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n")
-
-                            # Fetch frequency for everyone
-                            try:
-                                freq_data = await course.get_frequency()
-                                if freq_data:
-                                    output.append(json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n")
-                            except Exception:
-                                pass
-
-                            return output
-
-                    tasks = [fetch_parallel(item) for item in course_list_with_ids]
-                    for future in asyncio.as_completed(tasks):
-                        results = await future
-                        for res in results:
-                            yield res
         except SigaaQuestionnaireError as e:
             logger.warning(f"Stream blocked by questionnaire: {e}")
             yield json.dumps({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}) + "\n"
