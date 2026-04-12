@@ -842,6 +842,18 @@
 
     if (msg.type === 'user_info') {
       isSupporter = msg.is_supporter;
+    } else if (msg.type === 'course_loading') {
+      const idx = data.findIndex(d => d.id === msg.id);
+      if (idx !== -1) {
+        if (msg.step === 'done') {
+          data[idx].isRefreshing = false;
+          data[idx]._loadingStep = null;
+        } else {
+          data[idx].isRefreshing = true;
+          data[idx]._loadingStep = msg.step;
+        }
+        renderList();
+      }
     } else if (msg.type === 'course_start') {
       addOrUpdateCourse({ id: msg.id, name: msg.name, obs: msg.obs, grades: [], status: {}, isLoading: true });
       document.getElementById('empty-list-msg').style.display = 'none';
@@ -985,8 +997,14 @@
           detailsHtml += `<span class="badge ${badgeClass}" style="margin-right:4px">${disp}: ${st.details[k].toFixed(1)}</span>`;
         });
       }
+      let refreshingOverlay = '';
+      if (item.isRefreshing && item._loadingStep) {
+        let txt = item._loadingStep === 'notas' ? 'notas...' : 'frequência...';
+        refreshingOverlay = `<div style="position:absolute; top:8px; right:8px; font-size:11px; font-weight:600; color:var(--accent); display:flex; align-items:center; gap:4px; z-index:10;"><i class="fas fa-spinner fa-spin"></i> Atualizando ${txt}</div>`;
+      }
       div.onclick = () => openModal(item.id);
       div.innerHTML = `
+        ${refreshingOverlay}
         <div class="card-indicator" style="background:${sideColor}"></div>
         <div class="row-top">
           <div>
@@ -1180,11 +1198,17 @@
       if (isCritical) neededInfo = `<div class="m-item-needed" style="color:var(--danger)">Situação crítica</div>`;
       else if (st.needed > 0) neededInfo = `<div class="m-item-needed" style="color:#facc15">Falta ${st.needed.toFixed(1)} pts</div>`;
 
+      let refreshingLine = '';
+      if (item.isRefreshing && item._loadingStep) {
+        let txt = item._loadingStep === 'notas' ? 'notas...' : 'frequência...';
+        refreshingLine = `<div style="font-size:11px; color:var(--accent); margin-top:2px; display:flex; align-items:center; gap:4px;"><i class="fas fa-spinner fa-spin"></i> Atualizando ${txt}</div>`;
+      }
       el.innerHTML = `
         <div class="m-item-bar" style="background:${barColor}"></div>
         <div class="m-item-body">
           <div class="m-item-name">${newTag}${escapeHtml(item.name)}</div>
           ${subInfo ? `<div class="m-item-sub">${subInfo}</div>` : ''}
+          ${refreshingLine}
           ${detailBadges ? `<div class="m-item-badges">${detailBadges}</div>` : ''}
         </div>
         <div class="m-item-right">
