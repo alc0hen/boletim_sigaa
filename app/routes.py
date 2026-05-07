@@ -17,13 +17,20 @@ bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 SIGAA_URL = "https://sigaa.ifal.edu.br"
 SUPPORTERS_URL = "https://raw.githubusercontent.com/AlbertCohenhgs/public_lists/refs/heads/main/apoiadores.json"
+def run_async(coro):
+    """Run an async coroutine synchronously in a new event loop. Gevent-safe."""
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 @bp.route('/')
 def index():
     if 'user_id' in session:
         return redirect(url_for('main.dashboard'))
     return redirect(url_for('main.login'))
 @bp.route('/login', methods=['GET', 'POST'])
-async def login():
+def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -39,8 +46,8 @@ async def login():
             url = SIGAA_URL
         sigaa = Sigaa(url, inst_type)
         try:
-            account = await sigaa.login(username, password)
-            client_session = await sigaa.session._get_session()
+            account = run_async(sigaa.login(username, password))
+            client_session = run_async(sigaa.session._get_session())
             cookies = {}
             for cookie in client_session.cookie_jar:
                 cookies[cookie.key] = cookie.value
@@ -62,7 +69,7 @@ async def login():
             logger.error(f"Login failed: {type(e).__name__}")
             return render_template('login.html', error="Falha no login. Verifique suas credenciais.")
         finally:
-            await sigaa.close()
+            run_async(sigaa.close())
     return render_template('login.html')
 @bp.route('/login/google')
 def login_google():
@@ -105,7 +112,7 @@ def profile():
         return redirect(url_for('main.login'))
     return render_template('profile.html', user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
 @bp.route('/link_account', methods=['POST'])
-async def link_account():
+def link_account():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
     institution_str = request.form.get('institution')
@@ -125,7 +132,7 @@ async def link_account():
         url = SIGAA_URL
     sigaa = Sigaa(url, inst_type)
     try:
-        await sigaa.login(username, password)
+        run_async(sigaa.login(username, password))
         new_account = LinkedAccount(
             user_id=session['user_id'],
             institution=institution_str,
@@ -138,7 +145,7 @@ async def link_account():
         session['sigaa_url'] = url
         session['sigaa_inst'] = institution_str
         session['username'] = username
-        client_session = await sigaa.session._get_session()
+        client_session = run_async(sigaa.session._get_session())
         cookies = {}
         for cookie in client_session.cookie_jar:
             cookies[cookie.key] = cookie.value
@@ -149,7 +156,7 @@ async def link_account():
         user = User.query.get(session['user_id'])
         return render_template('profile.html', error="Falha ao vincular: Credenciais inválidas.", user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
     finally:
-        await sigaa.close()
+        run_async(sigaa.close())
 @bp.route('/unlink_account/<int:id>', methods=['POST'])
 def unlink_account(id):
     if 'user_id' not in session:
@@ -175,7 +182,7 @@ def activate_account(id):
         session.pop('sigaa_cookies', None)
     return redirect(url_for('main.dashboard'))
 @bp.route('/dashboard')
-async def dashboard():
+def dashboard():
     if 'user_id' in session and not session.get('sigaa_cookies'):
         active_id = session.get('active_account_id')
         if not active_id:
@@ -203,8 +210,8 @@ async def dashboard():
             url = SIGAA_URL
         sigaa = Sigaa(url, inst_type)
         try:
-            await sigaa.login(account.username, password)
-            client_session = await sigaa.session._get_session()
+            run_async(sigaa.login(account.username, password))
+            client_session = run_async(sigaa.session._get_session())
             cookies = {}
             for cookie in client_session.cookie_jar:
                 cookies[cookie.key] = cookie.value
@@ -217,7 +224,7 @@ async def dashboard():
             logger.error(f"Auto-login failed for {account.username}: {e}")
             return redirect(url_for('main.profile'))
         finally:
-            await sigaa.close()
+            run_async(sigaa.close())
     cookies = session.get('sigaa_cookies')
     if not cookies:
         if 'user_id' in session:
@@ -231,7 +238,7 @@ async def dashboard():
             linked_accounts = user.linked_accounts
     return render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'))
 @bp.route('/api/academic_profile')
-async def academic_profile():
+def academic_profile():
     cookies = session.get('sigaa_cookies')
     if not cookies:
         return jsonify({"error": "Unauthorized"}), 401
@@ -258,7 +265,7 @@ async def academic_profile():
         inst_type = InstitutionType.IFAL
     sigaa = Sigaa(url, inst_type, cookies=cookies)
     try:
-        response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+        response = run_async(sigaa.session.get("/sigaa/portais/discente/discente.jsf"))
         if "login" in response.url.path:
              return jsonify({"error": "Session expired"}), 401
         from .sigaa_api.account import Account
@@ -266,7 +273,7 @@ async def academic_profile():
         if not account.active_bonds:
             return jsonify({"error": "No active bonds"}), 404
         bond = account.active_bonds[0]
-        history = await bond.get_history()
+        history = run_async(bond.get_history())
         total_grades = []
         best_grade = 0
         best_subject = "-"
@@ -314,7 +321,7 @@ async def academic_profile():
         logger.error(f"Profile error: {e}")
         return jsonify({"error": "Failed to fetch profile"}), 500
     finally:
-        await sigaa.close()
+        run_async(sigaa.close())
 @bp.route('/apoio')
 def support():
     return render_template('support.html')
@@ -341,7 +348,7 @@ def stream_demo():
             yield json.dumps(msg) + "\n"
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 @bp.route('/api/update_course/<int:course_id>', methods=['POST'])
-async def update_course(course_id):
+def update_course(course_id):
     cookies = session.get('sigaa_cookies')
     if not cookies: return Response(json.dumps({"error": "Unauthorized"}), status=401, mimetype='application/json')
     url = session.get('sigaa_url', SIGAA_URL)
@@ -350,7 +357,7 @@ async def update_course(course_id):
     except KeyError: inst_type = InstitutionType.IFAL
     sigaa = Sigaa(url, inst_type, cookies=cookies)
     try:
-        response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+        response = run_async(sigaa.session.get("/sigaa/portais/discente/discente.jsf"))
         if "login" in response.url.path: return Response(json.dumps({"error": "Session expired"}), status=401, mimetype='application/json')
         from .sigaa_api.account import Account
         account = Account(sigaa.session, response)
@@ -358,7 +365,7 @@ async def update_course(course_id):
         current_id = 0
         if account.active_bonds:
             for bond in account.active_bonds:
-                courses = await bond.get_courses()
+                courses = run_async(bond.get_courses())
                 if courses:
                     for course in courses:
                         current_id += 1
@@ -369,7 +376,7 @@ async def update_course(course_id):
         if not target_course: return Response(json.dumps({"error": "Course not found"}), status=404, mimetype='application/json')
         raw_grades = []
         try:
-            raw_grades = await target_course.get_grades()
+            raw_grades = run_async(target_course.get_grades())
         except Exception as e:
             logger.error(f"Error fetching grades: {e}")
             return Response(json.dumps({"error": "Failed to fetch grades"}), status=500, mimetype='application/json')
@@ -384,7 +391,7 @@ async def update_course(course_id):
         }
         freq_data = None
         try:
-            freq_data = await target_course.get_frequency()
+            freq_data = run_async(target_course.get_frequency())
             if freq_data:
                 response_data['frequency'] = freq_data
         except Exception: pass
@@ -395,7 +402,7 @@ async def update_course(course_id):
     except Exception as e:
         logger.error(f"Single update error: {e}")
         return Response(json.dumps({"error": "Internal Server Error"}), status=500, mimetype='application/json')
-    finally: await sigaa.close()
+    finally: run_async(sigaa.close())
 @bp.route('/api/stream_grades')
 def stream_grades():
     cookies = session.get('sigaa_cookies')
