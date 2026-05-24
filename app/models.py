@@ -57,6 +57,8 @@ class LinkedAccount(db.Model):
     encrypted_password = db.Column(db.LargeBinary, nullable=False)
     history_json = db.Column(db.Text, nullable=True)
     history_updated_at = db.Column(db.DateTime, nullable=True)
+    portal_cache_json = db.Column(db.Text, nullable=True)
+    portal_cache_updated_at = db.Column(db.DateTime, nullable=True)
     def set_password(self, password):
         cipher = get_cipher_suite()
         if isinstance(password, str):

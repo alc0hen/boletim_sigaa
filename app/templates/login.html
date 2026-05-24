@@ -419,6 +419,9 @@
             labelEl.textContent = `${inst.name} — ${inst.full}`;
             labelEl.classList.remove('placeholder');
             closeDropdown();
+            try {
+                localStorage.setItem('last_institution', inst.value);
+            } catch (e) {}
         }
 
         function openDropdown() {
@@ -493,8 +496,17 @@
             }, 8000);
         }
 
-        // Pre-select IFAL by default (matching original behaviour)
-        selectOption(INSTITUTIONS[0]);
+        // Pre-select last chosen institution if available, otherwise default to IFAL
+        let lastInstValue = null;
+        try {
+            lastInstValue = localStorage.getItem('last_institution');
+        } catch (e) {}
+        const lastInst = INSTITUTIONS.find(i => i.value === lastInstValue);
+        if (lastInst) {
+            selectOption(lastInst);
+        } else {
+            selectOption(INSTITUTIONS[0]);
+        }
 
         renderOptions();
     </script>

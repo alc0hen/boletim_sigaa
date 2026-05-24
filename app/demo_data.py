@@ -30,14 +30,29 @@ def get_demo_data():
         "type": "course_frequency",
         "id": c1_id,
         "data": {
-            "total_faltas": 2,
+            "total_faltas": 10,
             "max_faltas": 20,
-            "percent": 2.5,
-            "presencas": 10,
-            "ausencias": 2,
-            "nao_registradas": 4,
-            "aulas_ministradas": 16,
-            "aulas_total": 80
+            "percent": 12.5,
+            "presencas": 40,
+            "ausencias": 10,
+            "nao_registradas": 10,
+            "aulas_ministradas": 60,
+            "aulas_total": 80,
+            "aulas_per_session": 5,
+            "logs": [
+                {"date": "10/03/2026", "status": "Presente", "value": 5},
+                {"date": "17/03/2026", "status": "Presente", "value": 5},
+                {"date": "24/03/2026", "status": "Ausente", "value": 5},
+                {"date": "31/03/2026", "status": "Presente", "value": 5},
+                {"date": "07/04/2026", "status": "Presente", "value": 5},
+                {"date": "14/04/2026", "status": "Presente", "value": 5},
+                {"date": "21/04/2026", "status": "Presente", "value": 5},
+                {"date": "28/04/2026", "status": "Ausente", "value": 5},
+                {"date": "05/05/2026", "status": "Presente", "value": 5},
+                {"date": "12/05/2026", "status": "Presente", "value": 5},
+                {"date": "19/05/2026", "status": "Pendente", "value": 5},
+                {"date": "26/05/2026", "status": "Pendente", "value": 5}
+            ]
         }
     }
     c2_id = 2
@@ -55,7 +70,7 @@ def get_demo_data():
             {'name': 'Unidade 2', 'type': 'group', 'grades': [{'name': 'Nota', 'value': 5.0}]},
             {'name': 'Unidade 3', 'type': 'group', 'grades': [{'name': 'Nota', 'value': 6.0}, {'name': 'Nota', 'value': 5.5}]},
             {'name': 'Unidade 4', 'type': 'group', 'grades': [{'name': 'Nota', 'value': 4.0}]},
-            {'name': 'Recuperação 1', 'value': 7.5, 'type': 'single'}
+            {'name': 'R1', 'value': 7.5, 'type': 'single'}
         ]
     }
     yield {
@@ -69,7 +84,28 @@ def get_demo_data():
             "ausencias": 12,
             "nao_registradas": 0,
             "aulas_ministradas": 72,
-            "aulas_total": 80
+            "aulas_total": 80,
+            "aulas_per_session": 4,
+            "logs": [
+                {"date": "09/03/2026", "status": "Presente", "value": 4},
+                {"date": "12/03/2026", "status": "Presente", "value": 4},
+                {"date": "16/03/2026", "status": "Presente", "value": 4},
+                {"date": "19/03/2026", "status": "Ausente", "value": 4},
+                {"date": "23/03/2026", "status": "Presente", "value": 4},
+                {"date": "26/03/2026", "status": "Presente", "value": 4},
+                {"date": "30/03/2026", "status": "Presente", "value": 4},
+                {"date": "02/04/2026", "status": "Presente", "value": 4},
+                {"date": "06/04/2026", "status": "Ausente", "value": 4},
+                {"date": "09/04/2026", "status": "Presente", "value": 4},
+                {"date": "13/04/2026", "status": "Presente", "value": 4},
+                {"date": "16/04/2026", "status": "Presente", "value": 4},
+                {"date": "20/04/2026", "status": "Presente", "value": 4},
+                {"date": "23/04/2026", "status": "Presente", "value": 4},
+                {"date": "27/04/2026", "status": "Presente", "value": 4},
+                {"date": "30/04/2026", "status": "Presente", "value": 4},
+                {"date": "04/05/2026", "status": "Presente", "value": 4},
+                {"date": "07/05/2026", "status": "Ausente", "value": 4}
+            ]
         }
     }
     c3_id = 3
@@ -100,7 +136,22 @@ def get_demo_data():
             "ausencias": 25,
             "nao_registradas": 15,
             "aulas_ministradas": 60,
-            "aulas_total": 80
+            "aulas_total": 80,
+            "aulas_per_session": 5,
+            "logs": [
+                {"date": "11/03/2026", "status": "Presente", "value": 5},
+                {"date": "18/03/2026", "status": "Ausente", "value": 5},
+                {"date": "25/03/2026", "status": "Ausente", "value": 5},
+                {"date": "01/04/2026", "status": "Presente", "value": 5},
+                {"date": "08/04/2026", "status": "Ausente", "value": 5},
+                {"date": "15/04/2026", "status": "Presente", "value": 5},
+                {"date": "22/04/2026", "status": "Ausente", "value": 5},
+                {"date": "29/04/2026", "status": "Ausente", "value": 5},
+                {"date": "06/05/2026", "status": "Presente", "value": 5},
+                {"date": "13/05/2026", "status": "Pendente", "value": 5},
+                {"date": "20/05/2026", "status": "Pendente", "value": 5},
+                {"date": "27/05/2026", "status": "Pendente", "value": 5}
+            ]
         }
     }
     c4_id = 4
@@ -131,6 +182,23 @@ def get_demo_data():
             "ausencias": 8,
             "nao_registradas": 8,
             "aulas_ministradas": 56,
-            "aulas_total": 80
+            "aulas_total": 80,
+            "aulas_per_session": 4,
+            "logs": [
+                {"date": "13/03/2026", "status": "Presente", "value": 4},
+                {"date": "20/03/2026", "status": "Presente", "value": 4},
+                {"date": "27/03/2026", "status": "Ausente", "value": 4},
+                {"date": "03/04/2026", "status": "Presente", "value": 4},
+                {"date": "10/04/2026", "status": "Presente", "value": 4},
+                {"date": "17/04/2026", "status": "Presente", "value": 4},
+                {"date": "24/04/2026", "status": "Presente", "value": 4},
+                {"date": "01/05/2026", "status": "Ausente", "value": 4},
+                {"date": "08/05/2026", "status": "Presente", "value": 4},
+                {"date": "15/05/2026", "status": "Presente", "value": 4},
+                {"date": "22/05/2026", "status": "Presente", "value": 4},
+                {"date": "29/05/2026", "status": "Presente", "value": 4},
+                {"date": "05/06/2026", "status": "Pendente", "value": 4},
+                {"date": "12/06/2026", "status": "Pendente", "value": 4}
+            ]
         }
     }

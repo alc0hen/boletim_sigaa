@@ -26,6 +26,29 @@ class Course:
         self.frequency = self._parse_frequency(freq_page)
         return self.frequency
 
+    async def get_grades_and_frequency(self):
+        course_page = await self._enter_course()
+        
+        try:
+            grades_page = await self._navigate_to_grades(course_page)
+            self.grades = self._parse_grades(grades_page)
+        except Exception:
+            self.grades = []
+            
+        try:
+            freq_page = await self._navigate_to_frequency(course_page)
+            self.frequency = self._parse_frequency(freq_page)
+        except Exception:
+            # Fallback in case of ViewState issues
+            try:
+                course_page = await self._enter_course()
+                freq_page = await self._navigate_to_frequency(course_page)
+                self.frequency = self._parse_frequency(freq_page)
+            except Exception:
+                self.frequency = None
+                
+        return self.grades, self.frequency
+
     async def _enter_course(self):
         page = await self.session.post(
             self.form_data['action'],
@@ -84,14 +107,48 @@ class Course:
         Falls back gracefully to summary-text parsing when the individual table is absent.
         """
         aulas_per_session = parse_schedule_code(self.schedule_code)
-
         text_full = page.soup.get_text()
-
+ 
+        # ── 1. "Aulas (Ministradas/Total): X / Y" (Parsed early for inference fallback) ────────────────
+        min_total_match = re.search(
+            r'Aulas\s*\(Ministradas/Total\)\s*[:\-]?\s*(\d+)\s*/\s*(\d+)',
+            text_full, re.IGNORECASE
+        )
+        aulas_ministradas = int(min_total_match.group(1)) if min_total_match else None
+        aulas_total = int(min_total_match.group(2)) if min_total_match else None
+ 
+        # Try to infer aulas_per_session from lack/absence records or by dividing aulas_ministradas by rows
+        inferred_aulas_per_session = None
+        for tbl in page.soup.find_all('table'):
+            headers = [th.get_text(strip=True).lower() for th in tbl.find_all('th')]
+            if any('data' in h for h in headers) and any('situa' in h for h in headers):
+                num_data_rows = 0
+                for row in tbl.find_all('tr'):
+                    cells = row.find_all('td')
+                    if len(cells) < 2:
+                        continue
+                    num_data_rows += 1
+                    status_text = cells[-1].get_text(strip=True).lower()
+                    if 'falta' in status_text:
+                        falta_num = re.search(r'(\d+)', status_text)
+                        if falta_num:
+                            inferred_aulas_per_session = int(falta_num.group(1))
+ 
+                # Fallback: divide aulas_ministradas by number of rows in the table
+                if not inferred_aulas_per_session and aulas_ministradas and num_data_rows > 0:
+                    val = round(aulas_ministradas / num_data_rows)
+                    if val > 0:
+                        inferred_aulas_per_session = val
+                break
+ 
+        if inferred_aulas_per_session:
+            aulas_per_session = inferred_aulas_per_session
+ 
         # ── 0. Early-exit: frequency not yet released ───────────────────────
         if 'frequência ainda não foi lançada' in text_full.lower() or \
            'frequencia ainda nao foi lancada' in text_full.lower():
             return {'nao_lancada': True}
-
+ 
         data = {
             'total_faltas':      0,
             'max_faltas':        0,
@@ -99,20 +156,12 @@ class Course:
             'presencas':         0,
             'ausencias':         0,
             'nao_registradas':   0,
-            'aulas_ministradas': None,
-            'aulas_total':       None,
+            'aulas_ministradas': aulas_ministradas,
+            'aulas_total':       aulas_total,
+            'logs':              [],
+            'aulas_per_session': aulas_per_session,
         }
-
-        # ── 1. "Aulas (Ministradas/Total): X / Y" ──────────────────────────
-        text_full = page.soup.get_text()
-        min_total_match = re.search(
-            r'Aulas\s*\(Ministradas/Total\)\s*[:\-]?\s*(\d+)\s*/\s*(\d+)',
-            text_full, re.IGNORECASE
-        )
-        if min_total_match:
-            data['aulas_ministradas'] = int(min_total_match.group(1))
-            data['aulas_total']       = int(min_total_match.group(2))
-
+ 
         # ── 2. Individual date rows ─────────────────────────────────────────
         freq_table = None
         for tbl in page.soup.find_all('table'):
@@ -127,26 +176,45 @@ class Course:
             presencas_count = 0
             ausencias_aulas = 0
             nao_reg_count   = 0
+            logs = []
 
             for row in rows:
                 cells = row.find_all('td')
                 if len(cells) < 2:
                     continue
-                status_text = cells[-1].get_text(strip=True).lower()
+                date_text = cells[0].get_text(strip=True)
+                status_raw = cells[-1].get_text(strip=True)
+                status_text = status_raw.lower()
 
                 if 'presente' in status_text:
                     presencas_count += 1
+                    logs.append({
+                        'date': date_text,
+                        'status': 'Presente',
+                        'value': aulas_per_session
+                    })
                 elif 'falta' in status_text:
-                    # "4 Falta(s)" — the number is already in individual aulas
                     falta_num = re.search(r'(\d+)', status_text)
-                    ausencias_aulas += int(falta_num.group(1)) if falta_num else aulas_per_session
+                    val = int(falta_num.group(1)) if falta_num else aulas_per_session
+                    ausencias_aulas += val
+                    logs.append({
+                        'date': date_text,
+                        'status': 'Ausente',
+                        'value': val
+                    })
                 elif 'não registrada' in status_text or 'nao registrada' in status_text:
                     nao_reg_count += 1
+                    logs.append({
+                        'date': date_text,
+                        'status': 'Pendente',
+                        'value': aulas_per_session
+                    })
 
             data['presencas']       = presencas_count * aulas_per_session
             data['ausencias']       = ausencias_aulas
             data['total_faltas']    = ausencias_aulas
             data['nao_registradas'] = nao_reg_count * aulas_per_session
+            data['logs']            = logs
 
             # ── 3. max_faltas and percent ───────────────────────────────────
             total_ref = data['aulas_total'] or 0

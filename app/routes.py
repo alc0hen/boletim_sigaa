@@ -17,13 +17,28 @@ bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 SIGAA_URL = "https://sigaa.ifal.edu.br"
 SUPPORTERS_URL = "https://raw.githubusercontent.com/AlbertCohenhgs/public_lists/refs/heads/main/apoiadores.json"
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 def run_async(coro):
     """Run an async coroutine synchronously in a new event loop. Gevent-safe."""
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
+    except Exception as e:
+        # Ensure the coroutine is closed to avoid "never awaited" warnings
+        if hasattr(coro, 'close'):
+            coro.close()
+        raise e
     finally:
-        loop.close()
+        try:
+            loop.close()
+        except:
+            pass
+        asyncio.set_event_loop(None)
 @bp.route('/')
 def index():
     if 'user_id' in session:
@@ -44,17 +59,25 @@ def login():
         else:
             inst_type = InstitutionType.IFAL
             url = SIGAA_URL
-        sigaa = Sigaa(url, inst_type)
+        async def perform_login():
+            sigaa = Sigaa(url, inst_type)
+            try:
+                account = await sigaa.login(username, password)
+                client_session = await sigaa.session._get_session()
+                cookies = {}
+                for cookie in client_session.cookie_jar:
+                    cookies[cookie.key] = cookie.value
+                return cookies
+            finally:
+                await sigaa.close()
+
         try:
-            account = run_async(sigaa.login(username, password))
-            client_session = run_async(sigaa.session._get_session())
-            cookies = {}
-            for cookie in client_session.cookie_jar:
-                cookies[cookie.key] = cookie.value
+            cookies = run_async(perform_login())
             session['sigaa_cookies'] = cookies
             session['sigaa_url'] = url
             session['sigaa_inst'] = institution_str
             session['username'] = username
+            session['sigaa_temp_password'] = password  # Temporarily store password for auto-linking
             try:
                 linked_account = LinkedAccount.query.filter_by(
                     username=username,
@@ -68,8 +91,6 @@ def login():
         except Exception as e:
             logger.error(f"Login failed: {type(e).__name__}")
             return render_template('login.html', error="Falha no login. Verifique suas credenciais.")
-        finally:
-            run_async(sigaa.close())
     return render_template('login.html')
 @bp.route('/login/google')
 def login_google():
@@ -99,6 +120,36 @@ def authorize_google():
         user.profile_pic = user_info.get('picture')
     db.session.commit()
     session['user_id'] = user.id
+
+    # Auto-link direct login session account to the Google user
+    temp_pass = session.get('sigaa_temp_password')
+    temp_user = session.get('username')
+    temp_inst = session.get('sigaa_inst')
+    if temp_pass and temp_user and temp_inst:
+        existing = LinkedAccount.query.filter_by(
+            user_id=user.id,
+            institution=temp_inst,
+            username=temp_user
+        ).first()
+        if not existing:
+            try:
+                new_account = LinkedAccount(
+                    user_id=user.id,
+                    institution=temp_inst,
+                    username=temp_user
+                )
+                new_account.set_password(temp_pass)
+                db.session.add(new_account)
+                db.session.commit()
+                session['active_account_id'] = new_account.id
+                logger.info(f"Auto-linked SIGAA account {temp_user} ({temp_inst}) to Google user {user.email}")
+            except Exception as e:
+                logger.error(f"Error auto-linking account: {e}")
+                db.session.rollback()
+        else:
+            session['active_account_id'] = existing.id
+        session.pop('sigaa_temp_password', None)
+
     if user.linked_accounts and 'active_account_id' not in session:
         session['active_account_id'] = user.linked_accounts[0].id
     return redirect(url_for('main.dashboard'))
@@ -130,9 +181,20 @@ def link_account():
     else:
         inst_type = InstitutionType.IFAL
         url = SIGAA_URL
-    sigaa = Sigaa(url, inst_type)
+    async def perform_link():
+        sigaa = Sigaa(url, inst_type)
+        try:
+            await sigaa.login(username, password)
+            client_session = await sigaa.session._get_session()
+            cookies = {}
+            for cookie in client_session.cookie_jar:
+                cookies[cookie.key] = cookie.value
+            return cookies
+        finally:
+            await sigaa.close()
+
     try:
-        run_async(sigaa.login(username, password))
+        cookies = run_async(perform_link())
         new_account = LinkedAccount(
             user_id=session['user_id'],
             institution=institution_str,
@@ -145,18 +207,12 @@ def link_account():
         session['sigaa_url'] = url
         session['sigaa_inst'] = institution_str
         session['username'] = username
-        client_session = run_async(sigaa.session._get_session())
-        cookies = {}
-        for cookie in client_session.cookie_jar:
-            cookies[cookie.key] = cookie.value
         session['sigaa_cookies'] = cookies
         return redirect(url_for('main.dashboard'))
     except Exception as e:
         logger.error(f"Link Account Failed: {e}")
         user = User.query.get(session['user_id'])
         return render_template('profile.html', error="Falha ao vincular: Credenciais inválidas.", user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
-    finally:
-        run_async(sigaa.close())
 @bp.route('/unlink_account/<int:id>', methods=['POST'])
 def unlink_account(id):
     if 'user_id' not in session:
@@ -208,13 +264,20 @@ def dashboard():
         else:
             inst_type = InstitutionType.IFAL
             url = SIGAA_URL
-        sigaa = Sigaa(url, inst_type)
+        async def perform_auto_login():
+            sigaa = Sigaa(url, inst_type)
+            try:
+                await sigaa.login(account.username, password)
+                client_session = await sigaa.session._get_session()
+                cookies = {}
+                for cookie in client_session.cookie_jar:
+                    cookies[cookie.key] = cookie.value
+                return cookies
+            finally:
+                await sigaa.close()
+
         try:
-            run_async(sigaa.login(account.username, password))
-            client_session = run_async(sigaa.session._get_session())
-            cookies = {}
-            for cookie in client_session.cookie_jar:
-                cookies[cookie.key] = cookie.value
+            cookies = run_async(perform_auto_login())
             session['sigaa_cookies'] = cookies
             session['sigaa_url'] = url
             session['sigaa_inst'] = account.institution
@@ -223,8 +286,6 @@ def dashboard():
         except Exception as e:
             logger.error(f"Auto-login failed for {account.username}: {e}")
             return redirect(url_for('main.profile'))
-        finally:
-            run_async(sigaa.close())
     cookies = session.get('sigaa_cookies')
     if not cookies:
         if 'user_id' in session:
@@ -263,17 +324,28 @@ def academic_profile():
         inst_type = InstitutionType[inst_str]
     except KeyError:
         inst_type = InstitutionType.IFAL
-    sigaa = Sigaa(url, inst_type, cookies=cookies)
+    async def fetch_academic_profile():
+        sigaa = Sigaa(url, inst_type, cookies=cookies)
+        try:
+            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+            if "login" in response.url.path:
+                 return {"error": "Session expired", "status": 401}
+            from .sigaa_api.account import Account
+            account = Account(sigaa.session, response)
+            if not account.active_bonds:
+                return {"error": "No active bonds", "status": 404}
+            bond = account.active_bonds[0]
+            history = await bond.get_history()
+            return {"history": history, "status": 200}
+        finally:
+            await sigaa.close()
+
     try:
-        response = run_async(sigaa.session.get("/sigaa/portais/discente/discente.jsf"))
-        if "login" in response.url.path:
-             return jsonify({"error": "Session expired"}), 401
-        from .sigaa_api.account import Account
-        account = Account(sigaa.session, response)
-        if not account.active_bonds:
-            return jsonify({"error": "No active bonds"}), 404
-        bond = account.active_bonds[0]
-        history = run_async(bond.get_history())
+        res = run_async(fetch_academic_profile())
+        if res["status"] != 200:
+            return jsonify({"error": res["error"]}), res["status"]
+            
+        history = res["history"]
         total_grades = []
         best_grade = 0
         best_subject = "-"
@@ -320,8 +392,6 @@ def academic_profile():
     except Exception as e:
         logger.error(f"Profile error: {e}")
         return jsonify({"error": "Failed to fetch profile"}), 500
-    finally:
-        run_async(sigaa.close())
 @bp.route('/apoio')
 def support():
     return render_template('support.html')
@@ -346,6 +416,7 @@ def stream_demo():
                 }
             time.sleep(0.1)
             yield json.dumps(msg) + "\n"
+        yield json.dumps({"type": "sync_end"}) + "\n"
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
 @bp.route('/api/update_course/<int:course_id>', methods=['POST'])
 def update_course(course_id):
@@ -355,31 +426,39 @@ def update_course(course_id):
     inst_str = session.get('sigaa_inst', 'IFAL')
     try: inst_type = InstitutionType[inst_str]
     except KeyError: inst_type = InstitutionType.IFAL
-    sigaa = Sigaa(url, inst_type, cookies=cookies)
-    try:
-        response = run_async(sigaa.session.get("/sigaa/portais/discente/discente.jsf"))
-        if "login" in response.url.path: return Response(json.dumps({"error": "Session expired"}), status=401, mimetype='application/json')
-        from .sigaa_api.account import Account
-        account = Account(sigaa.session, response)
-        target_course = None
-        current_id = 0
-        if account.active_bonds:
-            for bond in account.active_bonds:
-                courses = run_async(bond.get_courses())
-                if courses:
-                    for course in courses:
-                        current_id += 1
-                        if current_id == course_id:
-                            target_course = course
-                            break
-                if target_course: break
-        if not target_course: return Response(json.dumps({"error": "Course not found"}), status=404, mimetype='application/json')
-        raw_grades = []
+    async def perform_update():
+        sigaa = Sigaa(url, inst_type, cookies=cookies)
         try:
-            raw_grades = run_async(target_course.get_grades())
-        except Exception as e:
-            logger.error(f"Error fetching grades: {e}")
-            return Response(json.dumps({"error": "Failed to fetch grades"}), status=500, mimetype='application/json')
+            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+            if "login" in response.url.path: return {"error": "Session expired", "status": 401}
+            from .sigaa_api.account import Account
+            account = Account(sigaa.session, response)
+            target_course = None
+            current_id = 0
+            if account.active_bonds:
+                for bond in account.active_bonds:
+                    courses = await bond.get_courses()
+                    if courses:
+                        for course in courses:
+                            current_id += 1
+                            if current_id == course_id:
+                                target_course = course
+                                break
+                    if target_course: break
+            if not target_course: return {"error": "Course not found", "status": 404}
+            
+            raw_grades, freq_data = await target_course.get_grades_and_frequency()
+            return {"status": 200, "grades": raw_grades, "frequency": freq_data}
+        finally:
+            await sigaa.close()
+
+    try:
+        res = run_async(perform_update())
+        if res.get("status") != 200:
+            return Response(json.dumps({"error": res.get("error")}), status=res.get("status", 500), mimetype='application/json')
+            
+        raw_grades = res["grades"]
+        freq_data = res.get("frequency")
         calculator = CalculatorFactory.get_calculator(inst_type)
         course_result = calculator.calculate(raw_grades)
         response_data = {
@@ -389,12 +468,8 @@ def update_course(course_id):
                 "status": course_result.to_dict()
             }
         }
-        freq_data = None
-        try:
-            freq_data = run_async(target_course.get_frequency())
-            if freq_data:
-                response_data['frequency'] = freq_data
-        except Exception: pass
+        if freq_data:
+            response_data['frequency'] = freq_data
         return Response(json.dumps(response_data), mimetype='application/json')
     except SigaaQuestionnaireError as e:
         logger.warning(f"Single update error - questionnaire: {e}")
@@ -402,79 +477,176 @@ def update_course(course_id):
     except Exception as e:
         logger.error(f"Single update error: {e}")
         return Response(json.dumps({"error": "Internal Server Error"}), status=500, mimetype='application/json')
-    finally: run_async(sigaa.close())
 @bp.route('/api/stream_grades')
 def stream_grades():
     cookies = session.get('sigaa_cookies')
+    username = session.get('username', 'anonymous')
     if not cookies: return Response("Unauthorized", status=401)
-    priority_str = request.args.get('priority', '')
-    priority_ids = []
-    if priority_str:
-        try: priority_ids = [int(x) for x in priority_str.split(',')]
-        except ValueError: pass
-    async def async_generate():
-        url = session.get('sigaa_url', SIGAA_URL)
-        inst_str = session.get('sigaa_inst', 'IFAL')
+    priority_ids = [int(x) for x in request.args.get('priority', '').split(',') if x.strip().isdigit()]
+    skip_ids = [int(x) for x in request.args.get('skip', '').split(',') if x.strip().isdigit()]
+    # Extract all needed context data BEFORE starting the thread
+    url = session.get('sigaa_url', SIGAA_URL)
+    inst_str = session.get('sigaa_inst', 'IFAL')
+    active_account_id = session.get('active_account_id')
+
+    async def async_generate(url, inst_str, active_account_id, cookies, username, priority_ids, skip_ids):
         try: inst_type = InstitutionType[inst_str]
         except KeyError: inst_type = InstitutionType.IFAL
         sigaa = Sigaa(url, inst_type, cookies=cookies)
-        try:
-            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-            if "login" in response.url.path:
-                 yield json.dumps({"error": "Session expired"}) + "\n"
-                 return
-            from .sigaa_api.account import Account
-            account = Account(sigaa.session, response)
-            name = await account.get_name()
-            is_supporter = False
-            registration = None
-            if account.active_bonds: registration = account.active_bonds[0].registration
-            supporters = []
+        # Optimization: Use DB cache if fresh (< 10 min)
+        linked_account = None
+        acc_id = active_account_id
+        if acc_id:
+            linked_account = LinkedAccount.query.get(acc_id)
+        
+        cache = None
+        if linked_account and linked_account.portal_cache_json:
             try:
-                async with aiohttp.ClientSession() as session_http:
-                    async with session_http.get(SUPPORTERS_URL) as resp:
-                        if resp.status == 200: supporters = await resp.json(content_type=None)
-            except Exception:
+                cache = json.loads(linked_account.portal_cache_json)
+                cache['timestamp'] = linked_account.portal_cache_updated_at.timestamp() if linked_account.portal_cache_updated_at else 0
+            except: pass
+
+        now = time.time()
+        use_cache = False
+        if cache and (now - cache.get('timestamp', 0) < 600): # 10 minutes
+            use_cache = True
+            logger.info(f"Using DB portal cache for {username}")
+        else:
+            logger.info(f"Cache miss for {username}. Reason: {'Old/Missing' if cache else 'No cache'}")
+
+        try:
+            account = None
+            if not use_cache:
+                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+                if "login" in response.url.path:
+                    yield json.dumps({"error": "Session expired"}) + "\n"
+                    return
+                from .sigaa_api.account import Account
+                account = Account(sigaa.session, response)
+            
+            async def get_supporters_task():
                 try:
-                    with open('app/apoio/apoiadores.json', 'r') as f: supporters = json.load(f)
-                except Exception: pass
-            if registration and str(registration) in {str(s) for s in supporters}: is_supporter = True
-            yield json.dumps({"type": "user_info", "name": name, "is_supporter": is_supporter}) + "\n"
-            if account.active_bonds:
+                    async with aiohttp.ClientSession() as http_client_session:
+                        async with http_client_session.get(SUPPORTERS_URL, timeout=3) as resp:
+                            if resp.status == 200: return await resp.json(content_type=None)
+                except: pass
+                return []
+            
+            # Start fetching name and supporters
+            name = cache.get('name') if use_cache else await account.get_name()
+            
+            # Yield user_info ASAP
+            is_supporter_cached = cache.get('is_supporter', False) if use_cache else False
+            yield json.dumps({"type": "user_info", "name": name, "is_supporter": is_supporter_cached}) + "\n"
+
+            # Check for actual supporters in background if not using cache or to refresh
+            supporters = await get_supporters_task()
+            is_supporter = False
+            if not use_cache:
+                registration = None
+                if account.active_bonds: registration = account.active_bonds[0].registration
+                if registration and str(registration) in {str(s) for s in supporters}: is_supporter = True
+                # If cached value was wrong, we could send an update, but usually it's fine
+            else:
+                is_supporter = is_supporter_cached
+
+            if use_cache or (account and account.active_bonds):
                 calculator = CalculatorFactory.get_calculator(inst_type)
-                for bond in account.active_bonds:
-                    courses = await bond.get_courses()
-                    if not courses:
-                        continue
+                
+                # Reconstruct bonds from cache or use account
+                bonds_to_process = []
+                if use_cache:
+                    from .sigaa_api.bond import StudentBond
+                    from .sigaa_api.course import Course
+                    for b_data in cache.get('bonds', []):
+                        # Create the actual bond object
+                        bond_obj = StudentBond(
+                            sigaa.session, 
+                            b_data.get('registration'), 
+                            b_data['program'], 
+                            b_data.get('switch_url')
+                        )
+                        c_list = []
+                        for c_data in b_data.get('courses', []):
+                            c_list.append(Course(sigaa.session, c_data['title'], c_data['form_data'], c_data.get('schedule_code', '')))
+                        bonds_to_process.append({'program': b_data['program'], 'courses': c_list, 'bond_obj': bond_obj})
+                else:
+                    for bond in account.active_bonds:
+                        courses = await bond.get_courses()
+                        bonds_to_process.append({'program': bond.program, 'courses': courses, 'bond_obj': bond})
+
+                # Global cache update data
+                new_cache_bonds = []
+                
+                # Phase 1: Mapping & Cache Save (Fast)
+                for b_item in bonds_to_process:
+                    courses = b_item['courses']
+                    if not courses: continue
+                    
                     course_list_with_ids = []
                     for i, course in enumerate(courses):
                         course_list_with_ids.append({'id': i + 1, 'course': course})
-                    if priority_ids:
-                        prioritized = [c for c in course_list_with_ids if c['id'] in priority_ids]
-                        others = [c for c in course_list_with_ids if c['id'] not in priority_ids]
-                        course_list_with_ids = prioritized + others
+                    b_item['_course_list'] = course_list_with_ids # Save for phase 2
+                    
+                    # Cache current bond structure
+                    current_bond_cache = {
+                        'program': b_item['program'], 
+                        'registration': b_item['bond_obj'].registration if 'bond_obj' in b_item else None,
+                        'switch_url': b_item['bond_obj'].switch_url if 'bond_obj' in b_item else None,
+                        'courses': []
+                    }
                     for item in course_list_with_ids:
                         course_id = item['id']
                         course = item['course']
-                        yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": bond.program}) + "\n"
+                        yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": b_item['program']}) + "\n"
+                        current_bond_cache['courses'].append({
+                            'title': course.title,
+                            'form_data': course.form_data,
+                            'schedule_code': course.schedule_code
+                        })
+                    new_cache_bonds.append(current_bond_cache)
 
+                # Save cache BEFORE slow fetching
+                if not use_cache and linked_account:
+                    try:
+                        linked_account.portal_cache_json = json.dumps({
+                            'name': name,
+                            'is_supporter': is_supporter,
+                            'bonds': new_cache_bonds
+                        })
+                        linked_account.portal_cache_updated_at = datetime.now()
+                        db.session.commit()
+                        logger.info(f"Portal cache persistent for {username}")
+                    except Exception as e:
+                        logger.error(f"Cache persistence failed: {e}")
+                        db.session.rollback()
 
-
+                # Phase 2: Slow Data Fetching
+                for b_item in bonds_to_process:
+                    bond_obj = b_item.get('bond_obj')
+                    course_list_with_ids = b_item.get('_course_list', [])
                     for item in course_list_with_ids:
                         course_id = item['id']
                         course = item['course']
 
-                        # Signal UI that we started downloading grades
+                        if course_id in skip_ids:
+                            yield json.dumps({"type": "course_skipped", "id": course_id}) + "\n"
+                            continue
+
                         yield json.dumps({"type": "course_loading", "id": course_id, "step": "notas"}) + "\n"
 
                         try:
-                            raw_grades = await course.get_grades()
+                            raw_grades, freq_data = await course.get_grades_and_frequency()
                             course_result = calculator.calculate(raw_grades)
                             result_data = {
                                 "grades": raw_grades,
                                 "status": course_result.to_dict()
                             }
                             yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
+                            
+                            yield json.dumps({"type": "course_loading", "id": course_id, "step": "frequencia"}) + "\n"
+                            if freq_data:
+                                yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
                         except Exception:
                             empty_result = calculator.calculate([])
                             fallback_data = {
@@ -482,23 +654,14 @@ def stream_grades():
                                 "status": empty_result.to_dict()
                             }
                             yield json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n"
-
-                        # Signal UI that we started downloading frequency
-                        yield json.dumps({"type": "course_loading", "id": course_id, "step": "frequencia"}) + "\n"
-
-                        try:
-                            freq_data = await course.get_frequency()
-                            if freq_data:
-                                yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
-                        except Exception:
-                            pass
                         
-                        # Signal completion for this course
                         yield json.dumps({"type": "course_loading", "id": course_id, "step": "done"}) + "\n"
-
-                    # Now that current semester courses are fully fetched, fetch the full history slowly
+                            
                     try:
-                        history = await bond.get_history()
+                        if bond_obj:
+                            history = await bond_obj.get_history()
+                        else:
+                            history = {}
                     except Exception as e:
                         logger.error(f"Error fetching history: {e}")
                         history = {}
@@ -533,6 +696,9 @@ def stream_grades():
                         "history_raw": history
                     }
                     yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
+                
+                # Final sync end
+                yield json.dumps({"type": "sync_end"}) + "\n"
         except SigaaQuestionnaireError as e:
             logger.warning(f"Stream blocked by questionnaire: {e}")
             yield json.dumps({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}) + "\n"
@@ -541,16 +707,41 @@ def stream_grades():
             yield json.dumps({"error": "Erro no carregamento dos dados."}) + "\n"
         finally: await sigaa.close()
     def sync_generate():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        gen = async_generate()
-        try:
-            while True:
-                data = loop.run_until_complete(gen.__anext__())
-                yield data
-        except StopAsyncIteration: pass
-        except Exception: yield json.dumps({"error": "Internal Server Error"}) + "\n"
-        finally: loop.close()
+        import queue
+        import threading
+        q = queue.Queue()
+
+        def thread_target(app):
+            with app.app_context():
+                if sys.platform == 'win32':
+                    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                async def run_it():
+                    try:
+                        async for val in async_generate(url, inst_str, active_account_id, cookies, username, priority_ids, skip_ids):
+                            q.put(val)
+                    except Exception as e:
+                        logger.error(f"Async thread error: {e}")
+                        q.put(json.dumps({"error": "Internal Stream Error"}) + "\n")
+                    finally:
+                        q.put(None)
+                
+                try:
+                    loop.run_until_complete(run_it())
+                finally:
+                    loop.close()
+
+        t = threading.Thread(target=thread_target, args=(current_app._get_current_object(),))
+        t.start()
+
+        while True:
+            item = q.get()
+            if item is None:
+                break
+            yield item
+        t.join()
     return Response(stream_with_context(sync_generate()), mimetype='application/x-ndjson')
 @bp.route('/logout')
 def logout():
