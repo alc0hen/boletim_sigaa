@@ -90,49 +90,164 @@ class StudentBond:
         except Exception as e:
             logger.error(f"Error parsing courses: {e}")
         return courses
-    async def get_history(self):
+    async def get_history(self, cached_history=None):
         try:
-            page = None
+            logger.info("SIGAA: Starting get_history based on Turmas Anteriores...")
             if self.switch_url:
-                page = await self.session.get(self.switch_url)
+                logger.info(f"SIGAA: Switching context via URL: {self.switch_url}")
+                await self.session.get(self.switch_url)
             else:
-                page = await self.session.get('/sigaa/portais/discente/discente.jsf')
-            form_data = self._extract_jscook_action(page, 'Boletim')
-            bulletin_page = None
-            if form_data:
-                bulletin_page = await self.session.post(form_data['action_url'], data=form_data['post_values'])
-            else:
-                link = page.soup.find('a', string=re.compile(r"Boletim", re.I))
-                if not link: link = page.soup.find('a', title='Boletim')
-                if link:
-                    if link.get('onclick'):
-                         js = page.parse_jsfcljs(link['onclick'])
-                         bulletin_page = await self.session.post(js['action'], data=js['post_values'])
-                    else:
-                         href = link.get('href')
-                         if href and href != '#':
-                             bulletin_page = await self.session.get(urljoin(str(page.url), href))
-            if not bulletin_page:
-                form_data = self._extract_jscook_action(page, 'Consultar Minhas Notas')
-                if form_data:
-                    bulletin_page = await self.session.post(form_data['action_url'], data=form_data['post_values'])
-            if not bulletin_page:
-                link = page.soup.find('a', string=re.compile(r"Consultar\s.*Notas", re.I))
-                if not link: link = page.soup.find('a', title='Consultar Notas')
-                if link:
-                    if link.get('onclick'):
-                         js = page.parse_jsfcljs(link['onclick'])
-                         bulletin_page = await self.session.post(js['action'], data=js['post_values'])
-                    else:
-                         href = link.get('href')
-                         if href and href != '#':
-                             bulletin_page = await self.session.get(urljoin(str(page.url), href))
-            if bulletin_page:
-                return self._parse_bulletin(bulletin_page)
-            return {}
+                logger.info("SIGAA: Accessing discente.jsf to ensure session context.")
+                await self.session.get('/sigaa/portais/discente/discente.jsf')
+            
+            logger.info("SIGAA: Navigating to Turmas Anteriores: /sigaa/portais/discente/turmas.jsf")
+            turmas_page = await self.session.get('/sigaa/portais/discente/turmas.jsf')
+            
+            logger.info("SIGAA: Successfully loaded turmas.jsf, proceeding to parse classes.")
+            return await self._parse_previous_classes(turmas_page, cached_history)
         except Exception as e:
             logger.error(f"Get history error: {e}")
             return {}
+
+    async def _parse_previous_classes(self, page, cached_history=None):
+        history = {}
+        try:
+            tables = page.soup.find_all('table', class_='listagem')
+            if not tables:
+                 logger.info("SIGAA: No 'listagem' tables found, trying 'tabelaRelatorio'.")
+                 tables = page.soup.find_all('table', class_='tabelaRelatorio')
+            
+            logger.info(f"SIGAA: Found {len(tables)} tables to parse for Turmas Anteriores.")
+            
+            for table_idx, table in enumerate(tables):
+                 rows = table.find_all('tr')
+                 current_semester = "Unknown"
+                 logger.info(f"SIGAA: Table {table_idx+1} has {len(rows)} rows.")
+                 
+                 for row in rows:
+                     # Check for semester grouping
+                     text = row.get_text(strip=True)
+                     if 'Ano' in text or 'Período' in text or len(row.find_all('td')) == 1:
+                         sem_match = re.search(r'(\d{4}\.\d)', text)
+                         if sem_match:
+                             current_semester = sem_match.group(1)
+                             logger.info(f"SIGAA: Detected semester grouping: {current_semester}")
+                             continue
+                         
+
+                     avancar_img = row.find('img', src=re.compile(r'avancar\.gif'))
+                     if not avancar_img:
+                         continue
+                         
+                     link = avancar_img.find_parent('a')
+                     if not link or not link.get('onclick'):
+                         continue
+                         
+                     js_code = link['onclick']
+                     try:
+                         form_data = page.parse_jsfcljs(js_code)
+                     except Exception as e:
+                         logger.warning(f"SIGAA: Failed to parse jsfcljs for class link: {e}")
+                         continue
+                         
+                     cells = row.find_all('td')
+                     title = "Desconhecido"
+                     schedule_code = ""
+                     
+                     row_status = "Concluído"
+                     for cell in cells:
+                         t = cell.get_text(strip=True)
+                         if '-' in t and len(t) > 5 and not t.replace('.', '').isdigit():
+                             if title == "Desconhecido":
+                                 title = t
+                         t_upper = t.upper()
+                         if 'APROVADO' in t_upper or 'REPROVADO' in t_upper or 'TRANCADO' in t_upper or 'MATRICULADO' in t_upper or 'DISPENSADO' in t_upper or 'CANCELADO' in t_upper:
+                             row_status = t.title()
+                             
+                     # Check if we can reuse cached details
+                     can_reuse = False
+                     if cached_history and current_semester in cached_history:
+                         for c_subj in cached_history[current_semester]:
+                             if c_subj.get('name') == title:
+                                 # If the class has a final status, it won't change, we can reuse
+                                 if row_status not in ['Matriculado', 'Cursando', 'Indefinido']:
+                                     if current_semester not in history:
+                                         history[current_semester] = []
+                                     history[current_semester].append(c_subj)
+                                     can_reuse = True
+                                     break
+                     
+                     if can_reuse:
+                         logger.info(f"SIGAA: Reusing cached details for '{title}' in {current_semester}.")
+                         continue
+                     
+                     logger.info(f"SIGAA: Found class '{title}' in semester {current_semester}. Status: {row_status}. Fetching details...")
+                     
+                     course = Course(self.session, title, form_data, schedule_code)
+                     
+                     grades, frequency = await course.get_grades_and_frequency()
+                     logger.info(f"SIGAA: Fetched grades/freq for '{title}'.")
+                     
+                     professor = await course.get_professor()
+                     logger.info(f"SIGAA: Fetched professor for '{title}': {professor}")
+                     
+                     final_grade = None
+                     for g in grades:
+                         if g['type'] == 'single' and any(n in g['name'].lower() for n in ['média', 'nota final', 'resultado']):
+                             final_grade = g['value']
+                         elif g['type'] == 'group':
+                             for sg in g['grades']:
+                                 if 'média' in sg['name'].lower() or 'final' in sg['name'].lower():
+                                     final_grade = sg['value']
+                                     
+                     # Fallback if final_grade not found
+                     if final_grade is None:
+                         valid_vals = []
+                         for g in grades:
+                             if g['type'] == 'single':
+                                 valid_vals.append(g['value'])
+                             elif g['type'] == 'group':
+                                 for sg in g['grades']:
+                                     valid_vals.append(sg['value'])
+                         
+                         if valid_vals:
+                             final_grade = round(sum(valid_vals) / len(valid_vals), 1)
+                             logger.info(f"SIGAA: Calculated final_grade fallback for '{title}': {valid_vals} -> {final_grade}")
+                         else:
+                             final_grade = 0.0
+                     else:
+                         logger.info(f"SIGAA: Found final_grade naturally for '{title}': {final_grade}")
+                                 
+                     absences = frequency.get('total_faltas', 0) if frequency else 0
+                     
+                     detailed_grades = []
+                     for g in grades:
+                         if g['type'] == 'single':
+                             detailed_grades.append({'name': g['name'], 'value': g['value']})
+                         elif g['type'] == 'group':
+                             for sg in g['grades']:
+                                 detailed_grades.append({'name': sg['name'], 'value': sg['value']})
+                                 
+                     subj = {
+                         "name": title,
+                         "final_grade": final_grade,
+                         "absences": absences,
+                         "status": row_status,
+                         "grades": detailed_grades,
+                         "professor": professor
+                     }
+                     
+                     if current_semester not in history:
+                         history[current_semester] = []
+                     history[current_semester].append(subj)
+                     
+                     # Small delay to avoid hammering the server too hard when fetching many classes
+                     import asyncio
+                     await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.error(f"Parse previous classes error: {e}")
+            
+        return history
     def _extract_jscook_action(self, page, label):
         try:
             form = page.soup.find('form', id=re.compile(r'menu:form_menu_discente|menuForm'))
@@ -230,6 +345,185 @@ class StudentBond:
         except Exception as e:
             logger.error(f"Parse bulletin error: {e}")
         return history
+    async def get_enrollment_disciplines(self):
+        """
+        Navigates to the enrollment section and returns available classes / disciplines,
+        along with the current ViewState.
+        """
+        from .enrollment_parser import parse_enrollment_page
+
+        # 1. Access portal discente
+        if self.switch_url:
+            page = await self.session.get(self.switch_url)
+        else:
+            page = await self.session.get('/sigaa/portais/discente/discente.jsf')
+
+        # 2. Extract JSCookMenu action for Realizar Matrícula
+        action, form_id = self._extract_enrollment_action(page)
+        if not action:
+            raise ValueError("SIGAA: Realizar Matrícula menu action not found.")
+
+        post_values = {
+            form_id: form_id,
+            'jscook_action': action
+        }
+        if page.view_state:
+            post_values['javax.faces.ViewState'] = page.view_state
+
+        form_el = page.soup.find('form', id=form_id)
+        action_url = '/sigaa/portais/discente/discente.jsf'
+        if form_el and form_el.get('action'):
+            action_url = urljoin(str(page.url), form_el.get('action'))
+
+        # 3. Post to go to Instructions Page
+        instrucoes_page = await self.session.post(action_url, data=post_values)
+
+        # 4. Handle Instructions Form and click "Iniciar seleção de turmas"
+        form_el = instrucoes_page.soup.find('form', id='form')
+        if not form_el:
+            form_el = instrucoes_page.soup.find('form')
+        if not form_el:
+            raise ValueError("SIGAA: Instructions form not found.")
+
+        form_id = form_el.get('id', 'form')
+        post_values = {form_id: form_id}
+
+        # Auto-concordar: check all checkboxes inside the form (especially concordancia)
+        for inp in form_el.find_all('input'):
+            name = inp.get('name')
+            val = inp.get('value', '')
+            itype = inp.get('type')
+            if not name:
+                continue
+            if itype == 'submit':
+                continue
+            if itype == 'checkbox':
+                # Check it to be safe
+                post_values[name] = 'on'
+                continue
+            post_values[name] = val
+
+        # Add the submit button key
+        btn = form_el.find('input', id=re.compile(r'btnIniciarSolicit'))
+        if btn:
+            btn_name = btn.get('name', 'form:btnIniciarSolicit')
+            post_values[btn_name] = btn.get('value', 'Iniciar seleção de turmas')
+        else:
+            post_values[f'{form_id}:btnIniciarSolicit'] = 'Iniciar seleção de turmas'
+
+        if 'javax.faces.ViewState' not in post_values and instrucoes_page.view_state:
+            post_values['javax.faces.ViewState'] = instrucoes_page.view_state
+
+        action = form_el.get('action', '/sigaa/graduacao/matricula/instrucoes/instrucoes_regular.jsf')
+        action_url = urljoin(str(instrucoes_page.url), action)
+
+        # 5. Post to go to Classes Selection Page
+        selecao_page = await self.session.post(action_url, data=post_values)
+
+        # 6. Parse classes
+        levels = parse_enrollment_page(selecao_page.body)
+        return {
+            "levels": levels,
+            "view_state": selecao_page.view_state,
+            "action_url": urljoin(str(selecao_page.url), '/sigaa/graduacao/matricula/turmas_curriculo.jsf')
+        }
+
+    async def submit_enrollment(self, selected_class_ids, view_state, action_url=None):
+        """
+        Submits the chosen class IDs and returns the confirmation page.
+        """
+        if not action_url:
+            action_url = '/sigaa/graduacao/matricula/turmas_curriculo.jsf'
+
+        data = [
+            ('formSelecionarTurmas', 'formSelecionarTurmas'),
+            ('formSelecionarTurmas:btaoSelecionarTurmas', 'formSelecionarTurmas:btaoSelecionarTurmas'),
+            ('javax.faces.ViewState', view_state)
+        ]
+        for cid in selected_class_ids:
+            data.append(('selecaoTurmas', str(cid)))
+
+        response_page = await self.session.post(action_url, data=data)
+        return response_page
+
+    async def request_confirmation_page(self, view_state, action_url=None):
+        """
+        Submits the form to transition to the final password confirmation page.
+        """
+        if not action_url:
+            action_url = '/sigaa/graduacao/matricula/turmas_selecionadas.jsf'
+            
+        data = [
+            ('formBotoesSuperiores', 'formBotoesSuperiores'),
+            ('formBotoesSuperiores:linkSubmissao', 'formBotoesSuperiores:linkSubmissao'),
+            ('javax.faces.ViewState', view_state)
+        ]
+        
+        response_page = await self.session.post(action_url, data=data)
+        return response_page
+
+    async def confirm_enrollment(self, password, view_state, confirmation_page_html):
+        """
+        Submits the final password confirmation to complete enrollment.
+        """
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(confirmation_page_html, 'lxml')
+        form = soup.find('form', id=re.compile(r'form|confirm'))
+        if not form:
+            form = soup.find('form')
+        if not form:
+            raise ValueError("SIGAA: Confirmation form not found.")
+            
+        form_id = form.get('id', 'form')
+        post_values = {form_id: form_id}
+        
+        # Extract all inputs
+        for inp in form.find_all('input'):
+            name = inp.get('name')
+            val = inp.get('value', '')
+            itype = inp.get('type')
+            if not name:
+                continue
+            if itype == 'submit':
+                continue
+            post_values[name] = val
+            
+        # Find the password field and set it
+        pwd_field = form.find('input', type='password')
+        if pwd_field:
+            post_values[pwd_field.get('name')] = password
+            
+        # Find the submit button
+        btn = form.find('input', type='submit')
+        if btn:
+            post_values[btn.get('name')] = btn.get('value', '')
+        else:
+            # If it's a link or custom button
+            btn_confirm = form.find(id=re.compile(r'confirmar|gravar|enviar'))
+            if btn_confirm and btn_confirm.get('name'):
+                post_values[btn_confirm.get('name')] = btn_confirm.get('value', '')
+                
+        if 'javax.faces.ViewState' not in post_values and view_state:
+            post_values['javax.faces.ViewState'] = view_state
+            
+        action = form.get('action')
+        action_url = urljoin(str(self.session.base_url), action) if action else str(self.session.base_url)
+        
+        final_page = await self.session.post(action_url, data=post_values)
+        return final_page
+
+    def _extract_enrollment_action(self, page):
+        scripts = page.soup.find_all('script')
+        for s in scripts:
+            if s.string and 'matriculaGraduacao.telaInstrucoes' in s.string:
+                match = re.search(r"['\"]([^'\"]*matriculaGraduacao\.telaInstrucoes[^'\"]*)['\"]", s.string)
+                if match:
+                    action = match.group(1)
+                    form_match = re.search(r"menu:form_menu_discente|menuForm", s.string)
+                    form_id = form_match.group(0) if form_match else "menu:form_menu_discente"
+                    return action, form_id
+        return None, None
+
     def __repr__(self):
         return f"<StudentBond registration='{self.registration}' program='{self.program}'>"
 class TeacherBond:
