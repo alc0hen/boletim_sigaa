@@ -24,11 +24,10 @@ _GROUP_RE = re.compile(r'\d[MTN]\d+', re.IGNORECASE)
 def parse_schedule_code(code: str) -> int:
     """
     Return the total number of 50-min aula slots per class day.
- 
-    For multi-group codes, if they fall on the same day, they are summed.
-    If they fall on different days (e.g. "3T456 5T456"), the slot count per session
-    is determined as the maximum slot count on any single weekday.
- 
+
+    For multi-group codes (e.g. "4T6 4N1234") the groups are assumed to
+    fall on the SAME weekday, so their slot counts are summed.
+
     Returns 1 as a safe default if the code cannot be parsed.
     """
     if not code:
@@ -37,13 +36,9 @@ def parse_schedule_code(code: str) -> int:
     groups = _GROUP_RE.findall(code)
     if not groups:
         return 1
-    slots_by_day = {}
+    total_slots = 0
     for group in groups:
-        # Day digit is the first character (e.g. '4' in '4T12')
-        day = group[0]
         # Slots are all characters after the shift letter (index 2 onward)
         slots = group[2:]
-        slots_by_day[day] = slots_by_day.get(day, 0) + len(slots)
-    if slots_by_day:
-        return max(1, max(slots_by_day.values()))
-    return 1
+        total_slots += len(slots)
+    return max(1, total_slots)

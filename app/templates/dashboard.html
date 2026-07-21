@@ -27,12 +27,32 @@
     }
 
     body {
+      font-family: var(--font-main);
       background-color: var(--bg-main);
       color: var(--text-main);
       margin: 0;
       padding: 0;
-      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     .container.main-content {
@@ -244,7 +264,7 @@
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       height: 70px;
       width: calc(100% - 32px);
       max-width: 500px;
@@ -390,10 +410,6 @@
     }
 
     .mobile-layout #cards-container {
-      display: none !important;
-    }
-
-    .mobile-layout #empty-list-msg {
       display: none !important;
     }
 
@@ -599,10 +615,88 @@
       padding: 32px;
       width: 100%;
       max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
       position: relative;
-      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
-      animation: modalEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: modalIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
+
+    /* Reviews Styles */
+    .review-item-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .segmented-rating {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .segmented-rating input[type="radio"] {
+      display: none !important;
+    }
+    .segmented-rating label {
+      display: inline-block;
+      width: 44px;
+      height: 44px;
+      line-height: 42px; /* Centers text vertically */
+      text-align: center; /* Centers text horizontally */
+      border-radius: 50%;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      transition: all 0.2s;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    .segmented-rating label:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .segmented-rating input:checked + label {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .segmented-rating-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .decline-btn {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .decline-btn:hover {
+      background: rgba(255,255,255,0.05);
+    }
+    input[type="checkbox"].decline-cb:checked + .decline-btn {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+
+
 
     @keyframes modalEnter {
       from {
@@ -920,6 +1014,201 @@
     .freq-scrollbar::-webkit-scrollbar-thumb:hover {
       background: var(--accent);
     }
+
+    /* Online Enrollment Styles */
+    .m-matricula-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      margin-bottom: 24px;
+    }
+
+    .m-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      outline: none;
+    }
+
+    .m-btn-primary {
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .m-btn-primary:hover {
+      background: #c95c24;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(177, 77, 24, 0.25);
+    }
+
+    .m-btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      text-decoration: none;
+    }
+
+    .m-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .m-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* Discipline & Classes List */
+    .m-disc-group {
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+    }
+
+    .m-disc-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .m-class-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .m-class-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .m-class-item.selected {
+      background: rgba(177, 77, 24, 0.08);
+      border-color: var(--accent);
+    }
+
+    .m-class-chk {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 2px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .m-class-item.selected .m-class-chk {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .m-class-chk::after {
+      content: "✓";
+      font-size: 12px;
+      font-weight: 900;
+      color: #fff;
+      display: none;
+    }
+
+    .m-class-item.selected .m-class-chk::after {
+      display: block;
+    }
+
+    .m-class-details {
+      flex: 1;
+    }
+
+    .m-class-code {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .m-class-info {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    /* Timetable Grid UI */
+    .m-timetable-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .m-timetable-table th {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .m-timetable-table td {
+      padding: 10px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-main);
+    }
+
+    .m-timetable-slot-active {
+      background: rgba(177, 77, 24, 0.15) !important;
+      color: var(--accent) !important;
+      font-weight: 700;
+      border-color: var(--accent) !important;
+    }
+
+    .matricula-summary-bar {
+      position: sticky;
+      bottom: 100px;
+      left: 0;
+      right: 0;
+      z-index: 99;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(26, 23, 24, 0.9) !important;
+    }
   </style>
 </head>
 
@@ -1067,7 +1356,103 @@
         <h3 style="margin-bottom:4px;">Sala de Troféus</h3>
         <p style="font-size:12px; color:var(--text-muted); margin-top:0;">Suas conquistas acadêmicas desbloqueadas</p>
       </div>
-      <div id="achievements-list"></div>
+    </div>
+
+    <!-- Matricula view section -->
+    <div id="view-matricula" class="view-section">
+      <div class="m-matricula-card" id="matricula-intro-card" style="margin-top: 20px;">
+        <h3 style="margin-bottom:8px;">Inscrição em Matrícula Online</h3>
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.6; margin-top:0;">
+          Bem-vindo ao sistema de matrícula simplificado. Aqui você pode pré-selecionar as turmas disponíveis para o seu curso e verificar possíveis conflitos de horários em tempo real.
+        </p>
+        <div style="background:rgba(255,193,7,0.05); border:1px solid rgba(255,193,7,0.2); border-radius:12px; padding:12px; margin-bottom:16px; font-size:12px; color:#ffb300; line-height:1.5;">
+          ⚠️ <strong>Nota de Regulamento:</strong> Certifique-se de consultar as regras de matrícula vigentes da sua instituição antes de confirmar suas escolhas.
+        </div>
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <a href="https://sigaa.sig.ufal.br/sigaa/verTelaLogin.do" target="_blank" class="m-btn m-btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; flex:1; font-size:13px;">
+            📄 Regulamento UFAL
+          </a>
+          <button class="m-btn m-btn-primary" onclick="startMatriculaFlow()" style="flex:1;">
+            Iniciar Matrícula ➔
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Selection (initially hidden) -->
+      <div id="matricula-selection-container" style="display:none; margin-top: 20px;">
+        <div class="m-section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <h3 style="margin:0;">Escolha de Disciplinas e Turmas</h3>
+            <span style="font-size:11px; color:var(--text-muted);">Marque as turmas que deseja cursar no semestre</span>
+          </div>
+          <button class="m-btn m-btn-secondary" onclick="resetMatriculaSelection()" style="padding:6px 12px; font-size:12px;">Limpar</button>
+        </div>
+
+        <!-- Real-time Alerts Panel -->
+        <div id="matricula-conflict-alert" style="display:none; background:rgba(220,53,69,0.08); border:1px solid rgba(220,53,69,0.3); border-radius:16px; padding:16px; margin-bottom:20px; font-size:13px; color:var(--danger); line-height:1.5;">
+          <strong style="display:block; margin-bottom:6px;">⚠️ Choque de Horários Detectado!</strong>
+          <div id="matricula-conflict-list"></div>
+        </div>
+
+        <!-- Levels / Classes list -->
+        <div id="matricula-levels-list"></div>
+
+        <!-- Float bar with summary of selection and next button -->
+        <div class="matricula-summary-bar" style="background:var(--bg-card); border:1px solid var(--border); border-radius:20px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.3); margin-top:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div>
+              <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.05em;">Selecionadas</span>
+              <div id="matricula-selected-count" style="font-size:20px; font-weight:900; color:#fff;">0 turmas</div>
+            </div>
+            <button id="btn-submit-selection" class="m-btn m-btn-primary" onclick="submitMatriculaSelection()" style="padding:10px 24px;">
+              Prosseguir ➔
+            </button>
+          </div>
+          <div id="matricula-selected-list" style="font-size:12px; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;"></div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Review and Grid (initially hidden) -->
+      <div id="matricula-review-container" style="display:none; margin-top: 20px;">
+        <h3 style="margin-bottom:4px;">Revisão de Matrícula</h3>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:0; margin-bottom:20px;">Confira a grade horária e confirme as turmas escolhidas.</p>
+
+        <!-- Timetable Grid -->
+        <div id="matricula-grid-table-container" style="margin-bottom:24px; overflow-x:auto;"></div>
+
+        <!-- Confirmation Pass Card -->
+        <div class="m-matricula-card">
+          <h4 style="margin-top:0; margin-bottom:8px;">Confirmação Final</h4>
+          <p style="font-size:12px; color:var(--text-muted); line-height:1.5; margin-top:0; margin-bottom:16px;">
+            Para efetivar a sua matrícula definitivamente no SIGAA, digite a sua senha de confirmação.
+          </p>
+          <div style="margin-bottom:16px;">
+            <input type="password" id="matricula-confirm-password" placeholder="Senha do SIGAA" style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.2); border:1px solid var(--border); border-radius:12px; padding:12px; color:#fff; font-size:14px; outline:none; transition:border 0.2s;" />
+          </div>
+          <div id="matricula-confirm-error" style="display:none; color:var(--danger); font-size:12px; margin-bottom:12px;"></div>
+          
+          <div style="display:flex; gap:10px;">
+            <button class="m-btn m-btn-secondary" onclick="backToSelection()" style="flex:1;">
+              Voltar
+            </button>
+            <button class="m-btn m-btn-primary" id="btn-finalize-matricula" onclick="finalizeMatricula()" style="flex:1;">
+              Confirmar e Gravar ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: Success/Receipt (initially hidden) -->
+      <div id="matricula-success-container" style="display:none; text-align:center; padding:40px 20px; margin-top: 20px;">
+        <div style="font-size:64px; margin-bottom:16px;">🎉</div>
+        <h3 style="margin-bottom:8px; color:#4caf50;">Matrícula Enviada!</h3>
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.6; max-width:400px; margin:0 auto 24px auto;" id="matricula-success-msg">
+          Suas turmas foram gravadas com sucesso no SIGAA.
+        </p>
+        <button class="m-btn m-btn-primary" onclick="restartMatriculaWizard()" style="padding:10px 24px;">
+          Voltar ao Início
+        </button>
+      </div>
     </div>
 
   </div>
@@ -1093,6 +1478,54 @@
         <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.08em; margin-bottom:8px;">Observações</div>
         <div id="m-obs-box" style="background:rgba(255,255,255,0.02); border:1px solid var(--border); padding:16px; border-radius:16px; font-size:14px; color:var(--text-main); line-height:1.5;"></div>
       </div>
+
+      <div id="m-reviews-section" style="margin-top:24px; display:none;">
+        <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:800; letter-spacing:0.08em; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+          Dificuldade Média
+          <button class="m-btn m-btn-secondary" id="btn-minha-avaliacao" style="padding:4px 8px; font-size:10px;">Minha Avaliação</button>
+        </div>
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); padding:16px; border-radius:16px; display:flex; flex-direction:column; gap:12px;">
+          <div id="review-stat-course">
+             <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Disciplina</div>
+             <div style="display:flex; align-items:center; gap:8px;">
+               <div id="stars-course"></div>
+               <div id="count-course" style="font-size:10px; color:var(--text-muted);"></div>
+             </div>
+          </div>
+          <div id="review-stat-prof" style="display:none;">
+             <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;" id="lbl-prof">Professor</div>
+             <div style="display:flex; align-items:center; gap:8px;">
+               <div id="stars-prof"></div>
+               <div id="count-prof" style="font-size:10px; color:var(--text-muted);"></div>
+             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reviews Modal -->
+  <div id="reviews-modal" style="display:none; position:fixed; inset:0; z-index:2100; background:rgba(0,0,0,0.85); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); align-items:center; justify-content:center; padding:20px;">
+    <div class="modal-content" style="max-width: 600px; position:relative;">
+      <button onclick="closeReviewsModal(false)" style="position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); border:none; width:32px; height:32px; border-radius:50%; color:#fff; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">✕</button>
+      <h2 style="margin:0 0 8px 0; font-size:22px; font-weight:700; color:#fff; line-height:1.2; padding-right:40px;">Avaliações Pendentes</h2>
+      <p id="reviews-modal-text" style="font-size:13px; color:var(--text-muted); margin-bottom:24px; line-height:1.5;">
+        Notamos que você já cursou as seguintes disciplinas. Avalie a dificuldade delas para ajudar outros alunos!
+      </p>
+      
+      <div id="reviews-list-container" style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
+        <!-- Injected via JS -->
+      </div>
+
+      
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button class="m-btn" onclick="neverShowReviewsAgain()" style="background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--text-muted);">
+          Não me lembrar
+        </button>
+        <button class="m-btn m-btn-primary" onclick="submitPendingReviews()">
+          Salvar Avaliações
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1116,6 +1549,11 @@
     <button class="m-nav-btn" id="m-nav-achievements" onclick="mSwitchTabFromNav('achievements')">
       <span class="m-nav-icon">🏆</span>
       <span class="m-nav-label">Troféus</span>
+      <div class="m-nav-pip"></div>
+    </button>
+    <button class="m-nav-btn" id="m-nav-matricula" onclick="mSwitchTabFromNav('matricula')">
+      <span class="m-nav-icon">📝</span>
+      <span class="m-nav-label">Matrícula</span>
       <div class="m-nav-pip"></div>
     </button>
   </div>
@@ -1301,6 +1739,7 @@
       else if (viewId === 'stats') { buttons[1].classList.add('active'); renderChart(); loadAcademicProfile(); }
       else if (viewId === 'frequency') { buttons[2].classList.add('active'); renderFrequency(); }
       else if (viewId === 'achievements') { buttons[3].classList.add('active'); renderAchievements(); }
+      else if (viewId === 'matricula') { if (buttons[4]) buttons[4].classList.add('active'); loadMatricula(); }
     };
 
 
@@ -1319,6 +1758,7 @@
       if (viewId === 'stats') { renderChart(); loadAcademicProfile(); }
       if (viewId === 'frequency') renderFrequency();
       if (viewId === 'achievements') renderAchievements();
+      if (viewId === 'matricula') loadMatricula();
     }
 
     function mSwitchTabFromNav(viewId) {
@@ -1328,15 +1768,446 @@
       // bottom nav
       document.querySelectorAll('.m-nav-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('m-nav-' + viewId).classList.add('active');
-      // bottom nav
-      document.querySelectorAll('.m-nav-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('m-nav-' + viewId).classList.add('active');
       // side effects
       if (viewId === 'stats') { renderChart(); loadAcademicProfile(); }
       if (viewId === 'frequency') renderFrequency();
       if (viewId === 'achievements') renderAchievements();
+      if (viewId === 'matricula') loadMatricula();
       // scroll topo
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ----------------- ONLINE ENROLLMENT JAVASCRIPT LOGIC -----------------
+    let matriculaLevels = [];
+    let selectedClassIds = [];
+    let matriculaViewState = '';
+    let isMatriculaLoaded = false;
+
+    function startMatriculaFlow() {
+      const btn = document.querySelector('#matricula-intro-card .m-btn-primary');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Carregando turmas...';
+
+      fetch('/api/matricula/status')
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Falha ao autenticar ou carregar dados.');
+          }
+          return res.json();
+        })
+        .then(data => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          matriculaLevels = data.levels || [];
+          matriculaViewState = data.view_state || '';
+          isMatriculaLoaded = true;
+          
+          renderMatriculaSelection();
+          
+          document.getElementById('matricula-intro-card').style.display = 'none';
+          document.getElementById('matricula-selection-container').style.display = 'block';
+        })
+        .catch(err => {
+          alert('Erro ao iniciar matrícula: ' + err.message);
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        });
+    }
+
+    function renderMatriculaSelection() {
+      const listContainer = document.getElementById('matricula-levels-list');
+      listContainer.innerHTML = '';
+      
+      if (matriculaLevels.length === 0) {
+        listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nenhuma turma disponível no momento.</div>';
+        return;
+      }
+
+      matriculaLevels.forEach(level => {
+        const levelDiv = document.createElement('div');
+        levelDiv.style.marginBottom = '24px';
+        levelDiv.innerHTML = `<h4 style="color:var(--accent); font-weight:800; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px;">${level.level}</h4>`;
+
+        level.disciplines.forEach(disc => {
+          const discDiv = document.createElement('div');
+          discDiv.className = 'm-disc-group';
+
+          // Equivalents trigger JS
+          const equivBtnHtml = disc.equiv_onclick ? 
+            `<button class="m-btn m-btn-secondary" style="padding:4px 8px; font-size:11px; border-radius:8px;" onclick="showEquivalents('${disc.code}', '${disc.equiv_onclick.replace(/'/g, "\\'")}')">🔗 Equivalentes</button>` : '';
+
+          discDiv.innerHTML = `
+            <div class="m-disc-title">
+              <span>${disc.code} - ${disc.name}</span>
+              ${equivBtnHtml}
+            </div>
+            <div class="m-classes-list"></div>
+          `;
+
+          const classesList = discDiv.querySelector('.m-classes-list');
+          disc.classes.forEach(cls => {
+            const classItem = document.createElement('div');
+            classItem.className = 'm-class-item' + (selectedClassIds.includes(cls.class_id) ? ' selected' : '');
+            classItem.onclick = (e) => {
+              // Avoid triggering if clicked inside buttons/checkboxes directly
+              toggleSelectClass(cls.class_id);
+            };
+
+            classItem.innerHTML = `
+              <div class="m-class-chk"></div>
+              <div class="m-class-details">
+                <div class="m-class-code">${cls.class_code}</div>
+                <div class="m-class-info"><strong>Prof:</strong> ${cls.teacher || 'A definir'}</div>
+                <div class="m-class-info"><strong>Horário:</strong> ${cls.schedule} | <strong>Local:</strong> ${cls.location || 'A definir'}</div>
+              </div>
+            `;
+            classesList.appendChild(classItem);
+          });
+
+          levelDiv.appendChild(discDiv);
+        });
+
+        listContainer.appendChild(levelDiv);
+      });
+      
+      updateSummaryBar();
+    }
+
+    function toggleSelectClass(classId) {
+      const idx = selectedClassIds.indexOf(classId);
+      if (idx === -1) {
+        selectedClassIds.push(classId);
+      } else {
+        selectedClassIds.splice(idx, 1);
+      }
+      
+      // Update DOM classes
+      renderMatriculaSelection();
+      checkLocalConflicts();
+    }
+
+    function resetMatriculaSelection() {
+      selectedClassIds = [];
+      renderMatriculaSelection();
+      checkLocalConflicts();
+    }
+
+    function findClassById(classId) {
+      for (const lvl of matriculaLevels) {
+        for (const disc of lvl.disciplines) {
+          for (const cls of disc.classes) {
+            if (cls.class_id === classId) {
+              return { cls: cls, disc: disc };
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    // JS-based schedule conflict detector matching the python logic
+    function parseSchedule(scheduleStr) {
+      const regex = /^([2-7]+)([MNT])([1-6]+)$/;
+      const match = scheduleStr.match(regex);
+      if (!match) return [];
+      const days = match[1].split('').map(Number);
+      const shift = match[2];
+      const hours = match[3].split('').map(Number);
+      const slots = [];
+      days.forEach(d => {
+        hours.forEach(h => {
+          slots.push(`${d}-${shift}-${h}`);
+        });
+      });
+      return slots;
+    }
+
+    function checkLocalConflicts() {
+      const slotMap = {};
+      const conflicts = [];
+      
+      selectedClassIds.forEach(id => {
+        const item = findClassById(id);
+        if (!item) return;
+        const cls = item.cls;
+        const slots = parseSchedule(cls.schedule);
+        
+        slots.forEach(slot => {
+          if (slotMap[slot]) {
+            conflicts.push({
+              slot: slot,
+              class1: slotMap[slot],
+              class2: item
+            });
+          }
+          slotMap[slot] = item;
+        });
+      });
+
+      const alertBox = document.getElementById('matricula-conflict-alert');
+      const conflictList = document.getElementById('matricula-conflict-list');
+      const nextBtn = document.getElementById('btn-submit-selection');
+
+      if (conflicts.length > 0) {
+        alertBox.style.display = 'block';
+        nextBtn.disabled = true;
+        
+        // Render conflict descriptions
+        const uniqueConflicts = [];
+        const seenStr = new Set();
+        conflicts.forEach(conf => {
+          const key = [conf.class1.cls.class_id, conf.class2.cls.class_id].sort().join('-');
+          if (!seenStr.has(key)) {
+            seenStr.add(key);
+            uniqueConflicts.push(conf);
+          }
+        });
+
+        conflictList.innerHTML = uniqueConflicts.map(conf => {
+          return `• <strong>${conf.class1.disc.code} (${conf.class1.cls.class_code})</strong> e <strong>${conf.class2.disc.code} (${conf.class2.cls.class_code})</strong> possuem choque de horário (${conf.class1.cls.schedule} vs ${conf.class2.cls.schedule}).`;
+        }).join('<br>');
+      } else {
+        alertBox.style.display = 'none';
+        nextBtn.disabled = false;
+        conflictList.innerHTML = '';
+      }
+    }
+
+    function updateSummaryBar() {
+      const countEl = document.getElementById('matricula-selected-count');
+      const listEl = document.getElementById('matricula-selected-list');
+      
+      countEl.innerText = `${selectedClassIds.length} turma(s) selecionada(s)`;
+      listEl.innerHTML = '';
+
+      selectedClassIds.forEach(id => {
+        const item = findClassById(id);
+        if (item) {
+          const div = document.createElement('div');
+          div.innerHTML = `• ${item.disc.code} - ${item.cls.class_code} (${item.cls.schedule})`;
+          listEl.appendChild(div);
+        }
+      });
+    }
+
+    function showEquivalents(discCode, equivOnclick) {
+      // Clean overlay modal showing equivalent disciplines
+      const isDev = true; 
+      
+      let contentHtml = '';
+      if (discCode === 'PEDL092') {
+        contentHtml = `
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; padding:16px;">
+            <p><strong>Disciplinas Equivalentes Encontradas:</strong></p>
+            <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; margin-bottom:8px;">
+              <strong>PED090 - ANTROPOLOGIA DA EDUCAÇÃO</strong> (Carga: 60h)
+              <br><span style="color:#4caf50;">Turma 01 (Prof: MARCOS VINICIUS) - 4M1234</span>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted);">Essa equivalência é aceita para cumprir os requisitos da estrutura curricular de Geografia.</p>
+          </div>
+        `;
+      } else {
+        contentHtml = `
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; padding:16px;">
+            <p><strong>Consulta de Equivalentes (Gatilho SIGAA):</strong></p>
+            <code>${equivOnclick}</code>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Em ambiente de desenvolvimento, emulamos a verificação da expressão equivalente cadastrada no plano de curso.</p>
+          </div>
+        `;
+      }
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-active';
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100vw';
+      overlay.style.height = '100vh';
+      overlay.style.background = 'rgba(0,0,0,0.85)';
+      overlay.style.zIndex = '9999';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.backdropFilter = 'blur(10px)';
+
+      overlay.innerHTML = `
+        <div class="m-matricula-card" style="width:90%; max-width:450px; position:relative; animation: modalEnter 0.3s ease;">
+          <button class="btn-close" style="top:15px; right:15px;" onclick="this.closest('.modal-active').remove()">X</button>
+          <h3 style="margin-top:0;">Equivalências: ${discCode}</h3>
+          ${contentHtml}
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function submitMatriculaSelection() {
+      if (selectedClassIds.length === 0) {
+        alert('Selecione pelo menos uma turma.');
+        return;
+      }
+      
+      const btn = document.getElementById('btn-submit-selection');
+      btn.disabled = true;
+      btn.innerText = 'Processando...';
+
+      fetch('/api/matricula/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+          selected_class_ids: selectedClassIds,
+          view_state: matriculaViewState
+        })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error('Erro de comunicação com o servidor.');
+        return res.json();
+      })
+      .then(data => {
+        if (data.error) throw new Error(data.error);
+        
+        // Show Step 3
+        document.getElementById('matricula-selection-container').style.display = 'none';
+        document.getElementById('matricula-review-container').style.display = 'block';
+        
+        // Render schedule grid table
+        renderTimetableGrid();
+      })
+      .catch(err => {
+        alert(err.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Prosseguir ➔';
+      });
+    }
+
+    function renderTimetableGrid() {
+      const container = document.getElementById('matricula-grid-table-container');
+      container.innerHTML = '';
+
+      const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      const dayCodes = [2, 3, 4, 5, 6, 7];
+      const shifts = ['M', 'T', 'N'];
+      const shiftHours = {
+        'M': [1, 2, 3, 4, 5, 6],
+        'T': [1, 2, 3, 4, 5, 6],
+        'N': [1, 2, 3, 4]
+      };
+
+      let tableHtml = `
+        <table class="m-timetable-table">
+          <thead>
+            <tr>
+              <th>Horário</th>
+              ${days.map(d => `<th>${d}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      // Build rows
+      shifts.forEach(shift => {
+        shiftHours[shift].forEach(hour => {
+          const rowCode = `${shift}${hour}`;
+          tableHtml += `<tr><td><strong>${rowCode}</strong></td>`;
+          
+          dayCodes.forEach(day => {
+            const slotKey = `${day}-${shift}-${hour}`;
+            
+            // Check if any selected class occupies this slot
+            let occupiedClass = null;
+            let occupiedDisc = null;
+            selectedClassIds.forEach(id => {
+              const item = findClassById(id);
+              if (item) {
+                const slots = parseSchedule(item.cls.schedule);
+                if (slots.includes(slotKey)) {
+                  occupiedClass = item.cls;
+                  occupiedDisc = item.disc;
+                }
+              }
+            });
+
+            if (occupiedClass) {
+              tableHtml += `<td class="m-timetable-slot-active" title="${occupiedDisc.name}">${occupiedDisc.code}</td>`;
+            } else {
+              tableHtml += `<td>---</td>`;
+            }
+          });
+          
+          tableHtml += '</tr>';
+        });
+      });
+
+      tableHtml += '</tbody></table>';
+      container.innerHTML = tableHtml;
+    }
+
+    function backToSelection() {
+      document.getElementById('matricula-review-container').style.display = 'none';
+      document.getElementById('matricula-selection-container').style.display = 'block';
+    }
+
+    function finalizeMatricula() {
+      const password = document.getElementById('matricula-confirm-password').value;
+      const errorEl = document.getElementById('matricula-confirm-error');
+      const btn = document.getElementById('btn-finalize-matricula');
+      
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btn.innerText = 'Enviando ao SIGAA...';
+
+      fetch('/api/matricula/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+          password: password
+        })
+      })
+      .then(res => {
+        return res.json().then(data => {
+          if (!res.ok) {
+            throw new Error(data.message || 'Senha incorreta ou erro de validação.');
+          }
+          return data;
+        });
+      })
+      .then(data => {
+        // Step 4: Success
+        document.getElementById('matricula-review-container').style.display = 'none';
+        document.getElementById('matricula-success-container').style.display = 'block';
+        document.getElementById('matricula-success-msg').innerText = data.message;
+      })
+      .catch(err => {
+        errorEl.innerText = err.message;
+        errorEl.style.display = 'block';
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerText = 'Confirmar e Gravar ➔';
+      });
+    }
+
+    function restartMatriculaWizard() {
+      selectedClassIds = [];
+      document.getElementById('matricula-success-container').style.display = 'none';
+      document.getElementById('matricula-intro-card').style.display = 'block';
+      document.getElementById('matricula-confirm-password').value = '';
+    }
+
+    function loadMatricula() {
+      // Lazy load indicator
+      if (isMatriculaLoaded) return;
     }
 
 
@@ -1353,12 +2224,20 @@
     setTimeout(() => { if (!isStreamActive) return; showSupportCard(); }, 5000);
 
 
-    function escapeHtml(text) {
-      if (text == null) return '';
-      return String(text)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    function escapeHtml(unsafe) {
+      if (!unsafe) return '';
+      return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function formatProfName(fullName) {
+      if (!fullName || fullName.toUpperCase() === 'DESCONHECIDO') return fullName;
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length <= 1) return fullName;
+      const preps = ['DE', 'DA', 'DO', 'DAS', 'DOS'];
+      if (parts.length > 2 && preps.includes(parts[1].toUpperCase())) {
+         return parts[0] + ' ' + parts[1] + ' ' + parts[2];
+      }
+      return parts[0] + ' ' + parts[1];
     }
     function roundSigga(val) { return Math.round(val * 2) / 2; }
     function deepEqual(obj1, obj2) {
@@ -1381,16 +2260,8 @@
       `);
       }
       if (!isDemo) {
-        const stored = localStorage.getItem(CACHE_KEY);
-        if (stored) {
-          try {
-            const cached = JSON.parse(stored);
-            if (Array.isArray(cached.data)) {
-              liveData = cached.data.map(d => ({ ...d, id: String(d.id), isRefreshing: true })); // Immediate visual feedback
-              if (!isHistoryMode) { data = liveData; mRenderGroupedList(); updateHeader(); }
-            }
-          } catch (e) { console.error("Cache load error", e); }
-        }
+        // LocalStorage cache persistence removed to ensure fresh fetch from server
+        // Endpoint rate limiting protects against abuse.
       }
       let priorityIndices = [];
       let skipIndices = [];
@@ -1465,8 +2336,7 @@
     }
 
     function saveGradesState() {
-      if (window.location.pathname === '/demo') return;
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data: liveData }));
+      // LocalStorage state saving removed
     }
 
     function handleStreamMessage(msg, updatedCourseIds) {
@@ -1511,9 +2381,14 @@
             st.classList.add('visible');
           }
         }
+      } else if (msg.type === 'sync_start') {
+          if (msg.total_courses === 0 && !isHistoryMode) {
+              mRenderGroupedList();
+          }
       } else if (msg.type === 'profile_data') {
         profileData = msg.data;
         _buildMSemDropdown('Atual');
+        checkPendingReviews();
       } else if (msg.type === 'course_data') {
         const idx = liveData.findIndex(d => String(d.id) === String(msg.id));
         if (idx !== -1) {
@@ -1548,6 +2423,7 @@
         }
       } else if (msg.type === 'sync_end') {
         pruneStaleCourses(updatedCourseIds);
+        mRenderGroupedList(); // Ensures empty state is shown if data is 0
       }
     }
 
@@ -1598,6 +2474,27 @@
 
       // Remove existing groups to re-render
       viewList.querySelectorAll('.m-group').forEach(g => g.remove());
+
+      const emptyMsg = document.getElementById('empty-list-msg');
+      const freqBtn = document.getElementById('m-nav-frequency');
+      
+      if (data.length === 0 && !isHistoryMode) {
+          if (emptyMsg) {
+              emptyMsg.innerHTML = "Opa, você não está em nenhuma turma";
+              emptyMsg.style.display = 'block';
+          }
+          if (freqBtn) {
+              freqBtn.style.pointerEvents = 'none';
+              freqBtn.style.opacity = '0.3';
+          }
+          return;
+      } else {
+          if (emptyMsg) emptyMsg.style.display = 'none';
+          if (freqBtn) {
+              freqBtn.style.pointerEvents = 'auto';
+              freqBtn.style.opacity = '1';
+          }
+      }
 
       const sorted = [...data].sort((a, b) => {
         if (a.isLoading && !b.isLoading) return 1;
@@ -1650,7 +2547,13 @@
           const barColor = st.is_critical ? 'var(--danger)' : (st.status === 'Aprovado' ? 'var(--success)' : (st.needed > 0 ? '#facc15' : 'var(--accent)'));
           const scoreColor = st.is_critical ? 'var(--danger)' : (st.status === 'Aprovado' ? 'var(--success)' : (st.needed > 0 ? '#facc15' : 'var(--text-main)'));
           let scoreVal = st.average !== undefined ? st.average.toFixed(1) : '0.0';
-          let subInfo = item.obs || st.message || '';
+          
+          let calcMsg = st.message && st.message !== "Concluído" ? st.message : "";
+          let subInfo = calcMsg || item.obs || '';
+          
+          if (item.professor && item.professor !== "Desconhecido") {
+              subInfo += ` • Prof. ${escapeHtml(formatProfName(item.professor))}`;
+          }
           let detailBadges = '';
           if (st.details) {
             const styling = st.details.styling || {};
@@ -2025,6 +2928,12 @@
         populateSems(document.getElementById('semDropdown'), document.getElementById('semDropdownContent'));
         _buildMSemDropdown();
         renderAcademicProfileData();
+        if (typeof isHistoryMode !== 'undefined' && isHistoryMode) {
+          const lbl = document.getElementById('currentSemesterLabel-m') || document.getElementById('currentSemesterLabel');
+          if (lbl && lbl.textContent && lbl.textContent !== 'Atual') {
+            _doSwitchSemester(lbl.textContent, lbl);
+          }
+        }
         loading.style.display = 'none'; content.style.display = 'block';
       } catch (e) {
         console.error(e); loading.textContent = "Não foi possível carregar o histórico completo.";
@@ -2109,28 +3018,42 @@
             let details = {};
             if (subj.grades) subj.grades.forEach(g => { details[g.name] = g.value; });
             
-            // Normalize status from SIGAA bulletin (Portuguese and uppercase)
             let normalizedStatus = 'Indefinido';
             let isCritical = false;
-            const rawStatus = (subj.status || '').toUpperCase();
-            if (rawStatus.includes('APROVADO') || rawStatus.includes('CONCLUÍDO')) {
-              normalizedStatus = 'Aprovado';
-            } else if (rawStatus.includes('REPROVADO')) {
-              normalizedStatus = 'Reprovado';
-              isCritical = true;
-            } else if (rawStatus.includes('CURSANDO')) {
-              normalizedStatus = 'Cursando';
-            } else if (rawStatus.includes('FINAL') || rawStatus.includes('PROVA FINAL')) {
-              normalizedStatus = 'Prova Final';
-            } else if (rawStatus.includes('RECUPERAC') || rawStatus.includes('RECUPERAÇ')) {
-              normalizedStatus = 'Recuperação';
-            } else if (subj.status) {
-              normalizedStatus = subj.status;
+            let finalAvg = subj.final_grade !== null ? subj.final_grade : 0.0;
+            let message = subj.status;
+            let needed = 0;
+            
+            if (subj.status_dict) {
+                const st = subj.status_dict;
+                isCritical = st.is_critical;
+                normalizedStatus = (st.status === 'APPROVED' || st.status === 'Aprovado') ? 'Aprovado' : ((st.status === 'FAILED' || st.status === 'Reprovado') ? 'Reprovado' : subj.status);
+                message = st.message || subj.status;
+                needed = st.needed || 0;
+                if (st.details) details = st.details;
+                finalAvg = st.average !== undefined ? st.average : finalAvg;
+            } else {
+                // Normalize status from SIGAA bulletin (Portuguese and uppercase)
+                const rawStatus = (subj.status || '').toUpperCase();
+                if (rawStatus.includes('APROVADO') || rawStatus.includes('CONCLUÍDO')) {
+                  normalizedStatus = 'Aprovado';
+                } else if (rawStatus.includes('REPROVADO')) {
+                  normalizedStatus = 'Reprovado';
+                  isCritical = true;
+                } else if (rawStatus.includes('CURSANDO')) {
+                  normalizedStatus = 'Cursando';
+                } else if (rawStatus.includes('FINAL') || rawStatus.includes('PROVA FINAL')) {
+                  normalizedStatus = 'Prova Final';
+                } else if (rawStatus.includes('RECUPERAC') || rawStatus.includes('RECUPERAÇ')) {
+                  normalizedStatus = 'Recuperação';
+                } else if (subj.status) {
+                  normalizedStatus = subj.status;
+                }
             }
             
             return {
-              id: 1000 + index, name: subj.name, obs: subj.status, grades: subj.grades || [],
-              status: { status: normalizedStatus, average: subj.final_grade !== null ? subj.final_grade : 0.0, needed: 0, is_critical: isCritical, message: subj.status, details: details },
+              id: 1000 + index, name: subj.name, obs: subj.status, grades: subj.grades || [], professor: subj.professor,
+              status: { status: normalizedStatus, average: finalAvg, needed: needed, is_critical: isCritical, message: message, details: details },
               frequency: { total_faltas: subj.absences || 0, max_faltas: 0, percent: 0 },
               isLoading: false, isRefreshing: false
             };
@@ -2331,6 +3254,65 @@
         } else {
           container.innerHTML = '<div style="color:var(--text-muted); font-size:13px; text-align:center; width:100%; padding:20px 0;">Nenhuma nota lançada nesta disciplina.</div>';
         }
+
+        // Fetch and show review stats
+        document.getElementById('m-reviews-section').style.display = 'block';
+        document.getElementById('stars-course').innerHTML = 'Carregando...';
+        document.getElementById('count-course').textContent = '';
+        document.getElementById('review-stat-prof').style.display = 'none';
+
+        const cName = encodeURIComponent(item.name);
+        let pName = item.professor && item.professor !== 'Desconhecido' ? encodeURIComponent(item.professor) : '';
+        
+        let statsUrl = `/api/reviews/stats?course=${cName}`;
+        if (pName) statsUrl += `&professor=${pName}`;
+
+        fetch(statsUrl).then(r => r.json()).then(stats => {
+            function renderDifficultyBadge(elementId, average) {
+                const el = document.getElementById(elementId);
+                if (average === null) {
+                    el.innerHTML = '<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800; text-transform:uppercase;">Sem Dados</span>';
+                    return;
+                }
+                let text = 'Muito Difícil';
+                let color = '#f44336'; // Red
+                if (average < 1.5) { text = 'Muito Fácil'; color = '#4caf50'; } // Green
+                else if (average < 2.5) { text = 'Fácil'; color = '#8bc34a'; } // Light Green
+                else if (average < 3.5) { text = 'Médio'; color = '#facc15'; } // Yellow
+                else if (average < 4.5) { text = 'Difícil'; color = '#ff9800'; } // Orange
+                
+                el.innerHTML = `<span style="background:${color}20; border: 1px solid ${color}50; color:${color}; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">${text}</span>`;
+            }
+
+            if (stats.course) {
+                renderDifficultyBadge('stars-course', stats.course.average);
+                document.getElementById('count-course').textContent = `(${stats.course.count} avaliações)`;
+            } else {
+                renderDifficultyBadge('stars-course', null);
+                document.getElementById('count-course').textContent = '';
+            }
+
+            if (pName) {
+                document.getElementById('review-stat-prof').style.display = 'block';
+                document.getElementById('lbl-prof').textContent = `Prof. ${formatProfName(item.professor)}`;
+                if (stats.professor) {
+                    renderDifficultyBadge('stars-prof', stats.professor.average);
+                    document.getElementById('count-prof').textContent = `(${stats.professor.count} avaliações)`;
+                } else {
+                    renderDifficultyBadge('stars-prof', null);
+                    document.getElementById('count-prof').textContent = '';
+                }
+            }
+        });
+
+        const btnAvaliar = document.getElementById('btn-minha-avaliacao');
+        btnAvaliar.onclick = () => {
+            const pendingData = {
+                courses: [item.name],
+                professors: (item.professor && item.professor !== 'Desconhecido') ? [item.professor] : []
+            };
+            showReviewsModal(pendingData);
+        };
       }
     }
 
@@ -2339,6 +3321,158 @@
 
 
     startDataStream();
+
+    // --- REVIEW SYSTEM (ANTI-BOMBING) ---
+    async function checkPendingReviews() {
+        try {
+            const response = await fetch('/api/reviews/pending');
+            if (response.ok) {
+                const pendingData = await response.json();
+                if (pendingData.courses && pendingData.courses.length > 0 || pendingData.professors && pendingData.professors.length > 0) {
+                    showReviewsModal(pendingData);
+                }
+            }
+        } catch (e) { console.error("Error checking pending reviews", e); }
+    }
+
+    let currentPendingReviews = null;
+
+    function showReviewsModal(pendingData) {
+        currentPendingReviews = pendingData;
+        const container = document.getElementById('reviews-list-container');
+        container.innerHTML = '';
+        
+        const isSingle = (pendingData.courses.length <= 1 && pendingData.professors.length <= 1);
+        document.getElementById('reviews-modal-text').innerHTML = isSingle 
+            ? "Avalie a dificuldade desta disciplina e professor para ajudar a comunidade!" 
+            : "Notamos que você já cursou estas disciplinas. Avalie a dificuldade delas para ajudar outros alunos!";
+
+        pendingData.courses.forEach((c, idx) => {
+            container.innerHTML += `
+                <div class="review-item-card" data-type="course" data-name="${c}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-weight:700; font-size:14px; color:#fff;">Disciplina: ${c}</span>
+                        <input type="checkbox" class="decline-cb" id="c_decline_${idx}" style="display:none;" />
+                        <label for="c_decline_${idx}" class="decline-btn">Não Avaliar</label>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Quão difícil foi essa disciplina?</div>
+                    <div class="segmented-rating" dir="ltr">
+                        <input type="radio" id="c_star1_${idx}" name="rating_course_${idx}" value="1" /><label for="c_star1_${idx}">1</label>
+                        <input type="radio" id="c_star2_${idx}" name="rating_course_${idx}" value="2" /><label for="c_star2_${idx}">2</label>
+                        <input type="radio" id="c_star3_${idx}" name="rating_course_${idx}" value="3" /><label for="c_star3_${idx}">3</label>
+                        <input type="radio" id="c_star4_${idx}" name="rating_course_${idx}" value="4" /><label for="c_star4_${idx}">4</label>
+                        <input type="radio" id="c_star5_${idx}" name="rating_course_${idx}" value="5" /><label for="c_star5_${idx}">5</label>
+                    </div>
+                    <div class="segmented-rating-legend">
+                        <span>Fácil</span>
+                        <span>Muito Difícil</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        pendingData.professors.forEach((p, idx) => {
+            container.innerHTML += `
+                <div class="review-item-card" data-type="professor" data-name="${p}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-weight:700; font-size:14px; color:#fff;">Prof: ${formatProfName(p)}</span>
+                        <input type="checkbox" class="decline-cb" id="p_decline_${idx}" style="display:none;" />
+                        <label for="p_decline_${idx}" class="decline-btn">Não Avaliar</label>
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Quão difícil foi este professor?</div>
+                    <div class="segmented-rating" dir="ltr">
+                        <input type="radio" id="p_star1_${idx}" name="rating_prof_${idx}" value="1" /><label for="p_star1_${idx}">1</label>
+                        <input type="radio" id="p_star2_${idx}" name="rating_prof_${idx}" value="2" /><label for="p_star2_${idx}">2</label>
+                        <input type="radio" id="p_star3_${idx}" name="rating_prof_${idx}" value="3" /><label for="p_star3_${idx}">3</label>
+                        <input type="radio" id="p_star4_${idx}" name="rating_prof_${idx}" value="4" /><label for="p_star4_${idx}">4</label>
+                        <input type="radio" id="p_star5_${idx}" name="rating_prof_${idx}" value="5" /><label for="p_star5_${idx}">5</label>
+                    </div>
+                    <div class="segmented-rating-legend">
+                        <span>Fácil</span>
+                        <span>Muito Difícil</span>
+                    </div>
+                </div>
+            `;
+        });
+
+
+        document.getElementById('reviews-modal').style.display = 'flex';
+    }
+
+    function closeReviewsModal(didSubmit) {
+        document.getElementById('reviews-modal').style.display = 'none';
+        if (!didSubmit) {
+            // "Lembrar depois" clicked. 
+        }
+    }
+
+    function neverShowReviewsAgain() {
+        const container = document.getElementById('reviews-list-container');
+        const checkboxes = container.querySelectorAll('.decline-cb');
+        checkboxes.forEach(cb => cb.checked = true);
+        submitPendingReviews();
+    }
+
+    async function submitPendingReviews() {
+        const container = document.getElementById('reviews-list-container');
+        const cards = container.querySelectorAll('.review-item-card');
+        
+        let courses = [];
+        let professors = [];
+
+        cards.forEach(card => {
+            const type = card.getAttribute('data-type');
+            const name = card.getAttribute('data-name');
+            const isDeclined = card.querySelector('.decline-cb').checked;
+            let rating = null;
+
+            const selectedStar = card.querySelector('input[type="radio"]:checked');
+            if (selectedStar) {
+                rating = parseFloat(selectedStar.value);
+            }
+
+            if (rating !== null || isDeclined) {
+                if (type === 'course') {
+                    courses.push({ name: name, rating: rating, declined: isDeclined });
+                } else if (type === 'professor') {
+                    professors.push({ name: name, rating: rating, declined: isDeclined });
+                }
+            }
+        });
+
+        if (courses.length === 0 && professors.length === 0) {
+            closeReviewsModal(false);
+            return; // nothing selected
+        }
+
+        const payload = { courses: courses, professors: professors };
+        
+        const btn = document.querySelector('#reviews-modal .m-btn-primary');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "Salvando...";
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/reviews/submit', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                closeReviewsModal(true);
+            } else {
+                alert("Ocorreu um erro ao salvar as avaliações.");
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
   </script>
   <div id="account-switch-overlay">
     <div class="sw-avatar" id="sw-avatar-initials">?</div>

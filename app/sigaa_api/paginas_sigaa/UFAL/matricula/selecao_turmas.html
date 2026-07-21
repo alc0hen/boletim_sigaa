@@ -1,0 +1,7235 @@
+
+
+
+
+
+
+
+
+
+
+
+		<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="background" xmlns="http://www.w3.org/1999/xhtml">
+
+
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+
+
+<title>SIGAA - Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</title>
+<link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/basic_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css" /><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/extended_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" media="rich-extended-skinning" rel="stylesheet" type="text/css" /><script type="text/javascript">window.RICH_FACES_EXTENDED_SKINNING_ON=true;</script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/skinning.js.jsf" type="text/javascript"></script><link rel="shortcut icon" href="/sigaa/img/sigaa.ico" />
+
+<script type="text/javascript" src="/shared/jsBundles/jawr_loader.js"></script>
+<script type="text/javascript">
+                JAWR.loader.style('/bundles/css/sigaa_base.css', 'all');
+        		JAWR.loader.style('/css/ufrn_print.css', 'print');
+        		JAWR.loader.script('/bundles/js/sigaa_base.js');
+</script>
+<link rel="stylesheet" type="text/css" media="all" href="/sigaa/cssBundles/gzip_1549375585/bundles/css/sigaa.css" />
+
+
+<link rel="alternate stylesheet" type="text/css" media="screen" title="mono" href="/sigaa/css/mono.css" />
+<link rel="alternate stylesheet" type="text/css" media="screen" title="contraste" href="/sigaa/css/contraste.css" />
+
+<!-- FontAwesome -->
+<link rel="stylesheet" type="text/css" href="/shared/beta/css/font-awesome.css" media="screen" />
+
+<!-- Painel Gen&#233;rico para telas Modal -->
+<script type="text/javascript" src="/shared/javascript/paineis/painel_generico.js"></script>
+
+<script src="/sigaa/javascript/styleswitch.js" type="text/javascript" ></script>
+
+<script src="/sigaa/javascript/prevenir-duplo-clique.js" type="text/javascript"></script>
+
+
+
+
+
+<script type="text/javascript">
+		var mensagem;
+		var initMensagem = function() {
+			mensagem = new Mensagem();
+		}
+		YAHOO.util.Event.addListener(window,'load', initMensagem);
+
+		function isIE(){
+
+					return false;
+
+		}
+</script>
+
+<script type="text/javascript" src="/sigaa/javascript/jsCookMenuHack.js"></script>
+<!-- Fim dos imports para abrir chamado -->
+
+	<script src="/shared/javascript/STICookieConsent.js"></script>
+	<script>
+	    document.addEventListener("DOMContentLoaded", () => {
+	    	generateCookieConsentModal("SIGAA", "N&#243;s usamos cookies para melhorar sua experi&#234;ncia de navega&#231;&#227;o no portal. Ao utilizar o %sitename%, voc&#234; concorda com a pol&#237;&#173;tica de monitoramento de cookies.", "https://ufrn.br/institucional/politica-de-privacidade-e-termos-de-uso", "https://ufrn.br/institucional/politica-de-cookies");
+	    })
+	</script>
+
+</head>
+
+<body>
+
+
+
+
+
+
+
+	<div id="container">
+	<div id="cabecalho">
+		<div id="info-sistema">
+			<h1><span>UFAL - SIGAA -</span></h1>
+			<h3>Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</h3>
+			<div class="dir">
+
+
+					<style>
+#info-sistema span.sair-sistema,
+	#info-sistema #tempoSessao{
+	display: inline;
+	right: inherit;
+	position: relative;
+	top: 0;
+	padding-right: inherit;
+}
+
+#info-sistema div.dir{
+	top:0;
+	right:0;
+	text-align: right;
+	width: auto;
+	position: absolute;
+	margin:0;
+	padding: 0;
+	height:16px;
+	display: inline;
+	padding-right:5px;
+	color: #FFF;
+}
+#info-sistema span.acessibilidade{
+	padding: 0 5px;
+	border: solid #D99C44;
+	border-width: 0 1px 0 0;
+	margin: 0 5px;
+	padding: 0 5px;
+}
+	#info-sistema span.acessibilidade a{
+		font-size: 1.1em;
+		font-weight: bolder;
+		color: #FFF;
+		margin-left: 2px;
+		letter-spacing: 0.1px;
+		word-spacing: 0.1px;
+	}
+	#info-sistema span.acessibilidade a.fonteMenor strong{
+		font-size: 0.9em;
+	}
+	.rich-tabpanel-content {
+		font-size: inherit;
+	}
+</style>
+<span class="acessibilidade">
+	<a class="fonteMaior" title="Aumentar a texto" alt="Aumentar a texto" href="#">
+		<strong>A</strong>+
+	</a>
+	<a class="fonteMenor" title="Diminuir o texto" alt="Diminuir o texto" href="#">
+		<strong>A</strong>-
+	</a>
+</span>
+
+	<span class="acessibilidade">
+		<a title="Ajuda" alt="Ajuda" href="https://ufal.br/sig/sigaa/manuais" target="_blank">
+			Ajuda?
+		</a>
+	</span>
+
+<script type="text/javascript" src="/shared/javascript/jquery/jquery-1.4.4.min.js"></script>
+<script src="/sigaa/javascript/jquery.fontsize.js" type="text/javascript" ></script>
+<script type="text/javascript" >
+	redimensionarFonte('.acessibilidade', '#conteudo', 11, 11, 14);
+</script>
+<script>var $jq = jQuery.noConflict();</script>
+					<span id="tempoSessao"></span>
+					<span class="sair-sistema"> <a href="/sigaa/logar.do?dispatch=logOff">SAIR</a> </span>
+
+			</div>
+		</div>
+
+
+	<div id="painel-usuario"  >
+
+		<div id="menu-usuario">
+		<ul>
+			<li class="modulos">
+
+				<span id="modulos"> <a href="#" id="show-modulos"> M&#243;dulos </a> </span>
+
+			</li>
+
+
+				<li class="caixa-postal">
+
+
+
+						<a href=/sigaa/abrirCaixaPostal.jsf?sistema=2>
+
+							Caixa Postal
+
+
+						</a>
+
+
+				</li>
+
+
+
+			<!-- INICIO SUST - SIGAA-5677 -->
+
+			<!-- FIM SUST - SIGAA-5677 -->
+
+
+
+
+					<li class="menus">
+						<a href="/sigaa/verPortalDiscente.do">Menu Discente</a>
+					</li>
+
+
+
+
+
+
+<li class="dados-pessoais">
+
+		<a href="#" onclick="window.open('/sigaa/alterar_dados.jsf','','width=670,height=430, top=100, left=100, scrollbars' )">Alterar senha</a>
+
+</li>
+
+
+
+
+			<!-- INICIO SUST - SIGAA-5677 -->
+			<li class="ajuda">
+				<a href="https://ufal.br/sig/sigaa/manuais" target="_blank">Ajuda </a>
+			</li>
+			<!-- FIM SUST - SIGAA-5677 -->
+
+		</ul>
+
+
+
+
+		</div>
+
+		<div id="info-usuario">
+
+		<p class="periodo-atual">
+
+				Semestre atual: <strong>2026.2</strong>
+
+			</br>
+
+		</p>
+		<p class="usuario">
+
+			<span title="ALBERT ALEX S. DE VASCONCELLOS">
+				ALBERT ALEX S. DE VASCONCELLOS
+			</span>
+
+
+
+		</p>
+
+		<p class="unidade">
+			INSTITUTO DE GEOGRAFIA, DESENVOLVIMENTO E MEIO AMBIENTE
+			 (11.00.43.58)
+
+		</p>
+
+		</div>
+
+	<div id="menu-principal"></div>
+	</div>
+	</div>
+
+
+	<div id="conteudo">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+//Fun&#231;&#227;o adicionada no cabe&#231;alho para evitar a reescrita em cada JSP.
+function contarCaracteres(field, idMostraQuantidadeUsuario, maxlimit) {
+
+	if (field.value.length > maxlimit){
+		field.value = field.value.substring(0, maxlimit);
+	}else{
+		document.getElementById(idMostraQuantidadeUsuario).innerHTML = maxlimit - field.value.length ;
+	}
+}
+</script>
+
+<script type="text/javascript" src="/shared/javascript/paineis/turma_componentes.js"></script>
+<!--  Scripts do YAHOO -->
+<link rel="stylesheet" type="text/css" href="/shared/javascript/yui/tabview/assets/tabs.css">
+<link rel="stylesheet" type="text/css" href="/shared/javascript/yui/tabview/assets/border_tabs.css">
+<script type="text/javascript" src="/shared/javascript/yui/tabview-min.js"></script>
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript" src="/sigaa/jsBundles/gzip_N922008801/javascript/graduacao/matricula.js" ></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+function redirectManual(){
+	return window.open("http://www.sistemas.ufrn.br/download/sigaa/public/manual_nee.pdf","_blank");
+}
+</script>
+
+
+
+
+<h2>
+	<a href='/sigaa/verPortalDiscente.do'>Portal do Discente</a> &gt;
+
+
+			Matr&#237;cula On-Line 2026.2
+
+
+
+
+
+
+	&gt; Turmas Abertas do Curr&#237;culo do Aluno
+</h2>
+
+
+	<div class="descricaoOperacao">
+
+<form id="formDescricao" name="formDescricao" method="post" action="/sigaa/graduacao/matricula/turmas_curriculo.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formDescricao" value="formDescricao" />
+
+			<p>Selecione uma ou mais turmas da lista abaixo e confirme a sele&#231;&#227;o atrav&#233;s do bot&#227;o <b>Adicionar Turmas</b>, localizado no final desta p&#225;gina.</p>
+			<p>D&#250;vidas sobre as disciplinas do seu curr&#237;culo?
+
+
+<script type="text/javascript" language="Javascript">function dpf(f) {var adp = f.adp;if (adp != null) {for (var i = 0;i < adp.length;i++) {f.removeChild(adp[i]);}}};function apf(f, pvp) {var adp = new Array();f.adp = adp;var i = 0;for (k in pvp) {var p = document.createElement("input");p.type = "hidden";p.name = k;p.value = pvp[k];f.appendChild(p);adp[i++] = p;}};function jsfcljs(f, pvp, t) {apf(f, pvp);var ft = f.target;if (t) {f.target = t;}f.submit();f.target = ft;dpf(f);};</script>
+<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formDescricao'),{'formDescricao:j_id_jsp_1842047796_384':'formDescricao:j_id_jsp_1842047796_384','id':'1031538'},'_blank');}return false">Clique Aqui</a>
+
+
+			para ver os detalhes de sua estrutura curricular.</p>
+		<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id7" />
+</form>
+	</div>
+
+
+	<div class="box-geral">
+
+
+
+<div class="box-secao">
+
+<form id="formBotoesSuperiores" name="formBotoesSuperiores" method="post" action="/sigaa/graduacao/matricula/turmas_curriculo.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formBotoesSuperiores" value="formBotoesSuperiores" />
+
+	<div class="menu-matricula">
+	<ul>
+
+
+			<li>
+				<a href="javascript:PainelAjudaMatricula.show()" class="btn">
+					<i class="fa fa-question-circle"></i> Ajuda para matr&#237;cula on-line
+				</a>
+			</li>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+			<li>
+
+					<a id="formBotoesSuperiores:verEquivEstCurricualar" href="#" onclick="var a=function(){return prevenirDuploClique();};var b=function(){if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formBotoesSuperiores'),{'formBotoesSuperiores:verEquivEstCurricualar':'formBotoesSuperiores:verEquivEstCurricualar'},'');}return false};return (a()==false) ? false : b();" class="btn">
+						<i class="fa fa-sitemap"></i> Ver equivalentes a estr. curricular
+					</a>
+
+			</li>
+
+
+
+			<li>
+
+					<a id="formBotoesSuperiores:btnverTurmasAbertas" href="#" onclick="var a=function(){return prevenirDuploClique();};var b=function(){if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formBotoesSuperiores'),{'formBotoesSuperiores:btnverTurmasAbertas':'formBotoesSuperiores:btnverTurmasAbertas'},'');}return false};return (a()==false) ? false : b();" class="btn">
+						<i class="fa fa-search"></i> Buscar turmas abertas
+					</a>
+
+			</li>
+
+
+
+
+
+
+
+
+
+	</ul>
+	</div> <!-- /.box-menu-matricula -->
+<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id7" />
+</form>
+</div>
+
+
+
+
+
+<div class="box-secao">
+	<div class="titulo">
+		<h3><span>Dados do discente</span></h3>
+	</div>
+
+
+<form id="j_id_jsp_1842047796_404" name="j_id_jsp_1842047796_404" method="post" action="/sigaa/graduacao/matricula/turmas_curriculo.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="j_id_jsp_1842047796_404" value="j_id_jsp_1842047796_404" />
+
+		<dl class="dl-horizontal">
+			<dt>Discente:</dt>
+			<dd>2026011639 - ALBERT ALEX SILVA DE VASCONCELLOS
+
+					<a href="#" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1842047796_404'),{'j_id_jsp_1842047796_404:j_id_jsp_1842047796_405':'j_id_jsp_1842047796_404:j_id_jsp_1842047796_405','id':'392538'},'');}return false" class="btn btn-primary btn-xs">Ver hist&oacute;rico</a>
+
+			</dd>
+
+
+				<dt> Matriz Curricular: </dt>
+				<dd> GEOGRAFIA - CAMPUS MACEI&#211; - VESPERTINO - Macei&#243; - LICENCIATURA PLENA - Presencial - T </dd>
+
+
+
+
+
+
+
+				<dt> Curr&#237;culo: </dt>
+				<dd>
+
+						 GEO038
+
+
+				</dd>
+
+
+
+		</dl>
+	<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id7" />
+</form>
+</div>
+
+		<div class="box-secao">
+			<div class="titulo"><h3><span>Turmas abertas para os componentes do seu curr&#237;culo</span></h3></div>
+
+
+
+<form id="j_id_jsp_1842047796_407" name="j_id_jsp_1842047796_407" method="post" action="/sigaa/graduacao/matricula/turmas_curriculo.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="j_id_jsp_1842047796_407" value="j_id_jsp_1842047796_407" />
+
+				<input type="hidden" value="1031538" name="id" />
+			<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id7" />
+</form>
+<form id="formSelecionarTurmas" name="formSelecionarTurmas" method="post" action="/sigaa/graduacao/matricula/turmas_curriculo.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="formSelecionarTurmas" value="formSelecionarTurmas" />
+
+
+				<div class="infoAltRem">
+					<img src="/sigaa/img/graduacao/matriculas/matricula_permitida.png" alt="*">: &#201; permitida a matr&#237;cula nesse componente
+					<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png">: N&#227;o &#233; permitida a matr&#237;cula nesse componente <br />
+					<img src="/sigaa/img/graduacao/matriculas/zoom.png">: Ver detalhes da turma
+
+						<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" alt="" class="noborder" />: Turma possui reservas para seu curso
+
+				</div>
+
+				<table class="listagem" id="lista-turmas-curriculo" >
+					<thead>
+					<tr>
+						<th colspan="3"> </th>
+						<th> Turma </th>
+						<th width="30%"> Docente(s) </th>
+						<th width="20%"> Hor&#225;rio </th>
+						<th> Local </th>
+					</tr>
+					</thead>
+
+					<tbody>
+
+
+
+
+
+
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_0&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="0&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="0&#186; N&#237;vel">0&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71263, '#nivel_0&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* PEDL092 - FUNDAMENTOS ANTROPOL&#211;GICOS DA EDUCA&#199;&#195;O
+
+
+									</a>
+
+										<em>(Optativa)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas71263" style="display: table-row"
+								id="cc_71263t_01s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362383)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362383"
+										id="cc_71263t_01s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71263t_01s_0&#186; N&#237;velCHK">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71263t_01s_0&#186; N&#237;velCHK">
+
+								   <strong>turma matutina.</strong> -
+
+
+								ANDERSON DE ALENCAR MENEZES
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71263t_01s_0&#186; N&#237;velCHK">4M1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71263t_01s_0&#186; N&#237;velCHK">SALA 12 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas71263" style="display: table-row"
+								id="cc_71263t_02s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362887)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362887"
+										id="cc_71263t_02s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71263t_02s_0&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71263t_02s_0&#186; N&#237;velCHK">
+
+								   <strong>Turma vespertina.</strong> -
+
+
+								ANDERSON DE ALENCAR MENEZES
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71263t_02s_0&#186; N&#237;velCHK">4T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71263t_02s_0&#186; N&#237;velCHK">SALA 12 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71263" style="display: table-row"
+								id="cc_71263t_03s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(363080)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="363080"
+										id="cc_71263t_03s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71263t_03s_0&#186; N&#237;velCHK">Turma 03</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71263t_03s_0&#186; N&#237;velCHK">
+
+								   <strong>Turma noturna.</strong> -
+
+
+								ANDERSON DE ALENCAR MENEZES
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71263t_03s_0&#186; N&#237;velCHK">2N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71263t_03s_0&#186; N&#237;velCHK">SALA 12 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71257, '#nivel_0&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* PEDL129 - EDUCA&#199;&#195;O DE JOVENS E ADULTOS
+
+
+									</a>
+
+										<em>(Optativa)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 59622 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71257" style="display: table-row"
+								id="cc_71257t_01s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362409)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362409"
+										id="cc_71257t_01s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71257t_01s_0&#186; N&#237;velCHK">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71257t_01s_0&#186; N&#237;velCHK">
+
+								   <strong>turma matutina.</strong> -
+
+
+								ABDIZIA MARIA ALVES BARROS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71257t_01s_0&#186; N&#237;velCHK">5M45</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71257t_01s_0&#186; N&#237;velCHK">Sala 07 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71257" style="display: table-row"
+								id="cc_71257t_02s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362985)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362985"
+										id="cc_71257t_02s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71257t_02s_0&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71257t_02s_0&#186; N&#237;velCHK">
+
+								   <strong>Turma vespertina.</strong> -
+
+
+								ALLAN DIEGO RODRIGUES FIGUEIREDO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71257t_02s_0&#186; N&#237;velCHK">5T34</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71257t_02s_0&#186; N&#237;velCHK">Sala 07 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas71257" style="display: table-row"
+								id="cc_71257t_03s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(363220)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="363220"
+										id="cc_71257t_03s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71257t_03s_0&#186; N&#237;velCHK">Turma 03</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71257t_03s_0&#186; N&#237;velCHK">
+
+								   <strong>Turma noturna.</strong> -
+
+
+								ALLAN DIEGO RODRIGUES FIGUEIREDO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71257t_03s_0&#186; N&#237;velCHK">5N12</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71257t_03s_0&#186; N&#237;velCHK">Sala 07 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(72734, '#nivel_0&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* PEDL145 - POL&#205;TICAS P&#218;BLICAS PARA EDUCA&#199;&#195;O EM PRIS&#213;ES
+
+
+									</a>
+
+										<em>(Optativa)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 64779 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas72734" style="display: table-row"
+								id="cc_72734t_01s_0&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(363274)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="363274"
+										id="cc_72734t_01s_0&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_72734t_01s_0&#186; N&#237;velCHK">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_72734t_01s_0&#186; N&#237;velCHK">
+
+								   <strong>Turma vespertina.</strong> -
+
+
+								MARIA DA CONCEICAO VALENCA DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_72734t_01s_0&#186; N&#237;velCHK">6T12</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_72734t_01s_0&#186; N&#237;velCHK">SALA 06 - CEDU</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_1&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="1&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="1&#186; N&#237;vel">1&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(65121, '#nivel_1&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL091 - HIST&#211;RIA DO PENSAMENTO GEOGR&#193;FICO
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65915 ) OU ( 63435 ) OU ( 63433 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas65121" style="display: table-row"
+								id="cc_65121t_01s_1&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda674275').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda674275').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda674275').style.visibility = 'hidden';"id="ajuda674275">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360265)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360265"
+										id="cc_65121t_01s_1&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65121t_01s_1&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65121t_01s_1&#186; N&#237;velCHK'_temReservas'">
+
+
+								ANTONIO ALFREDO TELES DE CARVALHO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65121t_01s_1&#186; N&#237;velCHK'_temReservas'">5T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65121t_01s_1&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas65121" style="display: table-row"
+								id="cc_65121t_02s_1&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362100)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362100"
+										id="cc_65121t_02s_1&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65121t_02s_1&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65121t_02s_1&#186; N&#237;velCHK">
+
+
+								CIRLENE JEANE SANTOS E SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65121t_02s_1&#186; N&#237;velCHK">5N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65121t_02s_1&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png" onMouseOver="document.getElementById('ajuda706682').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda706682').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp"style="width: 400px; " onMouseOut="document.getElementById('ajuda706682').style.visibility = 'hidden';"id="ajuda706682">
+
+
+									<li>O discente j&#225; pagou componenete(s) equivalente(s)</li>
+									</div>
+</span>
+
+
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style="color: #666"
+										onclick="PainelComponente.show(65122, '#nivel_1&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+											GEOL092 - ORGANIZA&#199;&#195;O DO TRABALHO ACAD&#202;MICO
+
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+									<span onclick="esconderMostrar(65122, this)" onmouseover="this.style.cursor='pointer'" title="exibir/esconder turmas">
+									[ + ]
+									</span>
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas65122" style="display: none"
+								id="cc_65122t_01s_1&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda889894').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda889894').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda889894').style.visibility = 'hidden';"id="ajuda889894">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65122t_01s_1&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65122t_01s_1&#186; N&#237;velCHK'_temReservas'">
+
+
+								GENISSON PANTA DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65122t_01s_1&#186; N&#237;velCHK'_temReservas'">6T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65122t_01s_1&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas65122" style="display: none"
+								id="cc_65122t_02s_1&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65122t_02s_1&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65122t_02s_1&#186; N&#237;velCHK">
+
+
+								GENISSON PANTA DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65122t_02s_1&#186; N&#237;velCHK">6N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65122t_02s_1&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png" onMouseOver="document.getElementById('ajuda837759').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda837759').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp"style="width: 400px; " onMouseOut="document.getElementById('ajuda837759').style.visibility = 'hidden';"id="ajuda837759">
+
+
+									<li>O discente j&#225; pagou componenete(s) equivalente(s)</li>
+									</div>
+</span>
+
+
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style="color: #666"
+										onclick="PainelComponente.show(65125, '#nivel_1&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+											GEOL095 - QUANTIFICA&#199;&#195;O EM GEOGRAFIA
+
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+									<span onclick="esconderMostrar(65125, this)" onmouseover="this.style.cursor='pointer'" title="exibir/esconder turmas">
+									[ + ]
+									</span>
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas65125" style="display: none"
+								id="cc_65125t_01s_1&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda302354').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda302354').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda302354').style.visibility = 'hidden';"id="ajuda302354">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65125t_01s_1&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65125t_01s_1&#186; N&#237;velCHK'_temReservas'">
+
+
+								CARLOS MAURICIO ROCHA BARROSO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65125t_01s_1&#186; N&#237;velCHK'_temReservas'">3T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65125t_01s_1&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas65125" style="display: none"
+								id="cc_65125t_02s_1&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65125t_02s_1&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65125t_02s_1&#186; N&#237;velCHK">
+
+
+								CARLOS MAURICIO ROCHA BARROSO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65125t_02s_1&#186; N&#237;velCHK">3N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65125t_02s_1&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png" onMouseOver="document.getElementById('ajuda185285').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda185285').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp"style="width: 400px; " onMouseOut="document.getElementById('ajuda185285').style.visibility = 'hidden';"id="ajuda185285">
+
+
+									<li>O discente j&#225; pagou componenete(s) equivalente(s)</li>
+									</div>
+</span>
+
+
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style="color: #666"
+										onclick="PainelComponente.show(70198, '#nivel_1&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+											GEOL115 - FORMA&#199;&#195;O ECON&#212;MICA E TERRITORIAL DO BRASIL
+
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+									<span onclick="esconderMostrar(70198, this)" onmouseover="this.style.cursor='pointer'" title="exibir/esconder turmas">
+									[ + ]
+									</span>
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas70198" style="display: none"
+								id="cc_70198t_01s_1&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda761123').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda761123').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda761123').style.visibility = 'hidden';"id="ajuda761123">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70198t_01s_1&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70198t_01s_1&#186; N&#237;velCHK'_temReservas'">
+
+
+								LUCIANE MARANHA DE OLIVEIRA MARISCO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70198t_01s_1&#186; N&#237;velCHK'_temReservas'">4T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70198t_01s_1&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas70198" style="display: none"
+								id="cc_70198t_02s_1&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70198t_02s_1&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70198t_02s_1&#186; N&#237;velCHK">
+
+
+								LUCIANE MARANHA DE OLIVEIRA MARISCO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70198t_02s_1&#186; N&#237;velCHK">4N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70198t_02s_1&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_2&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="2&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="2&#186; N&#237;vel">2&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(65123, '#nivel_2&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL093 - CARTOGRAFIA B&#193;SICA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65892 ) OU ( 63559 ) OU ( 63560 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas65123" style="display: table-row"
+								id="cc_65123t_01s_2&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda634233').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda634233').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda634233').style.visibility = 'hidden';"id="ajuda634233">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360269)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360269"
+										id="cc_65123t_01s_2&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65123t_01s_2&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65123t_01s_2&#186; N&#237;velCHK'_temReservas'">
+
+
+								DIOGO CAVALCANTI GALVAO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65123t_01s_2&#186; N&#237;velCHK'_temReservas'">3T456</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65123t_01s_2&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas65123" style="display: table-row"
+								id="cc_65123t_02s_2&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362109)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362109"
+										id="cc_65123t_02s_2&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_65123t_02s_2&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_65123t_02s_2&#186; N&#237;velCHK">
+
+
+								DIOGO CAVALCANTI GALVAO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_65123t_02s_2&#186; N&#237;velCHK">3N234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_65123t_02s_2&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71624, '#nivel_2&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL101 - GEOGRAFIA DA POPULA&#199;&#195;O
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65899 OU 57992 OU 77434 OU 57992 OU 57998 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71624" style="display: table-row"
+								id="cc_71624t_01s_2&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda244473').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda244473').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda244473').style.visibility = 'hidden';"id="ajuda244473">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360270)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360270"
+										id="cc_71624t_01s_2&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71624t_01s_2&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71624t_01s_2&#186; N&#237;velCHK'_temReservas'">
+
+
+								MARTA DA SILVEIRA LUEDEMANN
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71624t_01s_2&#186; N&#237;velCHK'_temReservas'">6T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71624t_01s_2&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71624" style="display: table-row"
+								id="cc_71624t_02s_2&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362111)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362111"
+										id="cc_71624t_02s_2&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71624t_02s_2&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71624t_02s_2&#186; N&#237;velCHK">
+
+
+								MARTA DA SILVEIRA LUEDEMANN
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71624t_02s_2&#186; N&#237;velCHK">6N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71624t_02s_2&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71339, '#nivel_2&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL102 - GEOLOGIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65907 OU 58619 OU 58474 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71339" style="display: table-row"
+								id="cc_71339t_01s_2&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda615646').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda615646').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda615646').style.visibility = 'hidden';"id="ajuda615646">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360271)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360271"
+										id="cc_71339t_01s_2&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71339t_01s_2&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71339t_01s_2&#186; N&#237;velCHK'_temReservas'">
+
+
+								BRUNO FERREIRA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71339t_01s_2&#186; N&#237;velCHK'_temReservas'">4T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71339t_01s_2&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71339" style="display: table-row"
+								id="cc_71339t_02s_2&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362113)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362113"
+										id="cc_71339t_02s_2&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71339t_02s_2&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71339t_02s_2&#186; N&#237;velCHK">
+
+
+								BRUNO FERREIRA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71339t_02s_2&#186; N&#237;velCHK">4N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71339t_02s_2&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(76194, '#nivel_2&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL105 - PRACC 1: A CI&#202;N.GEOGR&#193;FICA E A INTER.NO ENS. DE GEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 76392 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas76194" style="display: table-row"
+								id="cc_76194t_01s_2&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda422264').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda422264').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda422264').style.visibility = 'hidden';"id="ajuda422264">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360272)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360272"
+										id="cc_76194t_01s_2&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_76194t_01s_2&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_76194t_01s_2&#186; N&#237;velCHK'_temReservas'">
+
+
+								KINSEY SANTOS PINTO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_76194t_01s_2&#186; N&#237;velCHK'_temReservas'">3T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_76194t_01s_2&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas76194" style="display: table-row"
+								id="cc_76194t_02s_2&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362115)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362115"
+										id="cc_76194t_02s_2&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_76194t_02s_2&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_76194t_02s_2&#186; N&#237;velCHK">
+
+
+								KINSEY SANTOS PINTO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_76194t_02s_2&#186; N&#237;velCHK">3T56  3N1</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_76194t_02s_2&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(72196, '#nivel_2&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL106 - CLIMATOLOGIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65895 OU 57991 OU 57997 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas72196" style="display: table-row"
+								id="cc_72196t_01s_2&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda825061').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda825061').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda825061').style.visibility = 'hidden';"id="ajuda825061">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360273)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360273"
+										id="cc_72196t_01s_2&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_72196t_01s_2&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_72196t_01s_2&#186; N&#237;velCHK'_temReservas'">
+
+
+								JORIO BEZERRA CABRAL JUNIOR
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_72196t_01s_2&#186; N&#237;velCHK'_temReservas'">5T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_72196t_01s_2&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas72196" style="display: table-row"
+								id="cc_72196t_02s_2&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362116)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362116"
+										id="cc_72196t_02s_2&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_72196t_02s_2&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_72196t_02s_2&#186; N&#237;velCHK">
+
+
+								JORIO BEZERRA CABRAL JUNIOR
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_72196t_02s_2&#186; N&#237;velCHK">5N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_72196t_02s_2&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_3&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="3&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="3&#186; N&#237;vel">3&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71406, '#nivel_3&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL107 - GEOMORFOLOGIA ESTRUTURAL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65909 OU 63535 OU 63568 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71406" style="display: table-row"
+								id="cc_71406t_01s_3&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda588171').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda588171').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda588171').style.visibility = 'hidden';"id="ajuda588171">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360275)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360275"
+										id="cc_71406t_01s_3&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71406t_01s_3&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71406t_01s_3&#186; N&#237;velCHK'_temReservas'">
+
+
+								KLEYTHON DE ARAUJO MONTEIRO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71406t_01s_3&#186; N&#237;velCHK'_temReservas'">2T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71406t_01s_3&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71406" style="display: table-row"
+								id="cc_71406t_02s_3&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362117)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362117"
+										id="cc_71406t_02s_3&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71406t_02s_3&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71406t_02s_3&#186; N&#237;velCHK">
+
+
+								KLEYTHON DE ARAUJO MONTEIRO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71406t_02s_3&#186; N&#237;velCHK">2N234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71406t_02s_3&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74815, '#nivel_3&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL108 - PRACC 2: A CONSTRU&#199;&#195;O DAS CATEGORIAS DE GEO.NA SALA DE AULA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas74815" style="display: table-row"
+								id="cc_74815t_01s_3&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda199601').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda199601').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda199601').style.visibility = 'hidden';"id="ajuda199601">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360276)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360276"
+										id="cc_74815t_01s_3&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74815t_01s_3&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74815t_01s_3&#186; N&#237;velCHK'_temReservas'">
+
+
+								GERALDO INACIO MARTINS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74815t_01s_3&#186; N&#237;velCHK'_temReservas'">3T456</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74815t_01s_3&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas74815" style="display: table-row"
+								id="cc_74815t_02s_3&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362119)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362119"
+										id="cc_74815t_02s_3&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74815t_02s_3&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74815t_02s_3&#186; N&#237;velCHK">
+
+
+								GERALDO INACIO MARTINS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74815t_02s_3&#186; N&#237;velCHK">2T6  23N1</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74815t_02s_3&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71650, '#nivel_3&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL109 - GEOGRAFIA ECON&#212;MICA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65902 OU 63551 OU 63575 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71650" style="display: table-row"
+								id="cc_71650t_01s_3&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda362634').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda362634').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda362634').style.visibility = 'hidden';"id="ajuda362634">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360277)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360277"
+										id="cc_71650t_01s_3&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71650t_01s_3&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71650t_01s_3&#186; N&#237;velCHK'_temReservas'">
+
+
+								MARTA DA SILVEIRA LUEDEMANN
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71650t_01s_3&#186; N&#237;velCHK'_temReservas'">5T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71650t_01s_3&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71650" style="display: table-row"
+								id="cc_71650t_02s_3&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362121)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362121"
+										id="cc_71650t_02s_3&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71650t_02s_3&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71650t_02s_3&#186; N&#237;velCHK">
+
+
+								MARTA DA SILVEIRA LUEDEMANN
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71650t_02s_3&#186; N&#237;velCHK">5N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71650t_02s_3&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70199, '#nivel_3&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL111 - ACE 1: PROJETO I: GEOGRAFIA NAS COMUNIDADES
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 76421 OU 70369 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas70199" style="display: table-row"
+								id="cc_70199t_01s_3&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda122522').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda122522').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda122522').style.visibility = 'hidden';"id="ajuda122522">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360278)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360278"
+										id="cc_70199t_01s_3&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70199t_01s_3&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70199t_01s_3&#186; N&#237;velCHK'_temReservas'">
+
+
+								GILCILEIDE RODRIGUES DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70199t_01s_3&#186; N&#237;velCHK'_temReservas'">6T4 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70199t_01s_3&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71059, '#nivel_3&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL114 - TEORIA E M&#201;TODO EM GEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65921 OU 63558 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas71059" style="display: table-row"
+								id="cc_71059t_01s_3&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda581636').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda581636').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda581636').style.visibility = 'hidden';"id="ajuda581636">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360279)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360279"
+										id="cc_71059t_01s_3&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71059t_01s_3&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71059t_01s_3&#186; N&#237;velCHK'_temReservas'">
+
+
+								GERALDO INACIO MARTINS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71059t_01s_3&#186; N&#237;velCHK'_temReservas'">6T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71059t_01s_3&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas71059" style="display: table-row"
+								id="cc_71059t_02s_3&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362125)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362125"
+										id="cc_71059t_02s_3&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71059t_02s_3&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71059t_02s_3&#186; N&#237;velCHK">
+
+
+								GERALDO INACIO MARTINS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71059t_02s_3&#186; N&#237;velCHK">6N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71059t_02s_3&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(75468, '#nivel_3&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL116 - HIDROGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65914 OU 63536 OU 63566 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas75468" style="display: table-row"
+								id="cc_75468t_01s_3&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda554437').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda554437').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda554437').style.visibility = 'hidden';"id="ajuda554437">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360280)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360280"
+										id="cc_75468t_01s_3&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75468t_01s_3&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75468t_01s_3&#186; N&#237;velCHK'_temReservas'">
+
+
+								PAULO RICARDO PETTER MEDEIROS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75468t_01s_3&#186; N&#237;velCHK'_temReservas'">3T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75468t_01s_3&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas75468" style="display: table-row"
+								id="cc_75468t_02s_3&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362129)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362129"
+										id="cc_75468t_02s_3&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75468t_02s_3&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75468t_02s_3&#186; N&#237;velCHK">
+
+
+								PAULO RICARDO PETTER MEDEIROS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75468t_02s_3&#186; N&#237;velCHK">3N234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75468t_02s_3&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_4&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="4&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="4&#186; N&#237;vel">4&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70753, '#nivel_4&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL117 - BIOGEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65890 OU 63543 OU 63567 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas70753" style="display: table-row"
+								id="cc_70753t_01s_4&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda211114').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda211114').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda211114').style.visibility = 'hidden';"id="ajuda211114">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360708)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360708"
+										id="cc_70753t_01s_4&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70753t_01s_4&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70753t_01s_4&#186; N&#237;velCHK'_temReservas'">
+
+
+								KALLIANNA DANTAS ARAUJO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70753t_01s_4&#186; N&#237;velCHK'_temReservas'">2T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70753t_01s_4&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas70753" style="display: table-row"
+								id="cc_70753t_02s_4&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362307)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362307"
+										id="cc_70753t_02s_4&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70753t_02s_4&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70753t_02s_4&#186; N&#237;velCHK">
+
+
+								KALLIANNA DANTAS ARAUJO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70753t_02s_4&#186; N&#237;velCHK">2N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70753t_02s_4&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(75421, '#nivel_4&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL119 - GEOGRAFIA URBANA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65906 OU 58978 OU 58986 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas75421" style="display: table-row"
+								id="cc_75421t_01s_4&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda701719').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda701719').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda701719').style.visibility = 'hidden';"id="ajuda701719">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360711)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360711"
+										id="cc_75421t_01s_4&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75421t_01s_4&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75421t_01s_4&#186; N&#237;velCHK'_temReservas'">
+
+
+								LUCIANE MARANHA DE OLIVEIRA MARISCO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75421t_01s_4&#186; N&#237;velCHK'_temReservas'">5T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75421t_01s_4&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas75421" style="display: table-row"
+								id="cc_75421t_02s_4&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362308)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362308"
+										id="cc_75421t_02s_4&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75421t_02s_4&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75421t_02s_4&#186; N&#237;velCHK">
+
+
+								LUCIANE MARANHA DE OLIVEIRA MARISCO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75421t_02s_4&#186; N&#237;velCHK">5N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75421t_02s_4&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(72173, '#nivel_4&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL121 - ACE 2: PROJETO II: GEOGRAFIA E MEIO AMBIENTE
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 72083 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas72173" style="display: table-row"
+								id="cc_72173t_01s_4&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda834576').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda834576').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda834576').style.visibility = 'hidden';"id="ajuda834576">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360732)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360732"
+										id="cc_72173t_01s_4&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_72173t_01s_4&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_72173t_01s_4&#186; N&#237;velCHK'_temReservas'">
+
+
+								LAIS SUSANA DE SOUZA GOIS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_72173t_01s_4&#186; N&#237;velCHK'_temReservas'">2T4 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_72173t_01s_4&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71467, '#nivel_4&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL123 - GEOGRAFIA AGR&#193;RIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65897 OU 58977 OU 58985 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71467" style="display: table-row"
+								id="cc_71467t_01s_4&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda992307').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda992307').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda992307').style.visibility = 'hidden';"id="ajuda992307">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360736)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360736"
+										id="cc_71467t_01s_4&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71467t_01s_4&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71467t_01s_4&#186; N&#237;velCHK'_temReservas'">
+
+
+								CIRLENE JEANE SANTOS E SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71467t_01s_4&#186; N&#237;velCHK'_temReservas'">4T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71467t_01s_4&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71467" style="display: table-row"
+								id="cc_71467t_02s_4&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362309)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362309"
+										id="cc_71467t_02s_4&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71467t_02s_4&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71467t_02s_4&#186; N&#237;velCHK">
+
+
+								CIRLENE JEANE SANTOS E SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71467t_02s_4&#186; N&#237;velCHK">4N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71467t_02s_4&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_5&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="5&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="5&#186; N&#237;vel">5&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70176, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL122 - ACE 3: PROJETO III: GEOGRAFIA E SUAS TECNOLOGIAS
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 71014 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas70176" style="display: table-row"
+								id="cc_70176t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda827450').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda827450').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda827450').style.visibility = 'hidden';"id="ajuda827450">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360782)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360782"
+										id="cc_70176t_01s_5&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70176t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70176t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								DIOGO CAVALCANTI GALVAO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70176t_01s_5&#186; N&#237;velCHK'_temReservas'">5T4 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70176t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70177, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL124 - ORGANIZA&#199;&#195;O DO ESPA&#199;O MUNDIAL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65916 OU 61704 OU 59544 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas70177" style="display: table-row"
+								id="cc_70177t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda432671').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda432671').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda432671').style.visibility = 'hidden';"id="ajuda432671">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360785)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360785"
+										id="cc_70177t_01s_5&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70177t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70177t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								DOMINGOS SAVIO CORREA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70177t_01s_5&#186; N&#237;velCHK'_temReservas'">6T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70177t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas70177" style="display: table-row"
+								id="cc_70177t_02s_5&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362320)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362320"
+										id="cc_70177t_02s_5&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70177t_02s_5&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70177t_02s_5&#186; N&#237;velCHK">
+
+
+								DOMINGOS SAVIO CORREA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70177t_02s_5&#186; N&#237;velCHK">6N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70177t_02s_5&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74664, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL125 - GEOGRAFIA REGIONAL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65905 OU 59567 OU 63562 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas74664" style="display: table-row"
+								id="cc_74664t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda284224').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda284224').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda284224').style.visibility = 'hidden';"id="ajuda284224">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360789)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360789"
+										id="cc_74664t_01s_5&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74664t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74664t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								PAULO ROGERIO DE FREITAS SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74664t_01s_5&#186; N&#237;velCHK'_temReservas'">5T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74664t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas74664" style="display: table-row"
+								id="cc_74664t_02s_5&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362322)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362322"
+										id="cc_74664t_02s_5&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74664t_02s_5&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74664t_02s_5&#186; N&#237;velCHK">
+
+
+								PAULO ROGERIO DE FREITAS SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74664t_02s_5&#186; N&#237;velCHK">5N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74664t_02s_5&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(72353, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL126 - GEOMORFOLOGIA DIN&#194;MICA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65908 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas72353" style="display: table-row"
+								id="cc_72353t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda840723').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda840723').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda840723').style.visibility = 'hidden';"id="ajuda840723">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360790)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360790"
+										id="cc_72353t_01s_5&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_72353t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_72353t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								NIVANEIDE ALVES DE MELO FALCAO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_72353t_01s_5&#186; N&#237;velCHK'_temReservas'">2T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_72353t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas72353" style="display: table-row"
+								id="cc_72353t_02s_5&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362327)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362327"
+										id="cc_72353t_02s_5&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_72353t_02s_5&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_72353t_02s_5&#186; N&#237;velCHK">
+
+
+								NIVANEIDE ALVES DE MELO FALCAO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_72353t_02s_5&#186; N&#237;velCHK">2N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_72353t_02s_5&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(73099, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL127 - DID&#193;TICA DO ENSINO DA GEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 59557 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas73099" style="display: table-row"
+								id="cc_73099t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda834881').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda834881').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda834881').style.visibility = 'hidden';"id="ajuda834881">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360791)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360791"
+										id="cc_73099t_01s_5&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_73099t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_73099t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								JACQUELINE PRAXEDES DE ALMEIDA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_73099t_01s_5&#186; N&#237;velCHK'_temReservas'">3T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_73099t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas73099" style="display: table-row"
+								id="cc_73099t_02s_5&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362328)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362328"
+										id="cc_73099t_02s_5&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_73099t_02s_5&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_73099t_02s_5&#186; N&#237;velCHK">
+
+
+								JACQUELINE PRAXEDES DE ALMEIDA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_73099t_02s_5&#186; N&#237;velCHK">3N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_73099t_02s_5&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(75183, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL128 - EST&#193;GIO SUPERVISIONADO 1
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 59559 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas75183" style="display: table-row"
+								id="cc_75183t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda289782').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda289782').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda289782').style.visibility = 'hidden';"id="ajuda289782">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360794)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360794"
+										id="cc_75183t_01s_5&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75183t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75183t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								GILCILEIDE RODRIGUES DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75183t_01s_5&#186; N&#237;velCHK'_temReservas'">4T123 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75183t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas75183" style="display: table-row"
+								id="cc_75183t_02s_5&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362333)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362333"
+										id="cc_75183t_02s_5&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75183t_02s_5&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75183t_02s_5&#186; N&#237;velCHK">
+
+
+								GILCILEIDE RODRIGUES DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75183t_02s_5&#186; N&#237;velCHK">4T6  4N12 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75183t_02s_5&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png" onMouseOver="document.getElementById('ajuda860197').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda860197').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp"style="width: 400px; " onMouseOut="document.getElementById('ajuda860197').style.visibility = 'hidden';"id="ajuda860197">
+
+
+									<li>O discente n&#227;o possui o(s) pr&#233;-requisito(s) necess&#225;rio(s)</li>
+									</div>
+</span>
+
+
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style="color: #666"
+										onclick="PainelComponente.show(70175, '#nivel_5&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+											GEOL129 - PRACC 3: O LETRAMENTO GEOGR&#193;FICO
+
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+									<span onclick="esconderMostrar(70175, this)" onmouseover="this.style.cursor='pointer'" title="exibir/esconder turmas">
+									[ + ]
+									</span>
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 74815 ) ','pr&#233;-requisitos')" title="Mostrar disciplinas de pr&#233;-requisitos">pr&#233;-requisitos</a>]
+										<br />
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas70175" style="display: none"
+								id="cc_70175t_01s_5&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda238091').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda238091').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda238091').style.visibility = 'hidden';"id="ajuda238091">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70175t_01s_5&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70175t_01s_5&#186; N&#237;velCHK'_temReservas'">
+
+
+								UMBELINO OLIVEIRA DE ANDRADE
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70175t_01s_5&#186; N&#237;velCHK'_temReservas'">2T456</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70175t_01s_5&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas70175" style="display: none"
+								id="cc_70175t_02s_5&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70175t_02s_5&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70175t_02s_5&#186; N&#237;velCHK">
+
+
+								UMBELINO OLIVEIRA DE ANDRADE
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70175t_02s_5&#186; N&#237;velCHK">4N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70175t_02s_5&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_6&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="6&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="6&#186; N&#237;vel">6&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74180, '#nivel_6&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL130 - PESQUISA EDUCACIONAL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 59563 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas74180" style="display: table-row"
+								id="cc_74180t_01s_6&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda178744').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda178744').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda178744').style.visibility = 'hidden';"id="ajuda178744">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360800)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360800"
+										id="cc_74180t_01s_6&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74180t_01s_6&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74180t_01s_6&#186; N&#237;velCHK'_temReservas'">
+
+
+								MARIA FRANCINEILA PINHEIRO DOS SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74180t_01s_6&#186; N&#237;velCHK'_temReservas'">3T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74180t_01s_6&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas74180" style="display: table-row"
+								id="cc_74180t_02s_6&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362334)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362334"
+										id="cc_74180t_02s_6&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74180t_02s_6&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74180t_02s_6&#186; N&#237;velCHK">
+
+
+								MARIA FRANCINEILA PINHEIRO DOS SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74180t_02s_6&#186; N&#237;velCHK">3N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74180t_02s_6&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74491, '#nivel_6&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL131 - ORGANIZA&#199;&#195;O E GEST&#195;O DO TERRIT&#211;RIO
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 63813 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas74491" style="display: table-row"
+								id="cc_74491t_01s_6&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda964955').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda964955').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda964955').style.visibility = 'hidden';"id="ajuda964955">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360801)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360801"
+										id="cc_74491t_01s_6&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74491t_01s_6&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74491t_01s_6&#186; N&#237;velCHK'_temReservas'">
+
+
+								ANTONIO ALFREDO TELES DE CARVALHO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74491t_01s_6&#186; N&#237;velCHK'_temReservas'">6T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74491t_01s_6&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas74491" style="display: table-row"
+								id="cc_74491t_02s_6&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362347)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362347"
+										id="cc_74491t_02s_6&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74491t_02s_6&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74491t_02s_6&#186; N&#237;velCHK">
+
+
+								ANTONIO ALFREDO TELES DE CARVALHO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74491t_02s_6&#186; N&#237;velCHK">6N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74491t_02s_6&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70172, '#nivel_6&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL132 - ENSINO DA GEOGRAFIA DOS SOLOS
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65901 OU 58111 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas70172" style="display: table-row"
+								id="cc_70172t_01s_6&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda872787').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda872787').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda872787').style.visibility = 'hidden';"id="ajuda872787">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360803)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360803"
+										id="cc_70172t_01s_6&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70172t_01s_6&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70172t_01s_6&#186; N&#237;velCHK'_temReservas'">
+
+
+								LAIS SUSANA DE SOUZA GOIS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70172t_01s_6&#186; N&#237;velCHK'_temReservas'">4T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70172t_01s_6&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas70172" style="display: table-row"
+								id="cc_70172t_02s_6&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362370)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362370"
+										id="cc_70172t_02s_6&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70172t_02s_6&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70172t_02s_6&#186; N&#237;velCHK">
+
+
+								LAIS SUSANA DE SOUZA GOIS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70172t_02s_6&#186; N&#237;velCHK">4N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70172t_02s_6&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(71503, '#nivel_6&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL133 - PRACC 4: AS PR&#193;TICAS EM GEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas71503" style="display: table-row"
+								id="cc_71503t_01s_6&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda874440').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda874440').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda874440').style.visibility = 'hidden';"id="ajuda874440">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360805)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360805"
+										id="cc_71503t_01s_6&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71503t_01s_6&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71503t_01s_6&#186; N&#237;velCHK'_temReservas'">
+
+
+								SIMONE AFFONSO DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71503t_01s_6&#186; N&#237;velCHK'_temReservas'">5T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71503t_01s_6&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas71503" style="display: table-row"
+								id="cc_71503t_02s_6&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362349)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362349"
+										id="cc_71503t_02s_6&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71503t_02s_6&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71503t_02s_6&#186; N&#237;velCHK">
+
+
+								SIMONE AFFONSO DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71503t_02s_6&#186; N&#237;velCHK">5N234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71503t_02s_6&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(73751, '#nivel_6&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL134 - EST&#193;GIO SUPERVISIONADO 2
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 72092 OU 59564 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas73751" style="display: table-row"
+								id="cc_73751t_01s_6&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda589616').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda589616').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda589616').style.visibility = 'hidden';"id="ajuda589616">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360810)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360810"
+										id="cc_73751t_01s_6&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_73751t_01s_6&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_73751t_01s_6&#186; N&#237;velCHK'_temReservas'">
+
+
+								JACQUELINE PRAXEDES DE ALMEIDA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_73751t_01s_6&#186; N&#237;velCHK'_temReservas'">2T123 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_73751t_01s_6&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(77512, '#nivel_6&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL135 - ACE 4:PROJETO IV: GEOGRAFIA E O PLANEJAMENTO DOS TERRIT&#211;RIOS
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 72605 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas77512" style="display: table-row"
+								id="cc_77512t_01s_6&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda74886').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda74886').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda74886').style.visibility = 'hidden';"id="ajuda74886">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360811)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360811"
+										id="cc_77512t_01s_6&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_77512t_01s_6&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_77512t_01s_6&#186; N&#237;velCHK'_temReservas'">
+
+
+								SIMONE AFFONSO DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_77512t_01s_6&#186; N&#237;velCHK'_temReservas'">5T4 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_77512t_01s_6&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_7&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="7&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="7&#186; N&#237;vel">7&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74549, '#nivel_7&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL136 - GEOGRAFIA CULTURAL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65898 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas74549" style="display: table-row"
+								id="cc_74549t_01s_7&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda896329').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda896329').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda896329').style.visibility = 'hidden';"id="ajuda896329">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360813)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360813"
+										id="cc_74549t_01s_7&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74549t_01s_7&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74549t_01s_7&#186; N&#237;velCHK'_temReservas'">
+
+
+								AVELAR ARAUJO SANTOS JUNIOR
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74549t_01s_7&#186; N&#237;velCHK'_temReservas'">4T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74549t_01s_7&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas74549" style="display: table-row"
+								id="cc_74549t_02s_7&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362352)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362352"
+										id="cc_74549t_02s_7&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74549t_02s_7&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74549t_02s_7&#186; N&#237;velCHK">
+
+
+								AVELAR ARAUJO SANTOS JUNIOR
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74549t_02s_7&#186; N&#237;velCHK">4N234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74549t_02s_7&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(76277, '#nivel_7&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL137 - ENSINO DE GEOGRAFIA DO BRASIL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 66487 OU 63552 OU 63576 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas76277" style="display: table-row"
+								id="cc_76277t_01s_7&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda89828').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda89828').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda89828').style.visibility = 'hidden';"id="ajuda89828">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360815)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360815"
+										id="cc_76277t_01s_7&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_76277t_01s_7&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_76277t_01s_7&#186; N&#237;velCHK'_temReservas'">
+
+
+								ANA PAULA LOPES DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_76277t_01s_7&#186; N&#237;velCHK'_temReservas'">5T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_76277t_01s_7&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas76277" style="display: table-row"
+								id="cc_76277t_02s_7&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362354)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362354"
+										id="cc_76277t_02s_7&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_76277t_02s_7&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_76277t_02s_7&#186; N&#237;velCHK">
+
+
+								ANA PAULA LOPES DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_76277t_02s_7&#186; N&#237;velCHK">5N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_76277t_02s_7&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70197, '#nivel_7&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL139 - PRACC 5: TEMAS TRANSVERSAIS EM GEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas70197" style="display: table-row"
+								id="cc_70197t_01s_7&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda279756').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda279756').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda279756').style.visibility = 'hidden';"id="ajuda279756">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360817)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360817"
+										id="cc_70197t_01s_7&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70197t_01s_7&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70197t_01s_7&#186; N&#237;velCHK'_temReservas'">
+
+
+								DANIEL ARTHUR LISBOA DE VASCONCELOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70197t_01s_7&#186; N&#237;velCHK'_temReservas'">6T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70197t_01s_7&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas70197" style="display: table-row"
+								id="cc_70197t_02s_7&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362358)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362358"
+										id="cc_70197t_02s_7&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70197t_02s_7&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70197t_02s_7&#186; N&#237;velCHK">
+
+
+								DANIEL ARTHUR LISBOA DE VASCONCELOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70197t_02s_7&#186; N&#237;velCHK">6N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70197t_02s_7&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png" onMouseOver="document.getElementById('ajuda123587').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda123587').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp"style="width: 400px; " onMouseOut="document.getElementById('ajuda123587').style.visibility = 'hidden';"id="ajuda123587">
+
+
+									<li>O discente n&#227;o possui o(s) pr&#233;-requisito(s) necess&#225;rio(s)</li>
+									</div>
+</span>
+
+
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style="color: #666"
+										onclick="PainelComponente.show(74824, '#nivel_7&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+											GEOL144 - EST&#193;GIO SUPERVISIONADO 3
+
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+									<span onclick="esconderMostrar(74824, this)" onmouseover="this.style.cursor='pointer'" title="exibir/esconder turmas">
+									[ + ]
+									</span>
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 73751 ) ','pr&#233;-requisitos')" title="Mostrar disciplinas de pr&#233;-requisitos">pr&#233;-requisitos</a>]
+										<br />
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas74824" style="display: none"
+								id="cc_74824t_01s_7&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda322586').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda322586').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda322586').style.visibility = 'hidden';"id="ajuda322586">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74824t_01s_7&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74824t_01s_7&#186; N&#237;velCHK'_temReservas'">
+
+
+								MARIA FRANCINEILA PINHEIRO DOS SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74824t_01s_7&#186; N&#237;velCHK'_temReservas'">2T123 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74824t_01s_7&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas74824" style="display: none"
+								id="cc_74824t_02s_7&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74824t_02s_7&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74824t_02s_7&#186; N&#237;velCHK">
+
+
+								MARIA FRANCINEILA PINHEIRO DOS SANTOS
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74824t_02s_7&#186; N&#237;velCHK">2T6  2N12 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74824t_02s_7&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(77493, '#nivel_7&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL147 - GEOGRAFIA DO TURISMO
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65900 OU 63553 OU 63577 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas77493" style="display: table-row"
+								id="cc_77493t_01s_7&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda591574').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda591574').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda591574').style.visibility = 'hidden';"id="ajuda591574">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360814)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360814"
+										id="cc_77493t_01s_7&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_77493t_01s_7&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_77493t_01s_7&#186; N&#237;velCHK'_temReservas'">
+
+
+								LINDEMBERG MEDEIROS DE ARAUJO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_77493t_01s_7&#186; N&#237;velCHK'_temReservas'">3T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_77493t_01s_7&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaImpar turmas77493" style="display: table-row"
+								id="cc_77493t_02s_7&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362359)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362359"
+										id="cc_77493t_02s_7&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_77493t_02s_7&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_77493t_02s_7&#186; N&#237;velCHK">
+
+
+								LINDEMBERG MEDEIROS DE ARAUJO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_77493t_02s_7&#186; N&#237;velCHK">3N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_77493t_02s_7&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(75049, '#nivel_7&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL148 - ACE 5: A ATUA&#199;&#195;O DOS PROFISSIONAIS DE GEOGRAFIA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 71779 OU 70434 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaPar turmas75049" style="display: table-row"
+								id="cc_75049t_01s_7&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda808068').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda808068').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda808068').style.visibility = 'hidden';"id="ajuda808068">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(360819)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="360819"
+										id="cc_75049t_01s_7&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_75049t_01s_7&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_75049t_01s_7&#186; N&#237;velCHK'_temReservas'">
+
+
+								GENISSON PANTA DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_75049t_01s_7&#186; N&#237;velCHK'_temReservas'">6M5  5T5 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_75049t_01s_7&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+								<tr class="periodo no-hover destaque">
+									<td width="2%">
+									<a name="nivel_8&#186; N&#237;vel"></a>
+
+									<input type="checkbox" id="8&#186; N&#237;vel" class="noborder" onclick="marcarSemestre(this)"/>
+
+									</td>
+									<td colspan="6">
+									<b><label for="8&#186; N&#237;vel">8&#186; N&#237;vel</label></b>
+									</td>
+								</tr>
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74396, '#nivel_8&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL140 - DIN&#194;MICAS DA EDUCA&#199;&#195;O AMBIENTAL
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas74396" style="display: table-row"
+								id="cc_74396t_01s_8&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda557926').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda557926').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda557926').style.visibility = 'hidden';"id="ajuda557926">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362095)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362095"
+										id="cc_74396t_01s_8&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74396t_01s_8&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74396t_01s_8&#186; N&#237;velCHK'_temReservas'">
+
+
+								GENISSON PANTA DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74396t_01s_8&#186; N&#237;velCHK'_temReservas'">5T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74396t_01s_8&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas74396" style="display: table-row"
+								id="cc_74396t_02s_8&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362371)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362371"
+										id="cc_74396t_02s_8&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74396t_02s_8&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74396t_02s_8&#186; N&#237;velCHK">
+
+
+								GENISSON PANTA DA SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74396t_02s_8&#186; N&#237;velCHK">5N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74396t_02s_8&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70174, '#nivel_8&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL141 - ENSINO DE GEOGRAFIA DE ALAGOAS
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 63555 OU 63580 OU 66472 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas70174" style="display: table-row"
+								id="cc_70174t_01s_8&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda818691').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda818691').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda818691').style.visibility = 'hidden';"id="ajuda818691">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362096)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362096"
+										id="cc_70174t_01s_8&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70174t_01s_8&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70174t_01s_8&#186; N&#237;velCHK'_temReservas'">
+
+
+								PAULO ROGERIO DE FREITAS SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70174t_01s_8&#186; N&#237;velCHK'_temReservas'">3T1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70174t_01s_8&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas70174" style="display: table-row"
+								id="cc_70174t_02s_8&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362361)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362361"
+										id="cc_70174t_02s_8&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70174t_02s_8&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70174t_02s_8&#186; N&#237;velCHK">
+
+
+								PAULO ROGERIO DE FREITAS SILVA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70174t_02s_8&#186; N&#237;velCHK">3N1234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70174t_02s_8&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_negada.png" onMouseOver="document.getElementById('ajuda806342').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda806342').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp"style="width: 400px; " onMouseOut="document.getElementById('ajuda806342').style.visibility = 'hidden';"id="ajuda806342">
+
+
+									<li>O discente n&#227;o possui o(s) pr&#233;-requisito(s) necess&#225;rio(s)</li>
+									</div>
+</span>
+
+
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style="color: #666"
+										onclick="PainelComponente.show(71435, '#nivel_8&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+											GEOL142 - EST&#193;GIO SUPERVISIONADO 4
+
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+									<span onclick="esconderMostrar(71435, this)" onmouseover="this.style.cursor='pointer'" title="exibir/esconder turmas">
+									[ + ]
+									</span>
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 74824 ) ','pr&#233;-requisitos')" title="Mostrar disciplinas de pr&#233;-requisitos">pr&#233;-requisitos</a>]
+										<br />
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas71435" style="display: none"
+								id="cc_71435t_01s_8&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda811479').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda811479').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda811479').style.visibility = 'hidden';"id="ajuda811479">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71435t_01s_8&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71435t_01s_8&#186; N&#237;velCHK'_temReservas'">
+
+
+								KINSEY SANTOS PINTO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71435t_01s_8&#186; N&#237;velCHK'_temReservas'">2T123 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71435t_01s_8&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas71435" style="display: none"
+								id="cc_71435t_02s_8&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+							</td>
+							<td width="2%">
+
+
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_71435t_02s_8&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_71435t_02s_8&#186; N&#237;velCHK">
+
+
+								KINSEY SANTOS PINTO
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_71435t_02s_8&#186; N&#237;velCHK">2T6  2N12 (27/07/2026 - 12/12/2026)</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_71435t_02s_8&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(70965, '#nivel_8&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL143 - GEOGRAFIA POL&#205;TICA
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+										[<a href="javascript:void(0);" class="linkExpressoes" onclick="PainelConsultaTurmas.show('( 65904 OU 61701 OU 63578 )','equivalentes')" title="Mostrar disciplinas equivalentes">equivalentes</a>]
+										<br />
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas70965" style="display: table-row"
+								id="cc_70965t_01s_8&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda837002').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda837002').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda837002').style.visibility = 'hidden';"id="ajuda837002">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362098)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362098"
+										id="cc_70965t_01s_8&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70965t_01s_8&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70965t_01s_8&#186; N&#237;velCHK'_temReservas'">
+
+
+								DOMINGOS SAVIO CORREA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70965t_01s_8&#186; N&#237;velCHK'_temReservas'">4T123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70965t_01s_8&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas70965" style="display: table-row"
+								id="cc_70965t_02s_8&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362362)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362362"
+										id="cc_70965t_02s_8&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_70965t_02s_8&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_70965t_02s_8&#186; N&#237;velCHK">
+
+
+								DOMINGOS SAVIO CORREA
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_70965t_02s_8&#186; N&#237;velCHK">4N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_70965t_02s_8&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+							<tr class="disciplina no-hover" >
+								<td>
+
+
+									<img alt="&#201; permitida a matr&#237;cula nesse componente" title="&#201; permitida a matr&#237;cula nesse componente" src="/sigaa/img/graduacao/matriculas/matricula_permitida.png">
+
+								</td>
+								<td colspan="4">
+									<a href="javascript:void(0);" style=""
+										onclick="PainelComponente.show(74508, '#nivel_8&#186; N&#237;vel')" title="Ver Detalhes do Componente Curricular">
+
+
+
+											* GEOL145 - CARTOGRAFIA ESCOLAR
+
+
+									</a>
+
+										<em>(Obrig. Curr&#237;culo)</em>
+
+
+								</td>
+								<td class="text-right" colspan="2">
+
+
+
+								</td>
+							</tr>
+
+
+
+
+						<tr class="linhaImpar turmas74508" style="display: table-row"
+								id="cc_74508t_01s_8&#186; N&#237;velTR">
+							<td>
+
+									<img src="/sigaa/img/graduacao/matriculas/matricula_tem_reservas.png" onMouseOver="document.getElementById('ajuda639991').style.visibility = 'visible';" onMouseOut="document.getElementById('ajuda639991').style.visibility = 'hidden';" border="0" >
+<span style="position: absolute;">
+	<div class="popUp" onMouseOut="document.getElementById('ajuda639991').style.visibility = 'hidden';"id="ajuda639991">
+
+
+									<li>Essa turma possui vagas reservadas para seu curso</li>
+									</div>
+</span>
+
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362099)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362099"
+										id="cc_74508t_01s_8&#186; N&#237;velCHK'_temReservas'" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74508t_01s_8&#186; N&#237;velCHK'_temReservas'">Turma 01</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74508t_01s_8&#186; N&#237;velCHK'_temReservas'">
+
+
+								UMBELINO OLIVEIRA DE ANDRADE
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74508t_01s_8&#186; N&#237;velCHK'_temReservas'">6T234</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74508t_01s_8&#186; N&#237;velCHK'_temReservas'">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+
+
+
+
+
+
+
+
+
+						<tr class="linhaPar turmas74508" style="display: table-row"
+								id="cc_74508t_02s_8&#186; N&#237;velTR">
+							<td>
+
+							</td>
+							<td width="2%">
+
+								<a href="javascript:void(0);" onclick="PainelTurma.show(362376)" title="Ver Detalhes dessa turma">
+									<img src="/sigaa/img/graduacao/matriculas/zoom.png" alt=""
+										class="noborder" />
+								</a>
+
+							</td>
+							<td width="2%">
+
+
+
+									<input type="checkbox" name="selecaoTurmas" value="362376"
+										id="cc_74508t_02s_8&#186; N&#237;velCHK" class="noborder" onclick="marcarTurma(this)"/>
+
+							</td>
+							<td width="11%" style="font-size: xx-small">
+								<label for="cc_74508t_02s_8&#186; N&#237;velCHK">Turma 02</label>
+							</td>
+							<td style="font-size: xx-small">
+								<label for="cc_74508t_02s_8&#186; N&#237;velCHK">
+
+
+								UMBELINO OLIVEIRA DE ANDRADE
+								</label>
+							</td>
+							<td width="10%" style="font-size: xx-small">
+								<label for="cc_74508t_02s_8&#186; N&#237;velCHK">6N123</label>
+							</td>
+							<td width="7%" style="font-size: xx-small">
+
+									<label for="cc_74508t_02s_8&#186; N&#237;velCHK">IGDEMA</label>
+
+
+							</td>
+						</tr>
+
+					<tfoot>
+						<tr>
+							<td colspan="7" align="center">
+								<a id="formSelecionarTurmas:btaoSelecionarTurmas" href="#" onclick="var a=function(){return prevenirDuploClique();};var b=function(){if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('formSelecionarTurmas'),{'formSelecionarTurmas:btaoSelecionarTurmas':'formSelecionarTurmas:btaoSelecionarTurmas'},'');}return false};return (a()==false) ? false : b();" class="btn btn-primary">
+									<i class="fa fa-plus-circle"></i> Adicionar turmas selecionadas
+								</a>
+							</td>
+						</tr>
+					</tfoot>
+				</table>
+			<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id7" />
+</form>
+
+
+		</div> <!-- /.box-secao -->
+	</div> <!-- /.box-geral -->
+
+<script type="text/javascript">
+<!--
+remarcarTurmasSubmetidas();
+
+//-->
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="clear"> </div>
+
+</div>
+	<br />
+
+
+
+
+
+	<div id="rodape">
+		<p>	SIGAA | NTI - N&#250;cleo de Tecnologia da Informa&#231;&#227;o - (82) 3214-1015 | Copyright &copy; 2006-2026 - UFRN - sig-app-1.srv1inst1
+
+
+			 - <a onclick="javascript:versao();">v4.9.3_s.453</a>
+
+
+		<span style="font-size: 6pt;">16/07/2026 21:39</span>
+
+		</p>
+	</div>
+
+
+</div>
+
+<div id="painel-mensagem-envio"> </div>
+
+
+
+
+
+
+
+
+	<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+	  ga('create', '0', 'auto');
+	  ga('send', 'pageview');
+
+	</script>
+
+
+
+<!-- MYFACES JAVASCRIPT -->
+
+</body>
+
+</html>
+
+	<script type="text/javascript" charset="UTF-8">
+		function versao(){
+			var msg='';
+			msg+='SIGAA 4.9.3_s.453,  publicado em: 14/07/2026 14:59\n\n';
+			msg+='Depend\u00eancias:\n';
+			msg+='Arquitetura 4.2.0_s.2\n';
+			msg+='Entidades Comuns 2.2.0_s.2\n';
+			msg+='Servicos Integrados 2.0.8\n';
+			msg+='SharedResources 2.1.2\n';
+			msg+='Servicos Remoto Biblioteca 1.0.3\n';
+			msg+='SIGAA Mobile Objects 1.0.0\n\n';
+			msg+='Copyright SINFO/UFRN';
+			alert(msg);
+		}
+	</script>
+
+
+<script language="javascript">
+Relogio.init(25);
+</script>
+
+
+
+<script>
+	document.location = '#';
+</script>

@@ -10,6 +10,7 @@ class Course:
         self.id = form_data['post_values'].get('idTurma')
         self.grades = []
         self.schedule_code = schedule_code  # e.g. "2N1234", "4T6 4N1234"
+        self.professor_name = None
 
     def __repr__(self):
         return f"<Course title='{self.title}'>"
@@ -48,6 +49,64 @@ class Course:
                 self.frequency = None
                 
         return self.grades, self.frequency
+
+    async def get_professor(self):
+        course_page = await self._enter_course()
+        try:
+            menu_items = course_page.soup.find_all(string=re.compile(r"Participantes", re.I))
+            participantes_page = None
+            for item in menu_items:
+                parent = item.parent
+                while parent:
+                    if parent.name in ['td', 'div', 'a', 'tr', 'li', 'span'] and parent.get('onclick'):
+                        js_code = parent['onclick']
+                        form_data = course_page.parse_jsfcljs(js_code)
+                        participantes_page = await self.session.post(
+                            form_data['action'],
+                            data=form_data['post_values']
+                        )
+                        break
+                    parent = parent.parent
+                    if not parent or parent.name == 'body':
+                        break
+                if participantes_page:
+                    break
+            
+            if participantes_page:
+                # Look for <legend> containing 'Docente' or 'Professor'
+                legends = participantes_page.soup.find_all('legend')
+                for legend in legends:
+                    txt_leg = legend.get_text(strip=True).upper()
+                    if 'DOCENTE' in txt_leg or 'PROFESSOR' in txt_leg:
+                        table = legend.find_next('table')
+                        if table:
+                            for row in table.find_all('tr'):
+                                name_tag = row.find('strong')
+                                if not name_tag:
+                                    name_tag = row.find('a', title=re.compile(r"docente", re.I))
+                                if name_tag:
+                                    ct = name_tag.get_text(strip=True)
+                                    if ct and len(ct) > 3:
+                                        self.professor_name = ct.strip()
+                                        return self.professor_name
+
+                # Fallback to older inline method
+                for cell in participantes_page.soup.find_all('td'):
+                    txt = cell.get_text(strip=True).upper()
+                    if 'DOCENTE' in txt or 'PROFESSOR' in txt:
+                        row = cell.find_parent('tr')
+                        if row:
+                            row_cells = row.find_all('td')
+                            for c in row_cells:
+                                ct = c.get_text(strip=True)
+                                ct_up = ct.upper()
+                                if ct and ct_up not in ['DOCENTE', 'PROFESSOR'] and len(ct) > 3 and '@' not in ct:
+                                    self.professor_name = ct.strip()
+                                    return self.professor_name
+        except Exception as e:
+            pass
+        self.professor_name = "Desconhecido"
+        return self.professor_name
 
     async def _enter_course(self):
         page = await self.session.post(

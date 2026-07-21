@@ -73,3 +73,23 @@ class LinkedAccount(db.Model):
             return None
     def __repr__(self):
         return f'<LinkedAccount {self.institution}:{self.username}>'
+
+class CourseReview(db.Model):
+    __tablename__ = 'course_reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    institution = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    difficulty_rating = db.Column(db.Float, nullable=True) # 1.0 to 5.0
+    is_declined = db.Column(db.Boolean, default=False)
+    __table_args__ = (db.UniqueConstraint('user_id', 'institution', 'name', name='uq_course_review'),)
+
+class ProfessorReview(db.Model):
+    __tablename__ = 'professor_reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    institution = db.Column(db.String(50), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    difficulty_rating = db.Column(db.Float, nullable=True) # 1.0 to 5.0
+    is_declined = db.Column(db.Boolean, default=False)
+    __table_args__ = (db.UniqueConstraint('user_id', 'institution', 'name', name='uq_professor_review'),)

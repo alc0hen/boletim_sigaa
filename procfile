@@ -1,1 +1,1 @@
-web: gunicorn run:app -k gevent --workers 2 --bind 0.0.0.0:$PORT
+web: hypercorn run:asgi_app --bind 0.0.0.0:$PORT --workers ${HYPERCORN_WORKERS:-2}

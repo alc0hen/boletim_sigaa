@@ -3,9 +3,10 @@ from .sigaa_api.sigaa import Sigaa, InstitutionType
 from .domain.factory import CalculatorFactory
 from .demo_data import get_demo_data
 from .extensions import db, oauth
-from .models import User, LinkedAccount, get_cipher_suite
+from .models import User, LinkedAccount, CourseReview, ProfessorReview, get_cipher_suite
 from .sigaa_api.exceptions import SigaaQuestionnaireError
 import asyncio
+from .cache import get as cache_get, set as cache_set
 import json
 import os
 import aiohttp
@@ -299,8 +300,16 @@ def dashboard():
             linked_accounts = user.linked_accounts
     return render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'))
 @bp.route('/api/academic_profile')
-def academic_profile():
+async def academic_profile():
     cookies = session.get('sigaa_cookies')
+    
+    # Rate limiting / Smart delay against brute-force reloads
+    last_req = session.get('last_academic_req', 0)
+    now = time.time()
+    if now - last_req < 5:
+        time.sleep(5 - (now - last_req))
+    session['last_academic_req'] = time.time()
+
     if not cookies:
         return jsonify({"error": "Unauthorized"}), 401
     force_update = request.args.get('force') == 'true'
@@ -308,6 +317,14 @@ def academic_profile():
     linked_account = None
     if active_account_id:
         linked_account = LinkedAccount.query.get(active_account_id)
+    # Redis cache fallback
+    cache_key = f"{session.get('user_id')}_{session.get('sigaa_inst')}_profile"
+    if not force_update:
+        cached = cache_get('history', cache_key)
+        if cached:
+            logger.info("Redis cache hit for academic profile")
+            return jsonify(cached)
+    # Existing DB cache check
     if linked_account and not force_update and linked_account.history_json and linked_account.history_updated_at:
         if datetime.utcnow() - linked_account.history_updated_at < timedelta(days=3):
             try:
@@ -341,7 +358,10 @@ def academic_profile():
             await sigaa.close()
 
     try:
-        res = run_async(fetch_academic_profile())
+        start_time = time.time()
+        res = await fetch_academic_profile()
+        duration = time.time() - start_time
+        logger.info(f"Historical data fetch took {duration:.2f}s")
         if res["status"] != 200:
             return jsonify({"error": res["error"]}), res["status"]
             
@@ -350,9 +370,18 @@ def academic_profile():
         best_grade = 0
         best_subject = "-"
         semesters_data = []
+        calculator = CalculatorFactory.get_calculator(inst_type)
         for sem, subjects in history.items():
             sem_grades = []
             for subj in subjects:
+                try:
+                    res = calculator.calculate(subj.get('grades', []))
+                    subj['final_grade'] = res.average
+                    subj['status_dict'] = res.to_dict()
+                    logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
+                except Exception as e:
+                    logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
+                
                 grade = subj.get('final_grade')
                 if grade is not None:
                     sem_grades.append(grade)
@@ -385,6 +414,15 @@ def academic_profile():
                 db.session.commit()
             except Exception as e:
                 logger.error(f"Cache encryption failed: {e}")
+
+        # Redis cache store
+        try:
+            cache_key = f"{session.get('user_id')}_{session.get('sigaa_inst')}_profile"
+            cache_set('history', cache_key, final_data, ttl=30)
+            logger.info("Redis cache set for academic profile")
+        except Exception as e:
+            logger.error(f"Redis cache set failed: {e}")
+
         return jsonify(final_data)
     except SigaaQuestionnaireError as e:
         logger.warning(f"Profile error - questionnaire: {e}")
@@ -480,6 +518,14 @@ def update_course(course_id):
 @bp.route('/api/stream_grades')
 def stream_grades():
     cookies = session.get('sigaa_cookies')
+    
+    # Rate limiting / Smart delay against brute-force reloads
+    last_req = session.get('last_stream_req', 0)
+    now = time.time()
+    if now - last_req < 5:
+        time.sleep(5 - (now - last_req))
+    session['last_stream_req'] = time.time()
+
     username = session.get('username', 'anonymous')
     if not cookies: return Response("Unauthorized", status=401)
     priority_ids = [int(x) for x in request.args.get('priority', '').split(',') if x.strip().isdigit()]
@@ -498,31 +544,24 @@ def stream_grades():
         acc_id = active_account_id
         if acc_id:
             linked_account = LinkedAccount.query.get(acc_id)
+            if linked_account and linked_account.history_json:
+                try:
+                    from .models import get_cipher_suite
+                    cipher = get_cipher_suite()
+                    decrypted = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
+                    cached_profile = json.loads(decrypted)
+                    yield json.dumps({"type": "profile_data", "data": cached_profile}) + "\n"
+                    logger.info("SIGAA: Emitted cached history_json for instant UI rendering.")
+                except Exception as e:
+                    logger.error(f"Failed to load cached history: {e}")
         
-        cache = None
-        if linked_account and linked_account.portal_cache_json:
-            try:
-                cache = json.loads(linked_account.portal_cache_json)
-                cache['timestamp'] = linked_account.portal_cache_updated_at.timestamp() if linked_account.portal_cache_updated_at else 0
-            except: pass
-
-        now = time.time()
-        use_cache = False
-        if cache and (now - cache.get('timestamp', 0) < 600): # 10 minutes
-            use_cache = True
-            logger.info(f"Using DB portal cache for {username}")
-        else:
-            logger.info(f"Cache miss for {username}. Reason: {'Old/Missing' if cache else 'No cache'}")
-
         try:
-            account = None
-            if not use_cache:
-                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-                if "login" in response.url.path:
-                    yield json.dumps({"error": "Session expired"}) + "\n"
-                    return
-                from .sigaa_api.account import Account
-                account = Account(sigaa.session, response)
+            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+            if "login" in response.url.path:
+                yield json.dumps({"error": "Session expired"}) + "\n"
+                return
+            from .sigaa_api.account import Account
+            account = Account(sigaa.session, response)
             
             async def get_supporters_task():
                 try:
@@ -532,53 +571,31 @@ def stream_grades():
                 except: pass
                 return []
             
-            # Start fetching name and supporters
-            name = cache.get('name') if use_cache else await account.get_name()
+            name = await account.get_name()
             
-            # Yield user_info ASAP
-            is_supporter_cached = cache.get('is_supporter', False) if use_cache else False
-            yield json.dumps({"type": "user_info", "name": name, "is_supporter": is_supporter_cached}) + "\n"
-
-            # Check for actual supporters in background if not using cache or to refresh
+            # Check for actual supporters in background
             supporters = await get_supporters_task()
             is_supporter = False
-            if not use_cache:
-                registration = None
-                if account.active_bonds: registration = account.active_bonds[0].registration
-                if registration and str(registration) in {str(s) for s in supporters}: is_supporter = True
-                # If cached value was wrong, we could send an update, but usually it's fine
-            else:
-                is_supporter = is_supporter_cached
+            registration = None
+            if account.active_bonds: registration = account.active_bonds[0].registration
+            if registration and str(registration) in {str(s) for s in supporters}: is_supporter = True
 
-            if use_cache or (account and account.active_bonds):
+            yield json.dumps({"type": "user_info", "name": name, "is_supporter": is_supporter}) + "\n"
+
+            if account and account.active_bonds:
                 calculator = CalculatorFactory.get_calculator(inst_type)
                 
-                # Reconstruct bonds from cache or use account
                 bonds_to_process = []
-                if use_cache:
-                    from .sigaa_api.bond import StudentBond
-                    from .sigaa_api.course import Course
-                    for b_data in cache.get('bonds', []):
-                        # Create the actual bond object
-                        bond_obj = StudentBond(
-                            sigaa.session, 
-                            b_data.get('registration'), 
-                            b_data['program'], 
-                            b_data.get('switch_url')
-                        )
-                        c_list = []
-                        for c_data in b_data.get('courses', []):
-                            c_list.append(Course(sigaa.session, c_data['title'], c_data['form_data'], c_data.get('schedule_code', '')))
-                        bonds_to_process.append({'program': b_data['program'], 'courses': c_list, 'bond_obj': bond_obj})
-                else:
-                    for bond in account.active_bonds:
-                        courses = await bond.get_courses()
-                        bonds_to_process.append({'program': bond.program, 'courses': courses, 'bond_obj': bond})
+                total_current_courses = 0
+                for bond in account.active_bonds:
+                    courses = await bond.get_courses()
+                    bonds_to_process.append({'program': bond.program, 'courses': courses, 'bond_obj': bond})
+                    if courses:
+                        total_current_courses += len(courses)
 
-                # Global cache update data
-                new_cache_bonds = []
-                
-                # Phase 1: Mapping & Cache Save (Fast)
+                yield json.dumps({"type": "sync_start", "total_courses": total_current_courses}) + "\n"
+
+                # Phase 1: Mapping (Fast)
                 for b_item in bonds_to_process:
                     courses = b_item['courses']
                     if not courses: continue
@@ -588,38 +605,10 @@ def stream_grades():
                         course_list_with_ids.append({'id': i + 1, 'course': course})
                     b_item['_course_list'] = course_list_with_ids # Save for phase 2
                     
-                    # Cache current bond structure
-                    current_bond_cache = {
-                        'program': b_item['program'], 
-                        'registration': b_item['bond_obj'].registration if 'bond_obj' in b_item else None,
-                        'switch_url': b_item['bond_obj'].switch_url if 'bond_obj' in b_item else None,
-                        'courses': []
-                    }
                     for item in course_list_with_ids:
                         course_id = item['id']
                         course = item['course']
                         yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": b_item['program']}) + "\n"
-                        current_bond_cache['courses'].append({
-                            'title': course.title,
-                            'form_data': course.form_data,
-                            'schedule_code': course.schedule_code
-                        })
-                    new_cache_bonds.append(current_bond_cache)
-
-                # Save cache BEFORE slow fetching
-                if not use_cache and linked_account:
-                    try:
-                        linked_account.portal_cache_json = json.dumps({
-                            'name': name,
-                            'is_supporter': is_supporter,
-                            'bonds': new_cache_bonds
-                        })
-                        linked_account.portal_cache_updated_at = datetime.now()
-                        db.session.commit()
-                        logger.info(f"Portal cache persistent for {username}")
-                    except Exception as e:
-                        logger.error(f"Cache persistence failed: {e}")
-                        db.session.rollback()
 
                 # Phase 2: Slow Data Fetching
                 for b_item in bonds_to_process:
@@ -659,12 +648,34 @@ def stream_grades():
                             
                     try:
                         if bond_obj:
-                            history = await bond_obj.get_history()
+                            c_hist = cached_profile.get('history_raw', {}) if cached_profile else None
+                            start_time = time.time()
+                            history = await bond_obj.get_history(cached_history=c_hist)
+                            duration = time.time() - start_time
+                            logger.info(f"Historical data fetch took {duration:.2f}s")
                         else:
                             history = {}
                     except Exception as e:
                         logger.error(f"Error fetching history: {e}")
                         history = {}
+
+                    # Calculate precise averages using the domain calculator
+                    for sem, subjects in history.items():
+                        unique_subjects = []
+                        seen_names = set()
+                        for subj in subjects:
+                            if subj['name'] in seen_names:
+                                continue
+                            seen_names.add(subj['name'])
+                            try:
+                                res = calculator.calculate(subj.get('grades', []))
+                                subj['final_grade'] = res.average
+                                subj['status_dict'] = res.to_dict()
+                                logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
+                            except Exception as e:
+                                logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
+                            unique_subjects.append(subj)
+                        history[sem] = unique_subjects
 
                     total_grades = []
                     best_grade = 0
@@ -695,6 +706,20 @@ def stream_grades():
                         "semesters": semesters_data,
                         "history_raw": history
                     }
+                    if linked_account:
+                        try:
+                            from .models import get_cipher_suite
+                            cipher = get_cipher_suite()
+                            json_str = json.dumps(profile_data)
+                            encrypted_data = cipher.encrypt(json_str.encode('utf-8')).decode('utf-8')
+                            linked_account.history_json = encrypted_data
+                            linked_account.history_updated_at = datetime.utcnow()
+                            db.session.commit()
+                            logger.info("Successfully persisted history_json in stream_grades")
+                        except Exception as e:
+                            logger.error(f"Failed to cache history in stream_grades: {e}")
+                            db.session.rollback()
+
                     yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
                 
                 # Final sync end
@@ -804,3 +829,413 @@ def admin():
         })
 
     return render_template('admin.html', user=user, stats=stats, user_list=user_list)
+
+# ----------------- MATRICULA ONLINE ROUTE ENDPOINTS -----------------
+@bp.route('/api/matricula/status')
+def api_matricula_status():
+    cookies = session.get('sigaa_cookies')
+    if not cookies:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    is_dev = os.environ.get('IS_DEV', '0') == '1'
+    
+    if is_dev:
+        # Emulation mode
+        try:
+            from .sigaa_api.enrollment_parser import parse_enrollment_page
+            ufal_dir = os.path.join(
+                os.path.dirname(__file__), "sigaa_api", "paginas_sigaa", "UFAL"
+            )
+            with open(os.path.join(ufal_dir, "matricula", "selecao_turmas.html"), "r", encoding="utf-8") as f:
+                selecao_body = f.read()
+                
+            levels = parse_enrollment_page(selecao_body)
+            # Save mock state
+            session['mock_view_state'] = 'mock_view_state_123'
+            return jsonify({
+                "is_dev": True,
+                "levels": levels,
+                "view_state": 'mock_view_state_123',
+                "status": "success"
+            })
+        except Exception as e:
+            logger.error(f"Error loading mock matricula: {e}")
+            return jsonify({"error": f"Erro na emulação: {str(e)}"}), 500
+            
+    else:
+        # Live SIGAA mode
+        url = session.get('sigaa_url', SIGAA_URL)
+        inst_str = session.get('sigaa_inst', 'IFAL')
+        try:
+            inst_type = InstitutionType[inst_str]
+        except KeyError:
+            inst_type = InstitutionType.IFAL
+
+        async def fetch_enrollment():
+            sigaa = Sigaa(url, inst_type, cookies=cookies)
+            try:
+                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+                if "login" in response.url.path:
+                    return {"error": "Session expired", "status": 401}
+                from .sigaa_api.account import Account
+                account = Account(sigaa.session, response)
+                if not account.active_bonds:
+                    return {"error": "No active bonds", "status": 404}
+                bond = account.active_bonds[0]
+                result = await bond.get_enrollment_disciplines()
+                return {"result": result, "status": 200}
+            finally:
+                await sigaa.close()
+
+        try:
+            res = run_async(fetch_enrollment())
+            if res["status"] != 200:
+                return jsonify({"error": res["error"]}), res["status"]
+            
+            result = res["result"]
+            # Save view state in session for submission
+            session['sigaa_view_state'] = result["view_state"]
+            return jsonify({
+                "is_dev": False,
+                "levels": result["levels"],
+                "view_state": result["view_state"],
+                "status": "success"
+            })
+        except Exception as e:
+            logger.error(f"Error loading live matricula: {e}")
+            return jsonify({"error": f"Erro ao acessar o SIGAA: {str(e)}"}), 500
+
+
+@bp.route('/api/matricula/submit', methods=['POST'])
+def api_matricula_submit():
+    cookies = session.get('sigaa_cookies')
+    if not cookies:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    is_dev = os.environ.get('IS_DEV', '0') == '1'
+    data = request.json or {}
+    selected_class_ids = data.get('selected_class_ids', [])
+    view_state = data.get('view_state') or session.get('sigaa_view_state') or session.get('mock_view_state')
+    
+    if not selected_class_ids:
+        return jsonify({"error": "Nenhuma turma selecionada"}), 400
+
+    if is_dev:
+        # Emulation mode
+        try:
+            # Load debug confirm_page
+            tests_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tests")
+            confirm_path = os.path.join(tests_dir, "confirm_page_debug.html")
+            
+            with open(confirm_path, "r", encoding="utf-8") as f:
+                confirm_body = f.read()
+                
+            session['mock_confirm_page_body'] = confirm_body
+            session['mock_confirm_view_state'] = 'mock_confirm_view_state_456'
+            
+            return jsonify({
+                "is_dev": True,
+                "html": confirm_body,
+                "view_state": 'mock_confirm_view_state_456',
+                "status": "success"
+            })
+        except Exception as e:
+            logger.error(f"Error submitting mock matricula: {e}")
+            return jsonify({"error": f"Erro na emulação: {str(e)}"}), 500
+    else:
+        # Live SIGAA mode
+        url = session.get('sigaa_url', SIGAA_URL)
+        inst_str = session.get('sigaa_inst', 'IFAL')
+        try:
+            inst_type = InstitutionType[inst_str]
+        except KeyError:
+            inst_type = InstitutionType.IFAL
+
+        async def post_enrollment():
+            sigaa = Sigaa(url, inst_type, cookies=cookies)
+            try:
+                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+                from .sigaa_api.account import Account
+                account = Account(sigaa.session, response)
+                bond = account.active_bonds[0]
+                confirm_page = await bond.submit_enrollment(selected_class_ids, view_state)
+                return {
+                    "html": confirm_page.body,
+                    "view_state": confirm_page.view_state,
+                    "status": 200
+                }
+            finally:
+                await sigaa.close()
+
+        try:
+            res = run_async(post_enrollment())
+            session['sigaa_confirm_view_state'] = res["view_state"]
+            session['sigaa_confirm_page_body'] = res["html"]
+            return jsonify({
+                "is_dev": False,
+                "html": res["html"],
+                "view_state": res["view_state"],
+                "status": "success"
+            })
+        except Exception as e:
+            logger.error(f"Error submitting live matricula: {e}")
+            return jsonify({"error": f"Erro ao submeter ao SIGAA: {str(e)}"}), 500
+
+
+@bp.route('/api/matricula/confirm', methods=['POST'])
+def api_matricula_confirm():
+    cookies = session.get('sigaa_cookies')
+    if not cookies:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    is_dev = os.environ.get('IS_DEV', '0') == '1'
+    data = request.json or {}
+    password = data.get('password')
+    
+    if not password and not is_dev:
+        return jsonify({"error": "Senha é obrigatória para confirmação"}), 400
+
+    if is_dev:
+        # Emulation mode
+        if password == "erro":
+            return jsonify({
+                "status": "error",
+                "message": "Senha incorreta ou erro de pré-requisitos no SIGAA."
+            }), 400
+        else:
+            return jsonify({
+                "status": "success",
+                "message": "Matrícula realizada com sucesso! (Emulado)"
+            })
+    else:
+        # Live SIGAA mode
+        url = session.get('sigaa_url', SIGAA_URL)
+        inst_str = session.get('sigaa_inst', 'IFAL')
+        try:
+            inst_type = InstitutionType[inst_str]
+        except KeyError:
+            inst_type = InstitutionType.IFAL
+
+        confirm_view_state = session.get('sigaa_confirm_view_state')
+        confirm_page_body = session.get('sigaa_confirm_page_body')
+        
+        if not confirm_view_state or not confirm_page_body:
+            return jsonify({"error": "Sessão inválida ou expirada"}), 400
+
+        async def finalize_enrollment():
+            sigaa = Sigaa(url, inst_type, cookies=cookies)
+            try:
+                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
+                from .sigaa_api.account import Account
+                account = Account(sigaa.session, response)
+                bond = account.active_bonds[0]
+                
+                # 1. Request password page
+                password_page = await bond.request_confirmation_page(confirm_view_state)
+                
+                # 2. Submit password page
+                final_res = await bond.confirm_enrollment(password, password_page.view_state, password_page.body)
+                return {
+                    "html": final_res.body,
+                    "status": 200
+                }
+            finally:
+                await sigaa.close()
+
+        try:
+            res = run_async(finalize_enrollment())
+            html = res["html"]
+            soup = BeautifulSoup(html, 'lxml')
+            
+            res_body_lower = html.lower()
+            if soup.find('input', type='password') or "senha incorreta" in res_body_lower or "senha de confirmação inválida" in res_body_lower or "inválida" in res_body_lower:
+                error_elements = soup.find_all(class_='erros')
+                msg = ""
+                if error_elements:
+                    msg = "; ".join([err.get_text(strip=True) for err in error_elements])
+                else:
+                    msg = "Senha incorreta ou erro de confirmação no SIGAA."
+                return jsonify({"status": "error", "message": msg}), 400
+                
+            return jsonify({
+                "status": "success",
+                "message": "Matrícula gravada com sucesso no SIGAA!"
+            })
+        except Exception as e:
+            logger.error(f"Error finalizing live matricula: {e}")
+            return jsonify({"error": f"Erro de confirmação: {str(e)}"}), 500
+
+@bp.route('/api/reviews/pending', methods=['GET'])
+def pending_reviews():
+    active_account_id = session.get('active_account_id')
+    user_id = session.get('user_id')
+    
+    if active_account_id:
+        linked_account = LinkedAccount.query.get(active_account_id)
+    elif user_id:
+        linked_account = LinkedAccount.query.filter_by(user_id=user_id).first()
+    else:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not linked_account or not linked_account.history_json:
+        return jsonify({"courses": [], "professors": []}), 200
+
+    user_id = linked_account.user_id
+
+    try:
+        cipher = get_cipher_suite()
+        decrypted = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
+        cached_profile = json.loads(decrypted)
+        history_raw = cached_profile.get('history_raw', {})
+    except Exception as e:
+        logger.error(f"Error parsing history for reviews: {e}")
+        return jsonify({"courses": [], "professors": []}), 200
+
+    past_courses = set()
+    past_professors = set()
+
+    # Extract all courses and professors from history
+    for sem, classes in history_raw.items():
+        for cls in classes:
+            status = cls.get('status', '')
+            # Allow evaluation only if the user has essentially completed or failed the course
+            if status not in ['Matriculado', 'Cursando', 'Indefinido']:
+                c_name = cls.get('name')
+                p_name = cls.get('professor')
+                
+                if c_name:
+                    past_courses.add(c_name)
+                if p_name and p_name.strip() and p_name.strip().upper() != "DESCONHECIDO":
+                    past_professors.add(p_name.strip().upper())
+
+    # Check which ones are already reviewed (or declined)
+    institution = linked_account.institution
+
+    existing_c_reviews = CourseReview.query.filter_by(user_id=user_id, institution=institution).all()
+    reviewed_courses = {r.name for r in existing_c_reviews}
+    
+    existing_p_reviews = ProfessorReview.query.filter_by(user_id=user_id, institution=institution).all()
+    reviewed_professors = {r.name for r in existing_p_reviews}
+
+    pending_courses = list(past_courses - reviewed_courses)
+    pending_professors = list(past_professors - reviewed_professors)
+
+    return jsonify({
+        "courses": pending_courses,
+        "professors": pending_professors
+    })
+
+@bp.route('/api/reviews/submit', methods=['POST'])
+def submit_reviews():
+    active_account_id = session.get('active_account_id')
+    user_id = session.get('user_id')
+    
+    if active_account_id:
+        linked_account = LinkedAccount.query.get(active_account_id)
+    elif user_id:
+        linked_account = LinkedAccount.query.filter_by(user_id=user_id).first()
+    else:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not linked_account:
+        return jsonify({"error": "No linked account"}), 400
+
+    user_id = linked_account.user_id
+
+    data = request.json
+    if not data:
+        return jsonify({"error": "Invalid payload"}), 400
+
+    institution = linked_account.institution
+    
+    # data format: {"courses": [{"name": "...", "rating": 4.0, "declined": false}], "professors": [...]}
+    courses_data = data.get('courses', [])
+    professors_data = data.get('professors', [])
+
+    try:
+        for c in courses_data:
+            name = c.get('name')
+            rating = c.get('rating')
+            declined = c.get('declined', False)
+            if not name: continue
+            
+            review = CourseReview.query.filter_by(user_id=user_id, institution=institution, name=name).first()
+            if not review:
+                review = CourseReview(user_id=user_id, institution=institution, name=name)
+                db.session.add(review)
+            review.difficulty_rating = float(rating) if rating is not None else None
+            review.is_declined = declined
+
+        for p in professors_data:
+            name = p.get('name')
+            if name: name = name.strip().upper()
+            rating = p.get('rating')
+            declined = p.get('declined', False)
+            if not name: continue
+            
+            review = ProfessorReview.query.filter_by(user_id=user_id, institution=institution, name=name).first()
+            if not review:
+                review = ProfessorReview(user_id=user_id, institution=institution, name=name)
+                db.session.add(review)
+            review.difficulty_rating = float(rating) if rating is not None else None
+            review.is_declined = declined
+
+        db.session.commit()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Failed to submit reviews: {e}")
+        return jsonify({"error": "Database error"}), 500
+
+@bp.route('/api/reviews/stats', methods=['GET'])
+def get_review_stats():
+    # Public endpoint (for logged in users) to get average stats
+    active_account_id = session.get('active_account_id')
+    user_id = session.get('user_id')
+    
+    if active_account_id:
+        linked_account = LinkedAccount.query.get(active_account_id)
+    elif user_id:
+        linked_account = LinkedAccount.query.filter_by(user_id=user_id).first()
+    else:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not linked_account:
+        return jsonify({"error": "No linked account"}), 400
+        
+    course_name = request.args.get('course')
+    professor_name = request.args.get('professor')
+    institution = linked_account.institution
+
+    stats = {}
+
+    if course_name:
+        reviews = CourseReview.query.filter(
+            CourseReview.institution == institution,
+            CourseReview.name == course_name,
+            CourseReview.is_declined == False,
+            CourseReview.difficulty_rating != None
+        ).all()
+        
+        if reviews:
+            avg = sum(r.difficulty_rating for r in reviews) / len(reviews)
+            stats['course'] = {"average": round(avg, 1), "count": len(reviews)}
+        else:
+            stats['course'] = None
+
+    if professor_name:
+        professor_name = professor_name.strip().upper()
+        reviews = ProfessorReview.query.filter(
+            ProfessorReview.institution == institution,
+            ProfessorReview.name == professor_name,
+            ProfessorReview.is_declined == False,
+            ProfessorReview.difficulty_rating != None
+        ).all()
+        
+        if reviews:
+            avg = sum(r.difficulty_rating for r in reviews) / len(reviews)
+            stats['professor'] = {"average": round(avg, 1), "count": len(reviews)}
+        else:
+            stats['professor'] = None
+
+    return jsonify(stats)

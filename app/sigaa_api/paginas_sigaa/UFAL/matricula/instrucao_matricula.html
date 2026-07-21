@@ -1,0 +1,566 @@
+
+
+
+
+
+
+
+
+
+	
+	
+		<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="background" xmlns="http://www.w3.org/1999/xhtml">
+
+
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+
+
+<title>SIGAA - Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</title>
+<link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/basic_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css" /><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/extended_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" media="rich-extended-skinning" rel="stylesheet" type="text/css" /><script type="text/javascript">window.RICH_FACES_EXTENDED_SKINNING_ON=true;</script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/skinning.js.jsf" type="text/javascript"></script><link rel="shortcut icon" href="/sigaa/img/sigaa.ico" />
+
+<script type="text/javascript" src="/shared/jsBundles/jawr_loader.js"></script>
+<script type="text/javascript">
+                JAWR.loader.style('/bundles/css/sigaa_base.css', 'all');
+        		JAWR.loader.style('/css/ufrn_print.css', 'print');
+        		JAWR.loader.script('/bundles/js/sigaa_base.js');
+</script>
+<link rel="stylesheet" type="text/css" media="all" href="/sigaa/cssBundles/gzip_1549375585/bundles/css/sigaa.css" />
+
+
+<link rel="alternate stylesheet" type="text/css" media="screen" title="mono" href="/sigaa/css/mono.css" />
+<link rel="alternate stylesheet" type="text/css" media="screen" title="contraste" href="/sigaa/css/contraste.css" />
+
+<!-- FontAwesome -->
+<link rel="stylesheet" type="text/css" href="/shared/beta/css/font-awesome.css" media="screen" />
+
+<!-- Painel Gen&#233;rico para telas Modal -->
+<script type="text/javascript" src="/shared/javascript/paineis/painel_generico.js"></script>
+
+<script src="/sigaa/javascript/styleswitch.js" type="text/javascript" ></script>
+
+<script src="/sigaa/javascript/prevenir-duplo-clique.js" type="text/javascript"></script>
+
+
+
+
+
+<script type="text/javascript">
+		var mensagem;
+		var initMensagem = function() {
+			mensagem = new Mensagem();
+		}
+		YAHOO.util.Event.addListener(window,'load', initMensagem);
+		
+		function isIE(){
+		
+					return false;
+			
+		}
+</script>
+
+<script type="text/javascript" src="/sigaa/javascript/jsCookMenuHack.js"></script>
+<!-- Fim dos imports para abrir chamado -->
+
+	<script src="/shared/javascript/STICookieConsent.js"></script>
+	<script>
+	    document.addEventListener("DOMContentLoaded", () => {
+	    	generateCookieConsentModal("SIGAA", "N&#243;s usamos cookies para melhorar sua experi&#234;ncia de navega&#231;&#227;o no portal. Ao utilizar o %sitename%, voc&#234; concorda com a pol&#237;&#173;tica de monitoramento de cookies.", "https://ufrn.br/institucional/politica-de-privacidade-e-termos-de-uso", "https://ufrn.br/institucional/politica-de-cookies");
+	    })
+	</script>
+	
+</head>
+
+<body>
+
+
+
+
+
+
+
+	<div id="container">
+	<div id="cabecalho">
+		<div id="info-sistema">
+			<h1><span>UFAL - SIGAA -</span></h1>
+			<h3>Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</h3>
+			<div class="dir">
+				
+					
+					<style>
+#info-sistema span.sair-sistema,
+	#info-sistema #tempoSessao{
+	display: inline;
+	right: inherit;
+	position: relative;
+	top: 0;
+	padding-right: inherit;
+}
+
+#info-sistema div.dir{
+	top:0;
+	right:0;
+	text-align: right;
+	width: auto;
+	position: absolute;
+	margin:0;
+	padding: 0;
+	height:16px;
+	display: inline;
+	padding-right:5px;
+	color: #FFF;
+}
+#info-sistema span.acessibilidade{
+	padding: 0 5px;
+	border: solid #D99C44;
+	border-width: 0 1px 0 0;
+	margin: 0 5px;
+	padding: 0 5px;
+}
+	#info-sistema span.acessibilidade a{
+		font-size: 1.1em;
+		font-weight: bolder;
+		color: #FFF;
+		margin-left: 2px;
+		letter-spacing: 0.1px;
+		word-spacing: 0.1px;
+	}
+	#info-sistema span.acessibilidade a.fonteMenor strong{
+		font-size: 0.9em;
+	}
+	.rich-tabpanel-content {
+		font-size: inherit;
+	}	
+</style>
+<span class="acessibilidade">
+	<a class="fonteMaior" title="Aumentar a texto" alt="Aumentar a texto" href="#">
+		<strong>A</strong>+
+	</a>
+	<a class="fonteMenor" title="Diminuir o texto" alt="Diminuir o texto" href="#">
+		<strong>A</strong>-
+	</a>
+</span>
+
+	<span class="acessibilidade">
+		<a title="Ajuda" alt="Ajuda" href="https://ufal.br/sig/sigaa/manuais" target="_blank">
+			Ajuda?
+		</a>
+	</span>
+
+<script type="text/javascript" src="/shared/javascript/jquery/jquery-1.4.4.min.js"></script>
+<script src="/sigaa/javascript/jquery.fontsize.js" type="text/javascript" ></script>
+<script type="text/javascript" >
+	redimensionarFonte('.acessibilidade', '#conteudo', 11, 11, 14);
+</script>
+<script>var $jq = jQuery.noConflict();</script>
+					<span id="tempoSessao"></span>
+					<span class="sair-sistema"> <a href="/sigaa/logar.do?dispatch=logOff">SAIR</a> </span>
+				
+			</div>
+		</div>
+	 
+
+	<div id="painel-usuario"  >
+	
+		<div id="menu-usuario">
+		<ul>
+			<li class="modulos">
+			
+				<span id="modulos"> <a href="#" id="show-modulos"> M&#243;dulos </a> </span>
+			
+			</li>
+			
+				
+				<li class="caixa-postal">
+				
+					
+									
+						<a href=/sigaa/abrirCaixaPostal.jsf?sistema=2> 
+							
+							Caixa Postal					
+							
+							 
+						</a>
+					
+				
+				</li>
+				
+			
+			
+			<!-- INICIO SUST - SIGAA-5677 -->
+			 
+			<!-- FIM SUST - SIGAA-5677 -->
+			
+			
+			
+				 
+					<li class="menus">
+						<a href="/sigaa/verPortalDiscente.do">Menu Discente</a>
+					</li>
+				 
+			
+			
+			
+				
+
+<li class="dados-pessoais">
+	
+		<a href="#" onclick="window.open('/sigaa/alterar_dados.jsf','','width=670,height=430, top=100, left=100, scrollbars' )">Alterar senha</a>
+	
+</li>
+			
+
+			
+			
+			<!-- INICIO SUST - SIGAA-5677 -->
+			<li class="ajuda">
+				<a href="https://ufal.br/sig/sigaa/manuais" target="_blank">Ajuda </a>
+			</li>
+			<!-- FIM SUST - SIGAA-5677 -->
+			
+		</ul>
+		
+		
+		
+		
+		</div>
+
+		<div id="info-usuario">
+
+		<p class="periodo-atual">
+			
+				Semestre atual: <strong>2026.2</strong>			
+			
+			</br>
+			
+		</p>		
+		<p class="usuario">
+		
+			<span title="ALBERT ALEX S. DE VASCONCELLOS">
+				ALBERT ALEX S. DE VASCONCELLOS
+			</span>
+			
+			
+		
+		</p>
+
+		<p class="unidade">
+			INSTITUTO DE GEOGRAFIA, DESENVOLVIMENTO E MEIO AMBIENTE
+			 (11.00.43.58)
+			
+		</p>
+
+		</div>
+	
+	<div id="menu-principal"></div>
+	</div>
+	</div>
+	
+
+	<div id="conteudo">
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+<script type="text/javascript">
+//Fun&#231;&#227;o adicionada no cabe&#231;alho para evitar a reescrita em cada JSP.
+function contarCaracteres(field, idMostraQuantidadeUsuario, maxlimit) {
+	
+	if (field.value.length > maxlimit){
+		field.value = field.value.substring(0, maxlimit);
+	}else{ 
+		document.getElementById(idMostraQuantidadeUsuario).innerHTML = maxlimit - field.value.length ;
+	} 
+}
+</script>
+
+
+<style>
+	span.periodo {
+		color: #292;
+		font-weight: bold;
+	}
+
+	descricaoOperacao p{
+		line-height: 1.25em;
+		margin: 8px 10px;
+	}
+
+</style>
+<script>
+
+ function showConcordancia() {
+
+	var elem = $('form:grupoConcordancia');
+	var dpy = elem.style.display;
+	if (dpy == "none" || dpy == "") {
+		elem.style.display = "block";
+	}
+ }
+
+</script>
+
+	
+
+
+
+
+
+<script type="text/javascript" src="/sigaa/jsBundles/gzip_N922008801/javascript/graduacao/matricula.js" ></script>
+
+
+
+	
+	
+		
+
+
+
+
+
+
+
+<script>
+function redirectManual(){
+	return window.open("http://www.sistemas.ufrn.br/download/sigaa/public/manual_nee.pdf","_blank");
+}
+</script>
+
+
+
+
+<h2>
+	<a href='/sigaa/verPortalDiscente.do'>Portal do Discente</a> &gt;
+	
+		
+		
+		
+		
+			Matr&#237;cula de Discente
+		
+	 
+	&gt; Instru&#231;&#245;es de matr&#237;cula
+</h2>
+
+	
+<form id="form" name="form" method="post" action="/sigaa/graduacao/matricula/instrucoes/instrucoes_regular.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="form" value="form" />
+
+	<div class="descricaoOperacao">
+		<p><b>Caro(a) aluno(a),</b></p>
+		<br>
+		<p>
+			O per&#237;odo de matr&#237;cula on-line estende-se de
+			<span class="periodo">
+				13/07/2026
+		 		a <b>16/07/2026</b>.
+		 	</span>
+		 	
+		 	Durante esse per&#237;odo voc&#234; poder&#225; efetuar a matr&#237;cula nos componentes curriculares desejados, de acordo com a
+		 	oferta de turmas.
+		</p>
+		<p>
+			Lembramos que a escolha das turmas est&#225; sujeita &#224;s regras do
+			<!-- IN&#205;CIO SUST SIGAA-28019 maximilian.guilherme em 06 de maio de 2024-->
+			<a href="https://ufal.br/resolucoes/2023/rco-n-114-de-05-12-2023.pdf" target="_blank"> Regulamento dos Cursos de Gradua&#231;&#227;o </a>
+			<!-- FIM SUST SIGAA-28019-->
+			tais como a verifica&#231;&#227;o de pr&#233;-requisitos e co-requisitos, as matr&#237;culas em componentes
+			equivalentes, entre outras. Vale ressaltar ainda que essa opera&#231;&#227;o permite somente a matr&#237;cula
+			em componentes curriculares do tipo DISCIPLINA ou M&#211;DULO, que possuem turmas abertas no ano-semestre
+			de 2026.2.
+		</p>
+		<p>
+			Para realizar a consulta e sele&#231;&#227;o das turmas dispon&#237;veis voc&#234; ter&#225; duas op&#231;&#245;es:
+			<ul>
+				<li><i>Turmas da Estr. Curricular:</i> aqui ser&#227;o listadas todas as turmas abertas para componentes do seu curr&#237;culo;</li>
+				<li><i>Buscar Outras Turmas:</i> aqui voc&#234; poder&#225; buscar e selecionar qualquer turma aberta.</li>
+			</ul>
+		</p>
+		<p>
+			Ap&#243;s a data final desse per&#237;odo voc&#234; ser&#225; automaticamente matriculado "EM ESPERA"
+			em todas as turmas escolhidas e submetidas. <b>At&#233; a data final do per&#237;odo de matr&#237;cula on-line,
+			&#233; permitida a altera&#231;&#227;o das turmas selecionadas, adicionando outras turmas ou removendo aquelas previamente escolhidas.</b>
+			O deferimento das suas matr&#237;culas est&#225; sujeito ao processamento de matr&#237;cula, que classificar&#225;
+			os alunos em cada turma com base nos crit&#233;rios definidos no	regulamento dos cursos de gradua&#231;&#227;o da UFAL.
+		</p>
+		<p>
+			Os orientadores acad&#234;micos e coordenadores do seu curso poder&#227;o fazer observa&#231;&#245;es sobre as turmas
+			escolhidas at&#233; o dia
+			<span class="periodo">16/07/2026.</span>
+			&#201; importante lembrar que essas observa&#231;&#245;es t&#234;m o objetivo somente de orientar os alunos.
+			
+			
+				Nenhuma outra orienta&#231;&#227;o/coordena&#231;&#227;o
+				&#233; capaz de cancelar ou excluir uma matr&#237;cula escolhida por voc&#234;, sendo de sua responsabilidade
+				excluir, caso desejado,	as matr&#237;culas nas turmas escolhidas at&#233; o prazo final da matr&#237;cula on-line.
+			
+		</p>
+		
+	 		<br>
+	 		
+				<p>
+					<b>Antes de iniciar a sele&#231;&#227;o das turmas para a sua matr&#237;cula, voc&#234; DEVE obter uma c&#243;pia eletr&#244;nica e declarar que est&#225; ciente das regras introduzidas pelo Regulamento do Regime Acad&#234;mico dos Cursos de Gradua&#231;&#227;o da UFAL (Resolu&#231;&#227;o N&#176; 114/2023-CONSUNI, de 5 de dezembro de 2023).</b>
+				</p>
+			
+			<p style="line-height: 1.5em; margin: 1em 0.5em; font-size: 1.2em; text-align: center;">
+			<!-- IN&#205;CIO SUST SIGAA-28019 maximilian.guilherme em 06 de maio de 2024-->
+				<a href="https://ufal.br/resolucoes/2023/rco-n-114-de-05-12-2023.pdf" onclick="showConcordancia();" target="_blank">	Clique aqui para baixar o NOVO REGULAMENTO DOS CURSOS DE GRADUA&#199;&#195;O	</a>
+			<!-- FIM SUST SIGAA-28019 -->	
+			</p>
+			<div id="form:grupoConcordancia" style="text-align: center;"></div>
+			
+		
+	</div>
+
+	<div class="box-geral">
+		<center>
+			<input id="form:btnIniciarSolicit" type="submit" name="form:btnIniciarSolicit" value="Iniciar sele&ccedil;&atilde;o de turmas" onclick="return prevenirDuploClique();" class="btn btn-primary" />
+		</center>
+	</div>
+	<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id6" />
+</form>
+
+	<script>
+		
+			$('form:grupoConcordancia').style.display = "none";
+		
+	</script>
+
+
+
+
+
+
+	
+	
+		
+
+
+
+<div class="clear"> </div>
+
+</div> 
+	<br />
+
+	
+	
+	<div style="width: 80%; text-align: center; margin: 0 auto;">
+		<a href='/sigaa/verPortalDiscente.do'>Portal do Discente</a>
+	</div>
+	
+	
+
+	<div id="rodape">
+		<p>	SIGAA | NTI - N&#250;cleo de Tecnologia da Informa&#231;&#227;o - (82) 3214-1015 | Copyright &copy; 2006-2026 - UFRN - sig-app-1.srv1inst1
+		
+		 
+			 - <a onclick="javascript:versao();">v4.9.3_s.453</a>
+		
+		
+		<span style="font-size: 6pt;">16/07/2026 21:38</span>
+			
+		</p>
+	</div>
+
+
+</div>  
+
+<div id="painel-mensagem-envio"> </div>
+
+
+
+
+
+
+
+
+	<script>
+	  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+	  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+	  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+	  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+	
+	  ga('create', '0', 'auto');
+	  ga('send', 'pageview');
+	
+	</script>	
+
+
+
+<!-- MYFACES JAVASCRIPT -->
+
+</body>
+
+</html>
+ 
+	<script type="text/javascript" charset="UTF-8">
+		function versao(){
+			var msg='';
+			msg+='SIGAA 4.9.3_s.453,  publicado em: 14/07/2026 14:59\n\n';
+			msg+='Depend\u00eancias:\n';
+			msg+='Arquitetura 4.2.0_s.2\n';
+			msg+='Entidades Comuns 2.2.0_s.2\n';
+			msg+='Servicos Integrados 2.0.8\n';
+			msg+='SharedResources 2.1.2\n';
+			msg+='Servicos Remoto Biblioteca 1.0.3\n';
+			msg+='SIGAA Mobile Objects 1.0.0\n\n';
+			msg+='Copyright SINFO/UFRN';
+			alert(msg);
+		}	
+	</script>
+
+
+<script language="javascript">
+Relogio.init(25);
+</script>
+
+	
+
