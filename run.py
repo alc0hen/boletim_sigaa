@@ -6,6 +6,7 @@ from hypercorn.asyncio import serve
 from hypercorn.config import Config
 
 app = create_app()
+asgi_app = app
 logger = logging.getLogger(__name__)
 
 WS_URL = os.getenv("WS_URL")
