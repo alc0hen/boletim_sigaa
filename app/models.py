@@ -1,4 +1,6 @@
-from .extensions import db
+from .extensions import Base
+from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, ForeignKey, LargeBinary, UniqueConstraint
+from sqlalchemy.orm import relationship
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
@@ -37,28 +39,33 @@ def get_cipher_suite():
     )
     derived_key = base64.urlsafe_b64encode(kdf.derive(key))
     return Fernet(derived_key)
-class User(db.Model):
+
+
+class User(Base):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    google_id = db.Column(db.String(255), unique=True, nullable=False)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    name = db.Column(db.String(255), nullable=True)
-    profile_pic = db.Column(db.String(1024), nullable=True)
-    is_admin = db.Column(db.Boolean, default=False)
-    linked_accounts = db.relationship('LinkedAccount', backref='user', lazy=True)
+    id = Column(Integer, primary_key=True)
+    google_id = Column(String(255), unique=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=False)
+    name = Column(String(255), nullable=True)
+    profile_pic = Column(String(1024), nullable=True)
+    is_admin = Column(Boolean, default=False)
+    linked_accounts = relationship('LinkedAccount', back_populates='user', lazy='selectin')
     def __repr__(self):
         return f'<User {self.email}>'
-class LinkedAccount(db.Model):
+
+
+class LinkedAccount(Base):
     __tablename__ = 'linked_accounts'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    institution = db.Column(db.String(50), nullable=False)
-    username = db.Column(db.String(255), nullable=False)
-    encrypted_password = db.Column(db.LargeBinary, nullable=False)
-    history_json = db.Column(db.Text, nullable=True)
-    history_updated_at = db.Column(db.DateTime, nullable=True)
-    portal_cache_json = db.Column(db.Text, nullable=True)
-    portal_cache_updated_at = db.Column(db.DateTime, nullable=True)
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    institution = Column(String(50), nullable=False)
+    username = Column(String(255), nullable=False)
+    encrypted_password = Column(LargeBinary, nullable=False)
+    history_json = Column(Text, nullable=True)
+    history_updated_at = Column(DateTime, nullable=True)
+    portal_cache_json = Column(Text, nullable=True)
+    portal_cache_updated_at = Column(DateTime, nullable=True)
+    user = relationship('User', back_populates='linked_accounts')
     def set_password(self, password):
         cipher = get_cipher_suite()
         if isinstance(password, str):
@@ -74,22 +81,24 @@ class LinkedAccount(db.Model):
     def __repr__(self):
         return f'<LinkedAccount {self.institution}:{self.username}>'
 
-class CourseReview(db.Model):
-    __tablename__ = 'course_reviews'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    institution = db.Column(db.String(50), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    difficulty_rating = db.Column(db.Float, nullable=True) # 1.0 to 5.0
-    is_declined = db.Column(db.Boolean, default=False)
-    __table_args__ = (db.UniqueConstraint('user_id', 'institution', 'name', name='uq_course_review'),)
 
-class ProfessorReview(db.Model):
+class CourseReview(Base):
+    __tablename__ = 'course_reviews'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    institution = Column(String(50), nullable=False)
+    name = Column(String(255), nullable=False)
+    difficulty_rating = Column(Float, nullable=True) # 1.0 to 5.0
+    is_declined = Column(Boolean, default=False)
+    __table_args__ = (UniqueConstraint('user_id', 'institution', 'name', name='uq_course_review'),)
+
+
+class ProfessorReview(Base):
     __tablename__ = 'professor_reviews'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    institution = db.Column(db.String(50), nullable=False)
-    name = db.Column(db.String(255), nullable=False)
-    difficulty_rating = db.Column(db.Float, nullable=True) # 1.0 to 5.0
-    is_declined = db.Column(db.Boolean, default=False)
-    __table_args__ = (db.UniqueConstraint('user_id', 'institution', 'name', name='uq_professor_review'),)
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    institution = Column(String(50), nullable=False)
+    name = Column(String(255), nullable=False)
+    difficulty_rating = Column(Float, nullable=True) # 1.0 to 5.0
+    is_declined = Column(Boolean, default=False)
+    __table_args__ = (UniqueConstraint('user_id', 'institution', 'name', name='uq_professor_review'),)
