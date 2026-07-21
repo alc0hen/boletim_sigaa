@@ -90,7 +90,54 @@ class StudentBond:
         except Exception as e:
             logger.error(f"Error parsing courses: {e}")
         return courses
-    async def get_history(self, cached_history=None):
+
+    # ── Parallel Strategy Controller ─────────────────────────────
+    MAX_CONCURRENT_SESSIONS = 5  # Semaphore limit (safe for SIGAA JSF)
+    MAX_BATCH_SIZE = 4           # Cap to avoid JSF session timeouts
+    LOGIN_COST = 7               # Observed avg login time (seconds)
+    SCRAPE_COST = 4              # Observed avg scrape + re-nav time per class (seconds)
+
+    def _compute_optimal_strategy(self, n_classes):
+        """Compute the optimal (batch_size, n_batches, n_waves, est_time).
+
+        Uses a cost model calibrated on real SIGAA timings:
+            total_time ≈ waves × (LOGIN_COST + batch_size × SCRAPE_COST)
+
+        The algorithm brute-forces all valid batch sizes (1..MAX_BATCH)
+        and picks the one that minimizes estimated total time.
+
+        Examples with MAX_SESSIONS=4:
+            N=4  → batch=1, 4 batches, 1 wave  ≈ 11s
+            N=5  → batch=2, 3 batches, 1 wave  ≈ 15s
+            N=10 → batch=3, 4 batches, 1 wave  ≈ 19s
+            N=15 → batch=4, 4 batches, 1 wave  ≈ 23s
+            N=25 → batch=4, 7 batches, 2 waves ≈ 46s
+        """
+        import math
+        S = self.MAX_CONCURRENT_SESSIONS
+
+        if n_classes <= S:
+            # Trivial: 1 class per session, single wave
+            return 1, n_classes, 1, self.LOGIN_COST + self.SCRAPE_COST
+
+        best_b = 1
+        best_time = float('inf')
+
+        for b in range(1, min(n_classes, self.MAX_BATCH_SIZE) + 1):
+            n_batches = math.ceil(n_classes / b)
+            n_waves = math.ceil(n_batches / S)
+            estimated = n_waves * (self.LOGIN_COST + b * self.SCRAPE_COST)
+
+            if estimated < best_time:
+                best_time = estimated
+                best_b = b
+
+        n_batches = math.ceil(n_classes / best_b)
+        n_waves = math.ceil(n_batches / S)
+
+        return best_b, n_batches, n_waves, best_time
+
+    async def get_history(self, cached_history=None, credentials=None):
         try:
             logger.info("SIGAA: Starting get_history based on Turmas Anteriores...")
             if self.switch_url:
@@ -104,13 +151,14 @@ class StudentBond:
             turmas_page = await self.session.get('/sigaa/portais/discente/turmas.jsf')
             
             logger.info("SIGAA: Successfully loaded turmas.jsf, proceeding to parse classes.")
-            return await self._parse_previous_classes(turmas_page, cached_history)
+            return await self._parse_previous_classes(turmas_page, cached_history, credentials)
         except Exception as e:
             logger.error(f"Get history error: {e}")
             return {}
 
-    async def _parse_previous_classes(self, page, cached_history=None):
+    async def _parse_previous_classes(self, page, cached_history=None, credentials=None):
         history = {}
+        classes_to_fetch = []
         try:
             tables = page.soup.find_all('table', class_='listagem')
             if not tables:
@@ -177,77 +225,213 @@ class StudentBond:
                                      can_reuse = True
                                      break
                      
+                     
                      if can_reuse:
                          logger.info(f"SIGAA: Reusing cached details for '{title}' in {current_semester}.")
                          continue
                      
-                     logger.info(f"SIGAA: Found class '{title}' in semester {current_semester}. Status: {row_status}. Fetching details...")
+                     classes_to_fetch.append({
+                         'title': title,
+                         'js_code': js_code,
+                         'schedule_code': schedule_code,
+                         'row_status': row_status,
+                         'semester': current_semester
+                     })
                      
-                     course = Course(self.session, title, form_data, schedule_code)
-                     
-                     grades, frequency = await course.get_grades_and_frequency()
-                     logger.info(f"SIGAA: Fetched grades/freq for '{title}'.")
-                     
-                     professor = await course.get_professor()
-                     logger.info(f"SIGAA: Fetched professor for '{title}': {professor}")
-                     
-                     final_grade = None
-                     for g in grades:
-                         if g['type'] == 'single' and any(n in g['name'].lower() for n in ['média', 'nota final', 'resultado']):
-                             final_grade = g['value']
-                         elif g['type'] == 'group':
-                             for sg in g['grades']:
-                                 if 'média' in sg['name'].lower() or 'final' in sg['name'].lower():
-                                     final_grade = sg['value']
-                                     
-                     # Fallback if final_grade not found
-                     if final_grade is None:
-                         valid_vals = []
-                         for g in grades:
-                             if g['type'] == 'single':
-                                 valid_vals.append(g['value'])
-                             elif g['type'] == 'group':
-                                 for sg in g['grades']:
-                                     valid_vals.append(sg['value'])
-                         
-                         if valid_vals:
-                             final_grade = round(sum(valid_vals) / len(valid_vals), 1)
-                             logger.info(f"SIGAA: Calculated final_grade fallback for '{title}': {valid_vals} -> {final_grade}")
-                         else:
-                             final_grade = 0.0
-                     else:
-                         logger.info(f"SIGAA: Found final_grade naturally for '{title}': {final_grade}")
-                                 
-                     absences = frequency.get('total_faltas', 0) if frequency else 0
-                     
-                     detailed_grades = []
-                     for g in grades:
-                         if g['type'] == 'single':
-                             detailed_grades.append({'name': g['name'], 'value': g['value']})
-                         elif g['type'] == 'group':
-                             for sg in g['grades']:
-                                 detailed_grades.append({'name': sg['name'], 'value': sg['value']})
-                                 
-                     subj = {
-                         "name": title,
-                         "final_grade": final_grade,
-                         "absences": absences,
-                         "status": row_status,
-                         "grades": detailed_grades,
-                         "professor": professor
-                     }
-                     
-                     if current_semester not in history:
-                         history[current_semester] = []
-                     history[current_semester].append(subj)
-                     
-                     # Small delay to avoid hammering the server too hard when fetching many classes
-                     import asyncio
-                     await asyncio.sleep(0.1)
+            if classes_to_fetch:
+                if credentials:
+                    import asyncio
+                    n = len(classes_to_fetch)
+                    batch_size, n_batches, n_waves, est_time = self._compute_optimal_strategy(n)
+                    batches = [classes_to_fetch[i:i+batch_size] for i in range(0, n, batch_size)]
+                    logger.info(
+                        f"SIGAA: Strategy computed → {n} classes, "
+                        f"batch_size={batch_size}, batches={n_batches}, "
+                        f"waves={n_waves}, est_time≈{est_time}s"
+                    )
+                    
+                    semaphore = asyncio.Semaphore(self.MAX_CONCURRENT_SESSIONS)
+                    
+                    async def bounded_fetch_batch(batch):
+                        async with semaphore:
+                            return await self._fetch_batch_parallel(credentials, batch)
+                            
+                    tasks = [bounded_fetch_batch(b) for b in batches]
+                    batch_results = await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    for batch, result in zip(batches, batch_results):
+                        if isinstance(result, Exception):
+                            logger.error(f"SIGAA: Batch fetch failed: {result}")
+                            for c_info in batch:
+                                sem = c_info['semester']
+                                if sem not in history:
+                                    history[sem] = []
+                                history[sem].append({
+                                    "name": c_info['title'], "final_grade": 0.0, "absences": 0, "status": c_info['row_status'], "grades": [], "professor": "Desconhecido"
+                                })
+                        else:
+                            # result is a list of (c_info, subject_data_or_exception) tuples
+                            for c_info, subj_result in result:
+                                sem = c_info['semester']
+                                if sem not in history:
+                                    history[sem] = []
+                                if isinstance(subj_result, Exception):
+                                    logger.error(f"SIGAA: Parallel fetch failed for '{c_info['title']}': {subj_result}")
+                                    history[sem].append({
+                                        "name": c_info['title'], "final_grade": 0.0, "absences": 0, "status": c_info['row_status'], "grades": [], "professor": "Desconhecido"
+                                    })
+                                else:
+                                    history[sem].append(subj_result)
+                else:
+                    logger.warning("SIGAA: No credentials provided, falling back to sequential fetch.")
+                    for c_info in classes_to_fetch:
+                        sem = c_info['semester']
+                        title = c_info['title']
+                        try:
+                            form_data = page.parse_jsfcljs(c_info['js_code'])
+                            subj = await self._process_course_sync(title, form_data, c_info['schedule_code'], c_info['row_status'])
+                            if sem not in history: history[sem] = []
+                            history[sem].append(subj)
+                        except Exception as e:
+                            logger.error(f"SIGAA: Sequential fetch failed for '{title}': {e}")
+                        import asyncio
+                        await asyncio.sleep(0.1)
+                            
         except Exception as e:
             logger.error(f"Parse previous classes error: {e}")
             
         return history
+
+    async def _fetch_batch_parallel(self, credentials, batch):
+        """Fetch multiple classes using a single authenticated session.
+        
+        Logs in once and processes each class sequentially within the same
+        JSF session. This is safe because requests are sequential per session,
+        so the ViewState is never corrupted. Between classes, we re-navigate
+        to turmas.jsf to get a fresh ViewState.
+        
+        Returns a list of (class_info, result_or_exception) tuples.
+        """
+        from .sigaa import Sigaa
+        username = credentials['username']
+        password = credentials['password']
+        url = credentials['url']
+        inst_type = credentials['inst_type']
+        
+        titles = [c['title'] for c in batch]
+        sigaa = Sigaa(url, inst_type)
+        results = []
+        try:
+            logger.info(f"Worker: Logging in for batch {titles}...")
+            await sigaa.login(username, password)
+            if self.switch_url:
+                await sigaa.session.get(self.switch_url)
+            
+            for idx, class_info in enumerate(batch):
+                try:
+                    # Navigate (or re-navigate) to turmas.jsf for a fresh ViewState
+                    turmas_page = await sigaa.session.get('/sigaa/portais/discente/turmas.jsf')
+                    
+                    target_js_code = None
+                    tables = turmas_page.soup.find_all('table', class_=['listagem', 'tabelaRelatorio'])
+                    for table in tables:
+                        rows = table.find_all('tr')
+                        current_sem = "Unknown"
+                        for row in rows:
+                            text = row.get_text(strip=True)
+                            sem_match = re.search(r'(\d{4}\.\d)', text)
+                            if sem_match:
+                                current_sem = sem_match.group(1)
+                                continue
+                            if current_sem != class_info['semester']:
+                                continue
+                                
+                            cells = row.find_all('td')
+                            row_title = "Desconhecido"
+                            for cell in cells:
+                                 t = cell.get_text(strip=True)
+                                 if '-' in t and len(t) > 5 and not t.replace('.', '').isdigit():
+                                     row_title = t
+                                     break
+                                     
+                            if row_title == class_info['title']:
+                                avancar_img = row.find('img', src=re.compile(r'avancar\.gif'))
+                                if avancar_img:
+                                    link = avancar_img.find_parent('a')
+                                    if link and link.get('onclick'):
+                                        target_js_code = link['onclick']
+                                break
+                        if target_js_code:
+                            break
+                            
+                    if not target_js_code:
+                        raise ValueError(f"Class '{class_info['title']}' not found in worker session.")
+                        
+                    form_data = turmas_page.parse_jsfcljs(target_js_code)
+                    subj = await self._process_course_sync(
+                        class_info['title'], form_data, class_info['schedule_code'], class_info['row_status'], sigaa_session=sigaa.session
+                    )
+                    results.append((class_info, subj))
+                    
+                    if idx < len(batch) - 1:
+                        logger.info(f"Worker: Re-navigating for next class in batch (done {idx+1}/{len(batch)}).")
+                except Exception as e:
+                    logger.error(f"Worker: Failed to fetch '{class_info['title']}' in batch: {e}")
+                    results.append((class_info, e))
+        finally:
+            await sigaa.close()
+        
+        return results
+
+    async def _process_course_sync(self, title, form_data, schedule_code, row_status, sigaa_session=None):
+        session = sigaa_session or self.session
+        course = Course(session, title, form_data, schedule_code)
+        
+        grades, frequency, professor = await course.get_all_details()
+        logger.info(f"SIGAA: Fetched all details for '{title}'.")
+        
+        final_grade = None
+        for g in grades:
+            if g['type'] == 'single' and any(n in g['name'].lower() for n in ['média', 'nota final', 'resultado']):
+                final_grade = g['value']
+            elif g['type'] == 'group':
+                for sg in g['grades']:
+                    if 'média' in sg['name'].lower() or 'final' in sg['name'].lower():
+                        final_grade = sg['value']
+                        
+        if final_grade is None:
+            valid_vals = []
+            for g in grades:
+                if g['type'] == 'single':
+                    valid_vals.append(g['value'])
+                elif g['type'] == 'group':
+                    for sg in g['grades']:
+                        valid_vals.append(sg['value'])
+            
+            if valid_vals:
+                final_grade = round(sum(valid_vals) / len(valid_vals), 1)
+            else:
+                final_grade = 0.0
+                    
+        absences = frequency.get('total_faltas', 0) if frequency else 0
+        
+        detailed_grades = []
+        for g in grades:
+            if g['type'] == 'single':
+                detailed_grades.append({'name': g['name'], 'value': g['value']})
+            elif g['type'] == 'group':
+                for sg in g['grades']:
+                    detailed_grades.append({'name': sg['name'], 'value': sg['value']})
+                    
+        return {
+            "name": title,
+            "final_grade": final_grade,
+            "absences": absences,
+            "status": row_status,
+            "grades": detailed_grades,
+            "professor": professor
+        }
+
     def _extract_jscook_action(self, page, label):
         try:
             form = page.soup.find('form', id=re.compile(r'menu:form_menu_discente|menuForm'))

@@ -27,86 +27,98 @@ class Course:
         self.frequency = self._parse_frequency(freq_page)
         return self.frequency
 
-    async def get_grades_and_frequency(self):
+    async def get_all_details(self):
+        # We chain navigations to avoid redundant _enter_course and ViewState errors
         course_page = await self._enter_course()
+        current_page = course_page
         
         try:
-            grades_page = await self._navigate_to_grades(course_page)
+            grades_page = await self._navigate_to_grades(current_page)
             self.grades = self._parse_grades(grades_page)
+            current_page = grades_page
         except Exception:
             self.grades = []
             
         try:
-            freq_page = await self._navigate_to_frequency(course_page)
+            freq_page = await self._navigate_to_frequency(current_page)
             self.frequency = self._parse_frequency(freq_page)
+            current_page = freq_page
         except Exception:
-            # Fallback in case of ViewState issues
+            # Fallback if chaining failed
             try:
                 course_page = await self._enter_course()
-                freq_page = await self._navigate_to_frequency(course_page)
+                current_page = course_page
+                freq_page = await self._navigate_to_frequency(current_page)
                 self.frequency = self._parse_frequency(freq_page)
+                current_page = freq_page
             except Exception:
                 self.frequency = None
-                
-        return self.grades, self.frequency
 
-    async def get_professor(self):
-        course_page = await self._enter_course()
         try:
-            menu_items = course_page.soup.find_all(string=re.compile(r"Participantes", re.I))
-            participantes_page = None
-            for item in menu_items:
-                parent = item.parent
-                while parent:
-                    if parent.name in ['td', 'div', 'a', 'tr', 'li', 'span'] and parent.get('onclick'):
-                        js_code = parent['onclick']
-                        form_data = course_page.parse_jsfcljs(js_code)
-                        participantes_page = await self.session.post(
-                            form_data['action'],
-                            data=form_data['post_values']
-                        )
-                        break
-                    parent = parent.parent
-                    if not parent or parent.name == 'body':
-                        break
-                if participantes_page:
-                    break
-            
-            if participantes_page:
-                # Look for <legend> containing 'Docente' or 'Professor'
-                legends = participantes_page.soup.find_all('legend')
-                for legend in legends:
-                    txt_leg = legend.get_text(strip=True).upper()
-                    if 'DOCENTE' in txt_leg or 'PROFESSOR' in txt_leg:
-                        table = legend.find_next('table')
-                        if table:
-                            for row in table.find_all('tr'):
-                                name_tag = row.find('strong')
-                                if not name_tag:
-                                    name_tag = row.find('a', title=re.compile(r"docente", re.I))
-                                if name_tag:
-                                    ct = name_tag.get_text(strip=True)
-                                    if ct and len(ct) > 3:
-                                        self.professor_name = ct.strip()
-                                        return self.professor_name
+            # Try to navigate to professor from the last current_page
+            participantes_page = await self._navigate_to_participantes(current_page)
+            self.professor_name = self._parse_professor(participantes_page)
+        except Exception:
+            # Fallback
+            try:
+                course_page = await self._enter_course()
+                participantes_page = await self._navigate_to_participantes(course_page)
+                self.professor_name = self._parse_professor(participantes_page)
+            except Exception:
+                self.professor_name = "Desconhecido"
 
-                # Fallback to older inline method
-                for cell in participantes_page.soup.find_all('td'):
-                    txt = cell.get_text(strip=True).upper()
-                    if 'DOCENTE' in txt or 'PROFESSOR' in txt:
-                        row = cell.find_parent('tr')
-                        if row:
-                            row_cells = row.find_all('td')
-                            for c in row_cells:
-                                ct = c.get_text(strip=True)
-                                ct_up = ct.upper()
-                                if ct and ct_up not in ['DOCENTE', 'PROFESSOR'] and len(ct) > 3 and '@' not in ct:
-                                    self.professor_name = ct.strip()
-                                    return self.professor_name
-        except Exception as e:
+        return self.grades, self.frequency, self.professor_name
+
+    async def _navigate_to_participantes(self, current_page):
+        menu_items = current_page.soup.find_all(string=re.compile(r"Participantes", re.I))
+        for item in menu_items:
+            parent = item.parent
+            while parent:
+                if parent.name in ['td', 'div', 'a', 'tr', 'li', 'span'] and parent.get('onclick'):
+                    js_code = parent['onclick']
+                    form_data = current_page.parse_jsfcljs(js_code)
+                    return await self.session.post(
+                        form_data['action'],
+                        data=form_data['post_values']
+                    )
+                parent = parent.parent
+                if not parent or parent.name == 'body':
+                    break
+        raise ValueError("Participantes menu not found.")
+
+    def _parse_professor(self, participantes_page):
+        try:
+            # Look for <legend> containing 'Docente' or 'Professor'
+            legends = participantes_page.soup.find_all('legend')
+            for legend in legends:
+                txt_leg = legend.get_text(strip=True).upper()
+                if 'DOCENTE' in txt_leg or 'PROFESSOR' in txt_leg:
+                    table = legend.find_next('table')
+                    if table:
+                        for row in table.find_all('tr'):
+                            name_tag = row.find('strong')
+                            if not name_tag:
+                                name_tag = row.find('a', title=re.compile(r"docente", re.I))
+                            if name_tag:
+                                ct = name_tag.get_text(strip=True)
+                                if ct and len(ct) > 3:
+                                    return ct.strip()
+
+            # Fallback to older inline method
+            for cell in participantes_page.soup.find_all('td'):
+                txt = cell.get_text(strip=True).upper()
+                if 'DOCENTE' in txt or 'PROFESSOR' in txt:
+                    row = cell.find_parent('tr')
+                    if row:
+                        row_cells = row.find_all('td')
+                        for c in row_cells:
+                            ct = c.get_text(strip=True)
+                            ct_up = ct.upper()
+                            if ct and ct_up not in ['DOCENTE', 'PROFESSOR'] and len(ct) > 3 and '@' not in ct:
+                                return ct.strip()
+        except Exception:
             pass
-        self.professor_name = "Desconhecido"
-        return self.professor_name
+        return "Desconhecido"
 
     async def _enter_course(self):
         page = await self.session.post(
