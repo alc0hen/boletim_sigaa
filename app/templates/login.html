@@ -303,8 +303,9 @@
             <form method="POST" action="{{ url_for('main.login') }}" onsubmit="startLogin()" id="login-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
-                <!-- Hidden input that actually submits the value -->
+                <!-- Hidden inputs that actually submit the choice -->
                 <input type="hidden" name="institution" id="institution-value" required>
+                <input type="hidden" name="sigaa_url" id="sigaa-url-value">
 
                 <!-- Custom dropdown -->
                 <div class="inst-dropdown-wrapper" id="instDropdown">
@@ -346,8 +347,13 @@
                 Entrar com Google
             </a>
 
-            <div style="margin-top: 20px; text-align: center; font-size: 12px;">
-                <a href="{{ url_for('main.privacy') }}" style="color: var(--text-muted); text-decoration: none;">Política de Privacidade e Transparência</a>
+            <div style="margin-top: 20px; text-align: center; font-size: 11px; color: var(--text-muted); padding: 0 10px;">
+                Ao entrar ou utilizar nossos serviços, você aceita nossos 
+                <a href="{{ url_for('main.privacy') }}" style="color: var(--accent); text-decoration: none; font-weight: 500;">Termos de Uso e Política de Privacidade</a>.
+            </div>
+            
+            <div style="margin-top: 15px; text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.4); font-weight: 600;">
+                v{{ app_version }}
             </div>
         </div>
     </div>
@@ -359,10 +365,15 @@
 
     <script>
         // ── Institutions data ──
+        // A url de cada instituição vai junto no formulário: é a escolha
+        // do usuário que define em qual SIGAA o login acontece. O servidor
+        // confere contra a allowlist dele (INSTITUTION_URLS, em
+        // sigaa_gateway.py) antes de usar — mexer aqui sem mexer lá faz o
+        // login ser recusado.
         const INSTITUTIONS = [
-            { value: 'IFAL', acronym: 'IFAL', name: 'IFAL', full: 'Instituto Federal de Alagoas',          color: '#1a7f4b' },
-            { value: 'UFAL', acronym: 'UFAL', name: 'UFAL', full: 'Universidade Federal de Alagoas',       color: '#1a5fa8' },
-            { value: 'UFPE', acronym: 'UFPE', name: 'UFPE', full: 'Universidade Federal de Pernambuco',    color: '#7b2d8b' },
+            { value: 'IFAL', acronym: 'IFAL', name: 'IFAL', full: 'Instituto Federal de Alagoas',          color: '#1a7f4b', url: 'https://sigaa.ifal.edu.br' },
+            { value: 'UFAL', acronym: 'UFAL', name: 'UFAL', full: 'Universidade Federal de Alagoas',       color: '#1a5fa8', url: 'https://sigaa.sig.ufal.br' },
+            { value: 'UFPE', acronym: 'UFPE', name: 'UFPE', full: 'Universidade Federal de Pernambuco',    color: '#7b2d8b', url: 'https://sigaa.ufpe.br' },
         ];
 
         // ── State ──
@@ -377,6 +388,7 @@
         const searchEl   = document.getElementById('instSearch');
         const listEl     = document.getElementById('optionsList');
         const hiddenInput = document.getElementById('institution-value');
+        const hiddenUrlInput = document.getElementById('sigaa-url-value');
 
         // ── Render options ──
         function renderOptions() {
@@ -414,6 +426,7 @@
         function selectOption(inst) {
             selectedInst = inst;
             hiddenInput.value = inst.value;
+            hiddenUrlInput.value = inst.url;
             badgeEl.textContent = inst.acronym.slice(0, 2);
             badgeEl.style.background = inst.color;
             labelEl.textContent = `${inst.name} — ${inst.full}`;

@@ -49,7 +49,7 @@ class User(Base):
     name = Column(String(255), nullable=True)
     profile_pic = Column(String(1024), nullable=True)
     is_admin = Column(Boolean, default=False)
-    linked_accounts = relationship('LinkedAccount', back_populates='user', lazy='selectin')
+    linked_accounts = relationship('LinkedAccount', back_populates='user', lazy='selectin', cascade='all, delete-orphan')
     def __repr__(self):
         return f'<User {self.email}>'
 

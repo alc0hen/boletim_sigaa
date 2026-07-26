@@ -1,6 +1,10 @@
 from .exceptions import SigaaConnectionError
 from .schedule_parser import parse_schedule_code
 import re
+import logging
+import unicodedata
+
+logger = logging.getLogger(__name__)
 
 class Course:
     def __init__(self, session, title, form_data, schedule_code: str = ''):
@@ -36,14 +40,16 @@ class Course:
             grades_page = await self._navigate_to_grades(current_page)
             self.grades = self._parse_grades(grades_page)
             current_page = grades_page
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing grades for {self.title}: {e}", exc_info=True)
             self.grades = []
             
         try:
             freq_page = await self._navigate_to_frequency(current_page)
             self.frequency = self._parse_frequency(freq_page)
             current_page = freq_page
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error parsing frequency for {self.title}: {e}", exc_info=True)
             # Fallback if chaining failed
             try:
                 course_page = await self._enter_course()
@@ -98,11 +104,19 @@ class Course:
                         for row in table.find_all('tr'):
                             name_tag = row.find('strong')
                             if not name_tag:
-                                name_tag = row.find('a', title=re.compile(r"docente", re.I))
+                                name_tag = row.find('a', title=re.compile(r"(docente|professor)", re.I))
                             if name_tag:
                                 ct = name_tag.get_text(strip=True)
                                 if ct and len(ct) > 3:
                                     return ct.strip()
+                                    
+                            # IFAL specific: sometimes the name is just in a td with class="nome" inside the table
+                            td_nome = row.find('td', class_='nome')
+                            if td_nome:
+                                # the name might be in the 'a' or just text
+                                txt = td_nome.get_text(strip=True)
+                                if txt and len(txt) > 3:
+                                    return txt
 
             # Fallback to older inline method
             for cell in participantes_page.soup.find_all('td'):
@@ -128,7 +142,7 @@ class Course:
         return page
 
     async def _navigate_to_grades(self, course_page):
-        menu_items = course_page.soup.find_all(string="Ver Notas")
+        menu_items = course_page.soup.find_all(string=lambda text: text and "ver notas" in text.lower())
         for item in menu_items:
             parent = item.parent
             while parent:
@@ -146,9 +160,7 @@ class Course:
         raise ValueError("Could not find 'Ver Notas' menu item.")
 
     async def _navigate_to_frequency(self, course_page):
-        menu_items = course_page.soup.find_all(lambda text: text and "Frequência" in text)
-        if not menu_items:
-             menu_items = course_page.soup.find_all(lambda text: text and "Frequencia" in text)
+        menu_items = course_page.soup.find_all(string=lambda text: text and "frequ" in text.lower())
         for item in menu_items:
             parent = item.parent
             while parent:
@@ -166,17 +178,7 @@ class Course:
         raise ValueError("Could not find 'Frequência' menu item.")
 
     def _parse_frequency(self, page):
-        """
-        Parse the Mapa de Frequências page, row by row.
 
-        Each row has a date and a status:
-          - "Presente"        → student attended (multiply by aulas_per_session)
-          - "X Falta(s)"      → X already counts individual aula slots (no extra multiply)
-          - "Não Registrada"  → professor did not submit attendance (yellow zone)
-
-        Also extracts "Aulas (Ministradas/Total): X / Y" for the real denominator.
-        Falls back gracefully to summary-text parsing when the individual table is absent.
-        """
         aulas_per_session = parse_schedule_code(self.schedule_code)
         text_full = page.soup.get_text()
  
@@ -373,22 +375,20 @@ class Course:
         col_to_subheader = {}
         sh_ptr = 0
         current_map_col = 0
-        ignore_names = ['', 'Matrícula', 'Nome', 'Sit.', 'Faltas', 'Resultado', 'Situação']
-        single_grade_names = ['Reposição', 'Recuperação']
+        ignore_names = ['', 'matricula', 'matrcula', 'nome', 'sit', 'sit.', 'faltas', 'resultado', 'situacao', 'status']
+        single_grade_names = ['reposicao', 'recuperacao']
+
+        def _norm(text):
+            return unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('utf-8').lower().strip()
 
         for header in main_headers:
-            header_text = header.get_text(strip=True)
+            header_text = _norm(header.get_text())
             colspan = int(header.get('colspan') or 1)
 
-            # Matrícula, Nome, etc. OR single grade columns (Reposição)
-            # usually don't have subheaders (or have empty ones in Row 2)
-            # so we assume they don't consume from the queue.
             if header_text in ignore_names or (header_text in single_grade_names and colspan == 1):
                 current_map_col += colspan
                 continue
 
-            # For Group Headers (Units, etc.), we consume `colspan` items from the queue
-            # This handles cases where Row 2 has extra empty headers for Reposição/etc.
             for _ in range(colspan):
                 if sh_ptr < len(sub_headers_queue):
                     col_to_subheader[current_map_col] = sub_headers_queue[sh_ptr]
@@ -397,22 +397,25 @@ class Course:
 
         student_row = None
         for row in tbody.find_all('tr'):
+            if row.find('th'):
+                continue
             cells = row.find_all('td')
-            if len(cells) > 1:
-                name_cell = cells[1].get_text(strip=True) if len(cells) > 1 else ""
-                if len(name_cell) > 10 and any(c.isalpha() for c in name_cell):
-                    student_row = row
-                    break
+            if len(cells) > 2:
+                student_row = row
+                break
+                
         if not student_row:
             return []
+            
         value_cells = student_row.find_all('td')
         current_cell_idx = 0
 
         for i, header in enumerate(main_headers):
             header_text = header.get_text(strip=True)
+            header_text_norm = _norm(header_text)
             colspan = int(header.get('colspan') or 1)
 
-            if header_text in ignore_names:
+            if header_text_norm in ignore_names:
                 current_cell_idx += colspan
                 continue
 
