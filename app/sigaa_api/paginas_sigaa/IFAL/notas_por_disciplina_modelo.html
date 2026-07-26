@@ -1,0 +1,716 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<title>Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</title>
+	<link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/basic_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css" /><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/extended_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" media="rich-extended-skinning" rel="stylesheet" type="text/css" /><script type="text/javascript">window.RICH_FACES_EXTENDED_SKINNING_ON=true;</script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/skinning.js.jsf" type="text/javascript"></script><script type="text/javascript" src="/shared/javascript/sigaa.js"> </script>
+</head>
+
+<link href="/shared/css/ufrn_relatorio.css" rel="stylesheet" type="text/css"/>
+<link href="/shared/css/ufrn.css" rel="stylesheet" type="text/css"/>
+<link rel="stylesheet" media="print" href="/shared/css/ufrn_print.css"/>
+<body>
+
+<div id="relatorio-paisagem-container">
+
+		<div id="relatorio-cabecalho">
+			<div id="ufrn"><img src="http://sistemas.ifal.edu.br/shared/img/instituicao/logo_ifal.jpg" height="100"/><br/><a href='/sigaa/ava/index.jsf'>Turma Virtual</a> </div>
+			<div id="sinfo"><img src="http://sistemas.ifal.edu.br/shared/img/instituicao/logo_dti.jpg" width="120"/>  </div>
+			<div id="texto">
+				Instituto Federal de Alagoas<br>
+				Pro-Reitoria de Pesquisa, P&#243;s-Gradua&#231;&#227;o e Inova&#231;&#227;o<br>
+				Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas<br>
+
+
+				<br />
+				<span class="dataAtual"> Emitido em 23/07/2026 05:13 </span>
+			</div>
+			<div class="clear"> </div>
+		</div>
+		<div id="relatorio">
+
+		<br/>
+
+
+
+<style type="text/css">
+div.opcoes { margin: 5px 0; }
+div.opcoes a { font-size: 0.9em; }
+tr.alunoSelecionado { background: #FF8888; }
+</style>
+
+<script type="text/javascript" src="/shared/jsBundles/jawr_loader.js" ></script>
+<script>
+	JAWR.loader.script('/javascript/jquery/jquery.js');
+</script>
+<script>
+	var JQuery = jQuery.noConflict();
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+	<input type="hidden" id="tipoUnid1" value="A"/>
+	<input type="hidden" id="tipoUnid2" value="A"/>
+	<input type="hidden" id="tipoUnid3" value="A"/>
+
+	<h3>MARHOSBIOL3 - BIOLOGIA - Turma: 3&#186; HOSP A (2025.1)</h3>
+	<br/>
+
+	<!-- Docentes da turma -->
+	<table>
+
+			<tr>
+				<td align="left" valign="top"><b>Docente:</b></td>
+
+					<td align="left" valign="top">2117016 - JOABE GOMES DE MELO</td>
+
+			</tr>
+
+
+
+	</table>
+
+	<br/>
+
+<!-- 	Consolida&#231;&#227;o da turma (data e respons&#225;vel) -->
+
+		<span class="dataAtual"> Turma consolidada por JOABE GOMES DE MELO em 04/03/2026 10:54 </span>
+
+
+	<hr/>
+		<br/>
+		<div class="notas" style="clear: both;">
+			<table class="tabelaRelatorio" width="100%">
+			<caption>Alunos Matriculados</caption>
+			<thead>
+				<tr>
+					<th width="10%" style="text-align: right">Matr&#237;cula</th>
+					<th>Nome</th>
+
+
+
+
+
+
+								<th style="text-align: center" colspan="3"> 1</th>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+								<th style="text-align: center" colspan="3"> 2</th>
+
+
+
+
+
+
+								<th width="5%" style="text-align:center;">Reposi&#231;&#227;o</th>
+
+
+
+
+
+
+
+
+
+
+
+								<th style="text-align: center" colspan="3"> 3</th>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+								<th style="text-align: center" colspan="3"> 4</th>
+
+
+
+
+
+
+
+								<th width="5%" style="text-align:center;">Reposi&#231;&#227;o</th>
+
+
+
+
+
+
+
+
+
+
+
+
+					<th width="5%" style="text-align: right">Recupera&#231;&#227;o</th>
+
+					<th width="5%" style="text-align: right;">Resultado</th>
+
+					<th width="5%" style="text-align: right;">Faltas</th>
+
+					<th width="5%" style="text-align: left;">Sit.</th>
+				</tr>
+
+
+				<tr id="trAval" bgcolor="#C4D2EB"><th></th><th></th>
+
+
+						<th id="aval_282012122" style="text-align: right;">A1</th>
+						<input type="hidden" id="abrevAval_282012122" value="A1"/>
+						<input type="hidden" id="denAval_282012122" value="Nota 1"/>
+						<input type="hidden" id="notaAval_282012122" value=""/>
+						<input type="hidden" id="pesoAval_282012122" value="1"/>
+
+						<th id="aval_282012157" style="text-align: right;">A2</th>
+						<input type="hidden" id="abrevAval_282012157" value="A2"/>
+						<input type="hidden" id="denAval_282012157" value="Nota 2"/>
+						<input type="hidden" id="notaAval_282012157" value=""/>
+						<input type="hidden" id="pesoAval_282012157" value="1"/>
+
+					<th id="unid" style="text-align: right">Nota</th>
+
+
+
+
+
+
+
+						<th id="aval_283131396" style="text-align: right;">b3</th>
+						<input type="hidden" id="abrevAval_283131396" value="b3"/>
+						<input type="hidden" id="denAval_283131396" value="Nota 3"/>
+						<input type="hidden" id="notaAval_283131396" value=""/>
+						<input type="hidden" id="pesoAval_283131396" value="1"/>
+
+						<th id="aval_283131431" style="text-align: right;">b4</th>
+						<input type="hidden" id="abrevAval_283131431" value="b4"/>
+						<input type="hidden" id="denAval_283131431" value="Nota 4"/>
+						<input type="hidden" id="notaAval_283131431" value=""/>
+						<input type="hidden" id="pesoAval_283131431" value="1"/>
+
+					<th id="unid" style="text-align: right">Nota</th>
+
+
+								<th></th><th></th>
+
+
+
+
+
+
+						<th id="aval_283822954" style="text-align: right;">C1</th>
+						<input type="hidden" id="abrevAval_283822954" value="C1"/>
+						<input type="hidden" id="denAval_283822954" value="Nota 1"/>
+						<input type="hidden" id="notaAval_283822954" value=""/>
+						<input type="hidden" id="pesoAval_283822954" value="1"/>
+
+						<th id="aval_283822992" style="text-align: right;">C2</th>
+						<input type="hidden" id="abrevAval_283822992" value="C2"/>
+						<input type="hidden" id="denAval_283822992" value="Nota 2"/>
+						<input type="hidden" id="notaAval_283822992" value=""/>
+						<input type="hidden" id="pesoAval_283822992" value="1"/>
+
+					<th id="unid" style="text-align: right">Nota</th>
+
+
+
+
+
+
+
+						<th id="aval_284117951" style="text-align: right;">D1</th>
+						<input type="hidden" id="abrevAval_284117951" value="D1"/>
+						<input type="hidden" id="denAval_284117951" value="Nota 4"/>
+						<input type="hidden" id="notaAval_284117951" value=""/>
+						<input type="hidden" id="pesoAval_284117951" value="1"/>
+
+						<th id="aval_284117997" style="text-align: right;">D2</th>
+						<input type="hidden" id="abrevAval_284117997" value="D2"/>
+						<input type="hidden" id="denAval_284117997" value="Nota 4"/>
+						<input type="hidden" id="notaAval_284117997" value=""/>
+						<input type="hidden" id="pesoAval_284117997" value="1"/>
+
+					<th id="unid" style="text-align: right">Nota</th>
+
+
+
+								<th></th><th></th>
+
+
+
+
+
+
+					<th></th><th></th><th></th><th></th>
+
+				</tr>
+
+			</thead>
+			<tbody>
+
+
+
+				<tr class="linhaPar">
+					<td nowrap="nowrap" style="text-align: right; border-right: 1px solid #888";>2023307343 </td>
+					<td nowrap="nowrap" style="border-right: 1px solid #888;">ALBERT ALEX SILVA DE VASCONCELLOS</td>
+
+
+
+
+
+
+							<td style="text-align: right">
+
+
+										10,00
+
+
+
+							</td>
+
+							<td style="text-align: right">
+
+
+										8,00
+
+
+
+							</td>
+
+
+					<td style="border-right: 1px solid #888; text-align: right">
+
+
+								<label>9,00</label>
+
+
+
+					</td>
+
+				<!-- Avalia&#231;&#227;o Substitutiva -->
+
+
+
+				<!-- Avalia&#231;&#227;o Substitutiva 2 -->
+
+
+
+
+
+
+
+
+
+
+							<td style="text-align: right">
+
+
+										10,00
+
+
+
+							</td>
+
+							<td style="text-align: right">
+
+
+										10,00
+
+
+
+							</td>
+
+
+					<td style="border-right: 1px solid #888; text-align: right">
+
+
+								<label>10,00</label>
+
+
+
+					</td>
+
+				<!-- Avalia&#231;&#227;o Substitutiva -->
+
+
+					<td style="border-right: 1px solid #888; text-align: right">
+
+
+							S/N
+
+					</td>
+
+
+				<!-- Avalia&#231;&#227;o Substitutiva 2 -->
+
+
+
+
+
+
+
+
+
+
+							<td style="text-align: right">
+
+
+										10,00
+
+
+
+							</td>
+
+							<td style="text-align: right">
+
+
+										S/N
+
+
+
+							</td>
+
+
+					<td style="border-right: 1px solid #888; text-align: right">
+
+
+								<label>5,00</label>
+
+
+
+					</td>
+
+				<!-- Avalia&#231;&#227;o Substitutiva -->
+
+
+
+				<!-- Avalia&#231;&#227;o Substitutiva 2 -->
+
+
+
+
+
+
+
+
+
+
+							<td style="text-align: right">
+
+
+										8,00
+
+
+
+							</td>
+
+							<td style="text-align: right">
+
+
+										6,00
+
+
+
+							</td>
+
+
+					<td style="border-right: 1px solid #888; text-align: right">
+
+
+								<label>7,00</label>
+
+
+
+					</td>
+
+				<!-- Avalia&#231;&#227;o Substitutiva -->
+
+
+
+				<!-- Avalia&#231;&#227;o Substitutiva 2 -->
+
+					<td style="border-right: 1px solid #888; text-align: right">
+
+
+							S/N
+
+					</td>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				<td style="border-right: 1px solid #888; text-align: right">
+
+
+						-
+
+				</td>
+
+
+				<td style="border-right: 1px solid #888; text-align:right">
+
+
+
+
+								8,0
+
+
+
+				</td>
+
+
+
+
+
+				<td style="border-right: 1px solid #888; text-align:right;">
+				12
+				</td>
+
+					<td style="text-align: left;">
+
+
+							APR
+
+					</td>
+				</tr>
+
+
+			</tbody>
+			</table>
+		</div>
+		<br/>
+
+
+
+
+<script type="text/javascript" src="/sigaa/jsBundles/gzip_N1742432189/javascript/jquery-wtooltip.js" ></script>
+
+<script type="text/javascript">
+function tooltipAval() {
+	var aval = JQuery("#trAval > th");
+	var avaliacoes = [];
+	var unid = 1;
+	var tipo = "";
+	var id = "";
+	var abreviacao = "";
+	var peso = "";
+	var denominacao = "";
+	var nota = "";
+	var text = "";
+	var calc = "";
+
+	aval.each(
+			function (i) {
+
+				if (this.id.indexOf("aval") != -1) {
+
+					tipo = "";
+					if (unid == 1)
+						tipo = JQuery('#tipoUnid1').val();
+					else if (unid == 2)
+						tipo = JQuery('#tipoUnid2').val();
+					else if (unid == 3)
+						tipo = JQuery('#tipoUnid3').val();
+
+					id = this.id.substring(5);
+
+			  	  	abreviacao = JQuery('#abrevAval_'+id).val();
+					peso = JQuery('#pesoAval_'+id).val();
+				  	var avaliacao = new Object();
+				  	avaliacao.abrev = abreviacao;
+				  	avaliacao.peso = peso;
+				 	avaliacoes.push(avaliacao);
+
+		         	denominacao = JQuery('#denAval_'+id).val();
+					nota = JQuery('#notaAval_'+id).val();
+
+					text = "<b>Avalia&#231;&#227;o:</b> " + denominacao +
+								"<br/>";
+					if ( nota != "" )
+						text +=	"<b>Nota M&#225;xima:</b> " + nota +
+								"<br/>";
+					if ( tipo == "P"  )
+						text += "<b>Peso:</b> " + peso;
+
+					JQuery(this).wTooltip({
+		    			content: text,
+		    			id: "tooltip"+i
+	    			});
+		        }
+
+				if (this.id.indexOf("unid") != -1) {
+
+					tipo = "";
+					if (unid == 1)
+						tipo = JQuery('#tipoUnid1').val();
+					else if (unid == 2)
+						tipo = JQuery('#tipoUnid2').val();
+					else if (unid == 3)
+						tipo = JQuery('#tipoUnid3').val();
+
+					if ( tipo == "P" ){
+						text = "<b>M&#233;todo de Avalia&#231;&#227;o:</b> M&#233;dia Ponderada<br/>";
+						calc = "(";
+						var somaPesos = 0;
+						for (var i = 0; (aval = avaliacoes[i]) != null && i < avaliacoes.length; i++ ){
+							calc += "(" + aval.abrev + " * " + aval.peso + ")";
+							somaPesos += parseInt(aval.peso);
+
+							if ( i == avaliacoes.length-1 )
+								calc += "";
+							else
+								calc += " + ";
+
+						}
+
+						calc += ")/" + somaPesos;
+						text += "<b>C&#225;lculo:</b> " + calc;
+						unid++;
+					}
+
+					if ( tipo == "A" ){
+						text = "<b>M&#233;todo de Avalia&#231;&#227;o:</b> M&#233;dia Aritm&#233;tica<br/>";
+						calc = "(";
+						var numeroAvaliacoes = 0;
+						for (var i = 0; (aval = avaliacoes[i]) != null && i < avaliacoes.length; i++ ){
+							calc += aval.abrev;
+							numeroAvaliacoes++;
+
+							if ( i == avaliacoes.length-1 )
+								calc += "";
+							else
+								calc += " + ";
+
+						}
+						calc += ")/" + numeroAvaliacoes;
+						text += "<b>C&#225;lculo:</b> " + calc;
+						unid++;
+					}
+
+					if ( tipo == "S" ){
+						text = "<b>M&#233;todo de Avalia&#231;&#227;o:</b> Soma das Notas<br/>";
+						calc = "";
+						var numeroAvaliacoes = 0;
+						for (var i = 0; (aval = avaliacoes[i]) != null && i < avaliacoes.length; i++ ){
+							calc += aval.abrev;
+							numeroAvaliacoes++;
+
+							if ( i == avaliacoes.length-1 )
+								calc += "";
+							else
+								calc += " + ";
+
+						}
+
+						text += "<b>C&#225;lculo:</b> " + calc;
+						unid++;
+					}
+
+					if ( avaliacoes != null && avaliacoes.length > 0 )
+						JQuery(this).wTooltip({
+				    		content: text,
+				    		id: "tooltip"+i
+				    	});
+					avaliacoes = [];
+				}
+			}
+	);
+
+}
+tooltipAval();
+</script>
+
+
+</div>
+	<div class="clear"> </div>
+	<br/>
+	<div id="relatorio-rodape">
+		<p>
+			<table width="100%">
+				<tr>
+					<td class="voltar" align="left"><a href="javascript:history.back();"> Voltar </a></td>
+					<td width="70%"  align="center">
+					<!-- Customizacao da descri&#231;&#227;o no rodap&#233; -->
+					SIGAA | DTI - Diretoria da Tecnologia de Informa&#231;&#227;o - IFAL - www.ifal.edu.br | Copyright &copy; 2006-2026 - UFRN - app-01-sig.instancia1
+					<!-- Fim customiza&#231;&#227;o -->
+					</td>
+					<td class="naoImprimir" align="right">
+						<a onclick="javascript:window.print();" href="#">Imprimir</a>
+					</td>
+					<td class="naoImprimir" align="right">
+						<a onclick="javascript:window.print();" href="#">
+							<img alt="Imprimir" title="Imprimir" src="/shared/javascript/ext-1.1/docs/resources/print.gif"/>
+						</a>
+					</td>
+				</tr>
+			</table>
+		</p>
+
+	</div>
+</div>
+
+<!-- MYFACES JAVASCRIPT -->
+
+</body>
+</html>

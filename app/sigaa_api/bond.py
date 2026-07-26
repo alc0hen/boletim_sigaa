@@ -140,23 +140,37 @@ class StudentBond:
     async def get_history(self, cached_history=None, credentials=None):
         try:
             logger.info("SIGAA: Starting get_history based on Turmas Anteriores...")
+            page = None
             if self.switch_url:
                 logger.info(f"SIGAA: Switching context via URL: {self.switch_url}")
-                await self.session.get(self.switch_url)
+                page = await self.session.get(self.switch_url)
             else:
                 logger.info("SIGAA: Accessing discente.jsf to ensure session context.")
-                await self.session.get('/sigaa/portais/discente/discente.jsf')
+                page = await self.session.get('/sigaa/portais/discente/discente.jsf')
+                
+            active_courses = self._parse_courses(page)
+            active_course_titles = {c.title for c in active_courses}
+            logger.info(f"SIGAA: Found {len(active_course_titles)} active courses to exclude from history.")
             
+            # Extract actual current semester
+            actual_current_semester = None
+            if page and hasattr(page, 'body') and page.body:
+                import re
+                actual_semester_match = re.search(r'Semestre atual:\s*<strong[^>]*>(\d{4}\.\d)</strong>', page.body)
+                if actual_semester_match:
+                    actual_current_semester = actual_semester_match.group(1)
+                    logger.info(f"SIGAA: Extracted actual current semester: {actual_current_semester}")
+
             logger.info("SIGAA: Navigating to Turmas Anteriores: /sigaa/portais/discente/turmas.jsf")
             turmas_page = await self.session.get('/sigaa/portais/discente/turmas.jsf')
             
             logger.info("SIGAA: Successfully loaded turmas.jsf, proceeding to parse classes.")
-            return await self._parse_previous_classes(turmas_page, cached_history, credentials)
+            return await self._parse_previous_classes(turmas_page, cached_history, credentials, active_course_titles, actual_current_semester)
         except Exception as e:
             logger.error(f"Get history error: {e}")
             return {}
 
-    async def _parse_previous_classes(self, page, cached_history=None, credentials=None):
+    async def _parse_previous_classes(self, page, cached_history=None, credentials=None, active_course_titles=None, actual_current_semester=None):
         history = {}
         classes_to_fetch = []
         try:
@@ -166,6 +180,8 @@ class StudentBond:
                  tables = page.soup.find_all('table', class_='tabelaRelatorio')
             
             logger.info(f"SIGAA: Found {len(tables)} tables to parse for Turmas Anteriores.")
+            
+            latest_semester = None
             
             for table_idx, table in enumerate(tables):
                  rows = table.find_all('tr')
@@ -179,6 +195,8 @@ class StudentBond:
                          sem_match = re.search(r'(\d{4}\.\d)', text)
                          if sem_match:
                              current_semester = sem_match.group(1)
+                             if latest_semester is None:
+                                 latest_semester = current_semester
                              logger.info(f"SIGAA: Detected semester grouping: {current_semester}")
                              continue
                          
@@ -202,7 +220,7 @@ class StudentBond:
                      title = "Desconhecido"
                      schedule_code = ""
                      
-                     row_status = "Concluído"
+                     row_status = None
                      for cell in cells:
                          t = cell.get_text(strip=True)
                          if '-' in t and len(t) > 5 and not t.replace('.', '').isdigit():
@@ -211,6 +229,28 @@ class StudentBond:
                          t_upper = t.upper()
                          if 'APROVADO' in t_upper or 'REPROVADO' in t_upper or 'TRANCADO' in t_upper or 'MATRICULADO' in t_upper or 'DISPENSADO' in t_upper or 'CANCELADO' in t_upper:
                              row_status = t.title()
+                             
+                     # Diagnostic log — shows exactly what SIGAA returns for each row
+                     logger.info(f"SIGAA: Row '{title}' [{current_semester}] → row_status={row_status!r}")
+
+                     # Bug fix: skip entire actual_current_semester to avoid treating it as history
+                     if actual_current_semester and current_semester == actual_current_semester:
+                         logger.info(f"SIGAA: Skipping '{title}' — it belongs to the actual current semester ({actual_current_semester}).")
+                         continue
+
+                     # Bug fix: skip current semester disciplines if explicitly marked.
+                     CURRENT_STATUSES = {'matriculado', 'cursando', 'em andamento', 'em curso', 'em progresso', 'ativo'}
+                     if row_status and row_status.strip().lower() in CURRENT_STATUSES:
+                         logger.info(f"SIGAA: Skipping '{title}' ({row_status!r}) — detected as current-semester, not history.")
+                         continue
+                         
+                     # Deduplicate: if this class is currently active and it's the latest semester, it's not history!
+                     if active_course_titles and title in active_course_titles and current_semester == latest_semester:
+                         logger.info(f"SIGAA: Skipping '{title}' in {current_semester} — it is an active course.")
+                         continue
+                         
+                     if row_status is None:
+                         row_status = "Concluído"
                              
                      # Check if we can reuse cached details
                      can_reuse = False

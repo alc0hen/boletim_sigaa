@@ -1,0 +1,1192 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<html class="background" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
+
+
+<title>SIGAA - Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</title>
+<link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/basic_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" rel="stylesheet" type="text/css" /><link class="component" href="/sigaa/a4j/s/3_3_3.Finalorg/richfaces/renderkit/html/css/extended_classes.xcss/DATB/eAF7sqpgb-jyGdIAFrMEaw__.jsf" media="rich-extended-skinning" rel="stylesheet" type="text/css" /><script type="text/javascript">window.RICH_FACES_EXTENDED_SKINNING_ON=true;</script><script src="/sigaa/a4j/g/3_3_3.Finalorg/richfaces/renderkit/html/scripts/skinning.js.jsf" type="text/javascript"></script><link rel="shortcut icon" href="/sigaa/img/sigaa_ifal.ico" />
+
+<script type="text/javascript" src="/shared/jsBundles/jawr_loader.js"></script>
+<script type="text/javascript">
+                JAWR.loader.style('/bundles/css/sigaa_base.css', 'all');
+        		JAWR.loader.style('/css/ufrn_print.css', 'print');
+
+        		JAWR.loader.script('/bundles/js/sigaa_base.js');
+</script>
+<link rel="stylesheet" type="text/css" media="all" href="/sigaa/cssBundles/gzip_780627853/bundles/css/sigaa.css" />
+
+
+<link rel="alternate stylesheet" type="text/css" media="screen" title="mono" href="/sigaa/css/mono.css" />
+<link rel="alternate stylesheet" type="text/css" media="screen" title="contraste" href="/sigaa/css/contraste.css" />
+<script src="/sigaa/javascript/styleswitch.js" type="text/javascript" ></script>
+<script src="/sigaa/javascript/prevenir-duplo-clique.js" type="text/javascript"></script>
+
+
+
+<script type="text/javascript">
+			var mensagem;
+			var initMensagem = function() {
+				mensagem = new Mensagem();
+			}
+			YAHOO.util.Event.addListener(window,'load', initMensagem);
+
+			function isIE(){
+
+			}
+		</script>
+<!-- Fim dos imports para abrir chamado -->
+</head>
+
+<body>
+
+
+
+
+
+	<div id="container">
+	<div id="cabecalho">
+	<div id="info-sistema">
+	<h1><span>IFAL - SIGAA -</span></h1>
+	<h3>Sistema Integrado de Gest&#227;o de Atividades Acad&#234;micas</h3>
+	<div class="dir">
+
+
+		<style>
+#info-sistema span.sair-sistema,
+	#info-sistema #tempoSessao{
+	display: inline;
+	right: inherit;
+	position: relative;
+	top: 0;
+	padding-right: inherit;
+}
+
+#info-sistema div.dir{
+	top:0;
+	right:0;
+	text-align: right;
+	width: auto;
+	position: absolute;
+	margin:0;
+	padding: 0;
+	height:16px;
+	display: inline;
+	padding-right:5px;
+	color: #FFF;
+}
+#info-sistema span.acessibilidade{
+	padding: 0 5px;
+	border: solid #D99C44;
+	border-width: 0 1px 0 0;
+	margin: 0 5px;
+	padding: 0 5px;
+}
+	#info-sistema span.acessibilidade a{
+		font-size: 1.1em;
+		font-weight: bolder;
+		color: #FFF;
+		margin-left: 2px;
+		letter-spacing: 0.1px;
+		word-spacing: 0.1px;
+	}
+	#info-sistema span.acessibilidade a.fonteMenor strong{
+		font-size: 0.9em;
+	}
+	.rich-tabpanel-content {
+		font-size: inherit;
+	}
+</style>
+<span class="acessibilidade">
+	<a class="fonteMaior" title="Aumentar a texto" alt="Aumentar a texto" href="#">
+		<strong>A</strong>+
+	</a>
+	<a class="fonteMenor" title="Diminuir o texto" alt="Diminuir o texto" href="#">
+		<strong>A</strong>-
+	</a>
+</span>
+<script type="text/javascript" src="/shared/javascript/jquery/jquery-1.4.4.min.js"></script>
+<script src="/sigaa/javascript/jquery.fontsize.js" type="text/javascript" ></script>
+<script type="text/javascript" >
+	redimensionarFonte('.acessibilidade', '#conteudo', 11, 11, 14);
+</script>
+		<span id="tempoSessao"></span>
+		<span class="sair-sistema"> <a href="/sigaa/logar.do?dispatch=logOff">SAIR</a> </span>
+
+	</div>
+	</div>
+
+
+	<div id="painel-usuario"
+		>
+
+		<div id="menu-usuario">
+		<ul>
+			<li class="modulos">
+				<span id="modulos"> <a href="#" id="show-modulos">
+				M&#243;dulos </a> </span>
+			</li>
+
+
+				<li class="caixa-postal">
+				<a href=/sigaa/abrirCaixaPostal.jsf?sistema=2>
+
+					Caixa Postal
+
+
+				</a>
+				</li>
+
+
+<!-- 			<li class="chamado"> -->
+
+
+
+
+
+
+
+
+
+
+<!-- 							<a href="#" onclick="window.open('/sigaa/novoChamadoAdmin.jsf?sistema=2', 'chamado', 'scrollbars=1,width=830,height=600')">Abrir Chamado</a> -->
+
+
+
+
+
+
+
+<!-- 			</li> -->
+
+
+					<li class="menus">
+						<a href="/sigaa/verPortalDiscente.do">Menu Discente</a>
+					</li>
+
+
+
+
+
+				<li class="admin"><a href="#"
+					onclick="window.open('/sigaa/alterar_dados.jsf','','width=670,height=430, top=100, left=100, scrollbars' )">Alterar
+				Senha</a></li>
+				<li class="dados-pessoais"><a href="#"
+					onclick="window.open('/sigaa/alterar_dados.jsf','','width=670,height=430, top=100, left=100, scrollbars' )">Alterar
+				Email</a></li>
+
+
+			<li class="ajuda">
+			<a href="https://docs.info.ufrn.br//doku.php?id=suporte:manuais:sigaa:portal_do_docente:lista" target="_blank">
+			Ajuda </a></li>
+		</ul>
+		</div>
+
+		<div id="info-usuario">
+
+		<p class="periodo-atual">
+					Semestre atual: <strong>2026.1</strong>
+		</p>
+
+		<p class="usuario">
+			<span title="ALBERT ALEX S. DE VASCONCELLOS">ALBERT ALEX S. DE VASCONCELLOS</span>
+
+
+		</p>
+
+		<p class="unidade">
+			CAMPUS MARAGOGI
+			 (11.06)
+
+		</p>
+
+		</div>
+
+	<div id="menu-principal"></div>
+	</div>
+	</div>
+
+
+	<div id="conteudo">
+
+
+
+
+<script src="/sigaa/javascript/encoding.js" type="text/javascript" ></script>
+
+
+
+
+
+
+
+
+
+
+
+
+<style>
+	table.listagem tr td.periodo {
+		background: #C4D2EB;
+		padding: 3px;
+		font-weight: bold;
+	}
+
+</style>
+
+
+
+	<h2><a href='/sigaa/ava/index.jsf'>Turma Virtual</a> &gt; Todas as Turmas</h2>
+
+	<div class="infoAltRem" style="font-variant: small-caps;">
+			<img src="/sigaa/img/avancar.gif" style="overflow: visible;" />: Acessar Turma Virtual
+	</div>
+
+
+<form id="j_id_jsp_1186832992_2" name="j_id_jsp_1186832992_2" method="post" action="/sigaa/portais/discente/turmas.jsf" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="j_id_jsp_1186832992_2" value="j_id_jsp_1186832992_2" />
+
+
+	<table class="listagem" width="80%">
+		<caption> Todas as Turmas Virtuais (48)</caption>
+		<thead>
+			<tr>
+				<td width="60%">Disciplina</td>
+				<td style="text-align:center;">Turma</td>
+				<td style="text-align:right;">Alunos</td>
+				<td style="text-align:right;">Carga Hor&#225;ria</td>
+				<td style="text-align:center;">Hor&#225;rio</td>
+				<td> </td>
+			</tr>
+		</thead>
+
+
+
+
+
+
+
+
+				<tr>
+					<td class="periodo" colspan="6"> 2025.1 </td>
+				</tr>
+
+
+			<tr class="linhaPar">
+				<td>MARHOSBIOL3 - BIOLOGIA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">3M3</td>
+				<td>
+
+<script type="text/javascript" language="Javascript">function dpf(f) {var adp = f.adp;if (adp != null) {for (var i = 0;i < adp.length;i++) {f.removeChild(adp[i]);}}};function apf(f, pvp) {var adp = new Array();f.adp = adp;var i = 0;for (k in pvp) {var p = document.createElement("input");p.type = "hidden";p.name = k;p.value = pvp[k];f.appendChild(p);adp[i++] = p;}};function jsfcljs(f, pvp, t) {apf(f, pvp);var ft = f.target;if (t) {f.target = t;}f.submit();f.target = ft;dpf(f);};</script>
+<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSFILO3 - FILOSOFIA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">4M3</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_1':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_1'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSFISI3 - F&#205;SICA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_2':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_2'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSGGRE3 - GEOGRAFIA GERAL E REGIONAL</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_3':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_3'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSGEMH3 - GEST&#195;O DE MEIOS DE HOSPEDAGEM</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_4':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_4'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSHIST3 - HIST&#211;RIA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_5':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_5'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSINFA3 - INFORM&#193;TICA APLICADA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">3M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_6':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_6'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSLIES3 - L&#205;NGUA ESPANHOLA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_7':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_7'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSLIPO3 - L&#205;NGUA PORTUGUESA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">120h</td>
+				<td align="center">4M6 5M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_8':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_8'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSMATE3 - MATEM&#193;TICA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_9':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_9'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSPSIA3 - PSICOLOGIA APLICADA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">3M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_10':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_10'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSQUIM3 - QU&#205;MICA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">4M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_11':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_11'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSSSTR3 - SA&#218;DE E SEGURAN&#199;A DO TRABALHO</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_12':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_12'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSSOCI3 - SOCIOLOGIA</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">3M4</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_13':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_13'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSSGAH3 - SUSTENTABILIDADE E GEST&#195;O AMBIENTAL EM HOSPEDAGEM</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">4M45</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_14':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_14'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSTPLR3 - TEORIA E PR&#193;TICA DE LAZER E RECREA&#199;&#195;O</td>
+				<td align="center">3&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_15':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_15'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+				<tr>
+					<td class="periodo" colspan="6"> 2024.1 </td>
+				</tr>
+
+
+			<tr class="linhaPar">
+				<td>MARHOSBIOL2 - BIOLOGIA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">4M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_16':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_16'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSEDFI2 - EDUCA&#199;&#195;O F&#205;SICA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_17':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_17'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSFILO2 - FILOSOFIA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">3M1</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_18':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_18'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSFISI2 - F&#205;SICA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">3M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_19':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_19'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSGEOG2 - GEOGRAFIA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_20':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_20'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSHIST2 - HIST&#211;RIA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">4M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_21':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_21'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSHIRE2 - HIST&#211;RIA REGIONAL</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">6M1</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_22':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_22'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSLIES2 - L&#205;NGUA ESPANHOLA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_23':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_23'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSLIIN2 - L&#205;NGUA INGLESA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">3M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_24':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_24'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSLIPO2 - L&#205;NGUA PORTUGUESA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_25':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_25'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSMATE2 - MATEM&#193;TICA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">120h</td>
+				<td align="center">3M2 4M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_26':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_26'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSQUIM2 - QU&#205;MICA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_27':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_27'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSSOCI2 - SOCIOLOGIA</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">6M2</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_28':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_28'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSTPAB2 - TEORIA E PR&#193;TICA DE ALIMENTOS & BEBIDAS</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_29':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_29'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSTPEV2 - TEORIA E PR&#193;TICA DE EVENTOS</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_30':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_30'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSTPGV2 - TEORIA E PR&#193;TICA DE GOVERNAN&#199;A</td>
+				<td align="center">2&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_31':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_31'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+				<tr>
+					<td class="periodo" colspan="6"> 2023.1 </td>
+				</tr>
+
+
+			<tr class="linhaPar">
+				<td>MARHOSARTE1 - ARTES</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M23</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_32':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_32'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSBIOL1 - BIOLOGIA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">4M45</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_33':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_33'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSDTIH1 - DESENHO T&#201;CNICO E INSTALA&#199;&#213;ES HOTELEIRAS</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_34':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_34'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSEDFI1 - EDUCA&#199;&#195;O F&#205;SICA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">3M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_35':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_35'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSFILO1 - FILOSOFIA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">3M6</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_36':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_36'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSFISC1 - F&#205;SICA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">3M34</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_37':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_37'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSFADM1 - FUNDAMENTOS DA ADMINISTRA&#199;&#195;O</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">4M6</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_38':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_38'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSFTHO1 - FUNDAMENTOS DO TURISMO E DA HOSPITALIDADE</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">5M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_39':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_39'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSGEOG1 - GEOGRAFIA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">4M23</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_40':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_40'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSHIST1 - HIST&#211;RIA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">6M6</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_41':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_41'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSLING1 - L&#205;NGUA INGLESA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M12</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_42':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_42'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSLIPO1 - L&#205;NGUA PORTUGUESA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">120h</td>
+				<td align="center">3M5 5M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_43':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_43'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSMATE1 - MATEM&#193;TICA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">120h</td>
+				<td align="center">2M34 4M1</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_44':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_44'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSQUIM1 - QU&#205;MICA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">6M45</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_45':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_45'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaPar">
+				<td>MARHOSSOCI1 - SOCIOLOGIA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">40h</td>
+				<td align="center">6M1</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_46':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_46'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+
+
+
+
+
+			<tr class="linhaImpar">
+				<td>MARHOSTPRR1 - TEORIA E PR&#193;TICA DE RECEP&#199;&#195;O E RESERVA</td>
+				<td align="center">1&#186; HOSP A</td>
+				<td align="right">0</td>
+				<td align="right">80h</td>
+				<td align="center">2M56</td>
+				<td>
+					<a href="#" title="Acessar Turma Virtual" onclick="if(typeof jsfcljs == 'function'){jsfcljs(document.getElementById('j_id_jsp_1186832992_2'),{'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_47':'j_id_jsp_1186832992_2:j_id_jsp_1186832992_4j_id_47'},'');}return false"><img src="/sigaa/img/avancar.gif" /></a>
+				</td>
+			</tr>
+
+
+	</table>
+<input type="hidden" name="javax.faces.ViewState" id="javax.faces.ViewState" value="j_id4" />
+</form>
+
+
+<div class="clear"> </div>
+
+</div>
+	<br />
+
+
+
+	<div style="width: 80%; text-align: center; margin: 0 auto;">
+		<a href='/sigaa/ava/index.jsf'>Turma Virtual</a>
+	</div>
+
+
+
+	<div id="rodape">
+		<!-- Customizacao da descri&#231;&#227;o no rodap&#233; -->
+		<p>	SIGAA | DTI - Diretoria da Tecnologia de Informa&#231;&#227;o - IFAL - www.ifal.edu.br | Copyright &copy; 2006-2026 - UFRN - app-01-sig.instancia1
+		<!-- Fim customiza&#231;&#227;o -->
+
+
+			 - <a onclick="javascript:versao();">v4.0.1301</a>
+
+		<small>23/07/2026 05:14</small>
+		</p>
+	</div>
+
+
+</div>
+
+<div id="painel-mensagem-envio"> </div>
+
+
+
+<!-- MYFACES JAVASCRIPT -->
+
+</body>
+
+</html>
+
+	<script type="text/javascript" charset="UTF-8">
+		function versao(){
+			var msg='';
+			msg+='SIGAA 4.0.1301,  publicado em: 15/07/2026\n\n';
+			msg+='Depend\u00eancias:\n';
+			msg+='Arquitetura 2.6.12_s.9\n';
+			msg+='Entidades Comuns 1.2.50_s.9\n';
+			msg+='Servicos Integrados 1.4.15\n\n';
+			msg+='Copyright SINFO/UFRN';
+			alert(msg);
+		}
+	</script>
+
+
+<script language="javascript">
+Relogio.init(90);
+</script>

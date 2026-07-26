@@ -1573,6 +1573,25 @@
     const CURRENT_USER = {{ session['username']|default ('guest') | tojson }};
     const CACHE_KEY = `grades_${CURRENT_USER}`;
 
+    function cleanProfileData() {
+      if (!profileData || !profileData.history_raw || !profileData.semesters) return;
+      const activeData = (typeof data !== 'undefined' && data.length > 0) ? data : ((typeof liveData !== 'undefined' && liveData.length > 0) ? liveData : []);
+      if (activeData.length > 0 && profileData.semesters.length > 0) {
+        let sems = profileData.semesters.map(s => s.semester).sort().reverse();
+        const highestSem = sems[0];
+        const activeClassNames = activeData.map(d => d.name.trim().toLowerCase());
+        const histClasses = profileData.history_raw[highestSem] || [];
+        const hasOverlap = histClasses.some(hc => {
+           const hcName = hc.name.trim().toLowerCase();
+           return activeClassNames.some(ac => ac.includes(hcName) || hcName.includes(ac));
+        });
+        if (hasOverlap) {
+           profileData.semesters = profileData.semesters.filter(s => s.semester !== highestSem);
+           delete profileData.history_raw[highestSem];
+        }
+      }
+    }
+
 
     function applyMobileLayout() {
       // Mobile layout is now default for all screen sizes
@@ -2387,6 +2406,7 @@
           }
       } else if (msg.type === 'profile_data') {
         profileData = msg.data;
+        cleanProfileData();
         _buildMSemDropdown('Atual');
         checkPendingReviews();
       } else if (msg.type === 'course_data') {
@@ -2916,9 +2936,13 @@
           }
           profileData = await resp.json();
         }
+        
+        cleanProfileData();
+        
         // populate dropdowns
         const populateSems = (dropdownEl, contentEl) => {
           if (!dropdownEl || !contentEl || !profileData.history_raw) return;
+
           dropdownEl.style.display = 'inline-block';
           contentEl.innerHTML = '<button onclick="switchSemester(\'Atual\')">Atual</button>';
           profileData.semesters.map(s => s.semester).sort().reverse().forEach(sem => {
@@ -3323,7 +3347,10 @@
     startDataStream();
 
     // --- REVIEW SYSTEM (ANTI-BOMBING) ---
+    let hasCheckedPendingReviews = false;
     async function checkPendingReviews() {
+        if (hasCheckedPendingReviews) return;
+        hasCheckedPendingReviews = true;
         try {
             const response = await fetch('/api/reviews/pending');
             if (response.ok) {

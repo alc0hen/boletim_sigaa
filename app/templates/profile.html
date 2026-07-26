@@ -49,8 +49,12 @@
         {% endif %}
         <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">{{ user.name }}</h2>
         <p style="margin-bottom: 1.5rem;">{{ user.email }}</p>
-        <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+        <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
             <a href="{{ url_for('main.logout') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block;">Sair da Conta</a>
+            <form method="POST" action="{{ url_for('main.delete_account') }}" onsubmit="return confirm('Tem certeza? Isso apagará permanentemente sua conta, todas as suas contas vinculadas do SIGAA e todo o seu cache de histórico. Suas avaliações serão anonimizadas. Esta ação é irreversível.');" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block; background: #dc3545; color: #fff; padding: 4px 8px; border-radius: 4px;">Excluir Minha Conta</button>
+            </form>
             {% if user.is_admin %}
             <a href="{{ url_for('main.admin') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block; background: var(--success); color: #fff; padding: 4px 8px; border-radius: 4px;">Painel Admin</a>
             {% endif %}
@@ -120,6 +124,9 @@
             <input type="text" name="username" placeholder="Username" required style="margin-bottom: 1rem;">
             <input type="password" name="password" placeholder="Senha do SIGAA" required style="margin-bottom: 1rem;">
             <button type="submit" id="btn-submit-link">Conectar</button>
+            <p style="text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 10px;">
+                Ao prosseguir, você concorda com nossos <a href="{{ url_for('main.privacy') }}" style="color: var(--accent); text-decoration: none;">Termos de Uso e Política de Privacidade</a>.
+            </p>
         </form>
     </div>
 </div>

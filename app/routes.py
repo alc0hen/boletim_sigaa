@@ -1,11 +1,21 @@
-from quart import Blueprint, render_template, request, redirect, url_for, session, Response, current_app, flash, jsonify, g
-from .sigaa_api.sigaa import Sigaa, InstitutionType
+from quart import Blueprint, render_template, request, redirect, url_for, session, Response, flash, jsonify, g
+
+from .sigaa_api.types import InstitutionType
+from .sigaa_gateway import (
+    SigaaError,
+    SigaaGateway,
+    SigaaInstitutionError,
+    SigaaLoginFailed,
+    SigaaQuestionnaire,
+    SigaaSessionExpired,
+    institution_url,
+    resolve_sigaa_url,
+)
 from .domain.factory import CalculatorFactory
 from .demo_data import get_demo_data
 from .extensions import db_session, google_oauth, generate_csrf_token
 from sqlalchemy import select, func, distinct
 from .models import User, LinkedAccount, CourseReview, ProfessorReview, get_cipher_suite
-from .sigaa_api.exceptions import SigaaQuestionnaireError
 import asyncio
 from .cache import get as cache_get, set as cache_set
 import json
@@ -17,26 +27,86 @@ import unicodedata
 from datetime import datetime, timedelta
 bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
-SIGAA_URL = "https://sigaa.ifal.edu.br"
 SUPPORTERS_URL = "https://raw.githubusercontent.com/AlbertCohenhgs/public_lists/refs/heads/main/apoiadores.json"
 
+QUESTIONNAIRE_MESSAGE = (
+    "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. "
+    "Acesse o SIGAA para respondê-lo e tente novamente."
+)
 
-# ── Session guard decorator ──────────────────────────────────────
-def _require_sigaa_session():
-    """Return (cookies, url, inst_type) or None.
-    If the session has expired / is missing, returns None so the caller
-    can redirect to login.
-    """
-    cookies = session.get('sigaa_cookies')
-    if not cookies:
-        return None
-    url = session.get('sigaa_url', SIGAA_URL)
-    inst_str = session.get('sigaa_inst', 'IFAL')
+
+def _inst_type(inst_str=None):
     try:
-        inst_type = InstitutionType[inst_str]
+        return InstitutionType[(inst_str or session.get('sigaa_inst') or 'IFAL').upper()]
     except KeyError:
-        inst_type = InstitutionType.IFAL
-    return cookies, url, inst_type
+        return InstitutionType.IFAL
+
+
+async def _load_credentials(db=None):
+    active_account_id = session.get('active_account_id')
+    if active_account_id:
+        db = db or getattr(g, 'db_session', None)
+        if db is not None:
+            try:
+                account = await db.get(LinkedAccount, active_account_id)
+                if account:
+                    password = account.get_password()
+                    if password:
+                        return {'username': account.username, 'password': password}
+            except Exception as e:
+                logger.warning(f"Falha ao ler credenciais da conta vinculada: {e}")
+
+    encrypted = session.get('sigaa_temp_password')
+    if encrypted and session.get('username'):
+        try:
+            cipher = get_cipher_suite()
+            return {
+                'username': session['username'],
+                'password': cipher.decrypt(encrypted.encode('utf-8')).decode('utf-8'),
+            }
+        except Exception as e:
+            logger.warning(f"Falha ao decifrar a senha temporária da sessão: {e}")
+    return None
+
+
+async def _get_gateway(db=None):
+    state = session.get('sigaa_state')
+    if not state:
+        return None
+    return SigaaGateway.from_state(state, await _load_credentials(db))
+
+
+def _save_gateway(gateway):
+    session['sigaa_state'] = gateway.state()
+    session['sigaa_url'] = gateway.url
+    session['sigaa_inst'] = gateway.institution
+    login_info = getattr(gateway, 'login_info', None)
+    if login_info and login_info.get('name'):
+        session['sigaa_name'] = login_info['name']
+
+
+def _clear_sigaa_session():
+    session.pop('sigaa_state', None)
+
+
+def _active_student_bonds(bonds):
+    return [b for b in bonds if b.get('status') == 'active' and b.get('type') == 'student']
+
+
+async def _enumerate_courses(gateway, bonds=None):
+    if bonds is None:
+        bonds = _active_student_bonds(await gateway.get_bonds())
+    listing = []
+    for bond in bonds:
+        for course in await gateway.get_courses(bond['bond_id']):
+            listing.append({
+                'id': len(listing) + 1,
+                'bond_id': bond['bond_id'],
+                'course_id': course['id'],
+                'title': course.get('title'),
+                'program': bond.get('program'),
+            })
+    return bonds, listing
 
 
 @bp.route('/')
@@ -53,36 +123,22 @@ async def login():
         username = form['username']
         password = form['password']
         institution_str = form.get('institution', 'IFAL')
-        if institution_str == 'UFAL':
-            inst_type = InstitutionType.UFAL
-            url = "https://sigaa.sig.ufal.br"
-        elif institution_str == 'UFPE':
-            inst_type = InstitutionType.UFPE
-            url = "https://sigaa.ufpe.br"
-        else:
-            inst_type = InstitutionType.IFAL
-            url = SIGAA_URL
-
-        async def perform_login():
-            sigaa = Sigaa(url, inst_type)
-            try:
-                account = await sigaa.login(username, password)
-                client_session = await sigaa.session._get_session()
-                cookies = {}
-                for cookie in client_session.cookie_jar:
-                    cookies[cookie.key] = cookie.value
-                return cookies
-            finally:
-                await sigaa.close()
 
         try:
-            cookies = await perform_login()
-            session['sigaa_cookies'] = cookies
-            session['sigaa_url'] = url
-            session['sigaa_inst'] = institution_str
+            url = resolve_sigaa_url(institution_str, form.get('sigaa_url'))
+        except SigaaInstitutionError as e:
+            logger.warning(f"Login recusado por instituição/URL inválida: {e}")
+            return await render_template('login.html', error="Instituição inválida. Selecione uma das opções da lista.")
+
+        try:
+            gateway = await SigaaGateway.login(
+                url, institution_str, username, password,
+                credentials={'username': username, 'password': password},
+            )
+            _save_gateway(gateway)
             session['username'] = username
             cipher = get_cipher_suite()
-            session['sigaa_temp_password'] = cipher.encrypt(password.encode('utf-8')).decode('utf-8')  # Temporarily store ENCRYPTED password for auto-linking
+            session['sigaa_temp_password'] = cipher.encrypt(password.encode('utf-8')).decode('utf-8')                                                         
             try:
                 async with db_session() as s:
                     result = await s.execute(
@@ -94,6 +150,17 @@ async def login():
             except Exception as e:
                 logger.error(f"Error linking session to account: {e}")
             return redirect(url_for('main.dashboard'))
+        except SigaaQuestionnaire:
+            logger.warning("Login bloqueado por questionário obrigatório do SIGAA.")
+            return await render_template('login.html', error=QUESTIONNAIRE_MESSAGE)
+        except SigaaLoginFailed:
+            logger.info("Login recusado pelo SIGAA.")
+            return await render_template('login.html', error="Falha no login. Verifique suas credenciais.")
+        except SigaaError as e:
+                                                                   
+                                                                         
+            logger.error(f"Login indisponível: {e}")
+            return await render_template('login.html', error="O SIGAA está indisponível no momento. Tente novamente em alguns minutos.")
         except Exception as e:
             logger.error(f"Login failed: {type(e).__name__}")
             return await render_template('login.html', error="Falha no login. Verifique suas credenciais.")
@@ -144,7 +211,7 @@ async def authorize_google():
         await s.refresh(user)
         session['user_id'] = user.id
 
-        # Auto-link direct login session account to the Google user
+                                                                   
         temp_pass_enc = session.get('sigaa_temp_password')
         temp_pass = None
         if temp_pass_enc:
@@ -209,30 +276,21 @@ async def link_account():
         async with db_session() as s:
             user = await s.get(User, session['user_id'])
             return await render_template('profile.html', error="Preencha todos os campos.", user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
-    if institution_str == 'UFAL':
-        inst_type = InstitutionType.UFAL
-        url = "https://sigaa.sig.ufal.br"
-    elif institution_str == 'UFPE':
-        inst_type = InstitutionType.UFPE
-        url = "https://sigaa.ufpe.br"
-    else:
-        inst_type = InstitutionType.IFAL
-        url = SIGAA_URL
-
-    async def perform_link():
-        sigaa = Sigaa(url, inst_type)
-        try:
-            await sigaa.login(username, password)
-            client_session = await sigaa.session._get_session()
-            cookies = {}
-            for cookie in client_session.cookie_jar:
-                cookies[cookie.key] = cookie.value
-            return cookies
-        finally:
-            await sigaa.close()
+                                                                  
+                            
+    try:
+        url = resolve_sigaa_url(institution_str)
+    except SigaaInstitutionError as e:
+        logger.warning(f"Vínculo recusado por instituição inválida: {e}")
+        async with db_session() as s:
+            user = await s.get(User, session['user_id'])
+            return await render_template('profile.html', error="Instituição inválida.", user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
 
     try:
-        cookies = await perform_link()
+        gateway = await SigaaGateway.login(
+            url, institution_str, username, password,
+            credentials={'username': username, 'password': password},
+        )
         async with db_session() as s:
             new_account = LinkedAccount(
                 user_id=session['user_id'],
@@ -244,10 +302,8 @@ async def link_account():
             await s.commit()
             await s.refresh(new_account)
             session['active_account_id'] = new_account.id
-        session['sigaa_url'] = url
-        session['sigaa_inst'] = institution_str
+        _save_gateway(gateway)
         session['username'] = username
-        session['sigaa_cookies'] = cookies
         return redirect(url_for('main.dashboard'))
     except Exception as e:
         logger.error(f"Link Account Failed: {e}")
@@ -267,7 +323,7 @@ async def unlink_account(id):
             await s.commit()
             if session.get('active_account_id') == id:
                 session.pop('active_account_id', None)
-                session.pop('sigaa_cookies', None)
+                _clear_sigaa_session()
                 user = await s.get(User, session['user_id'])
                 if user and user.linked_accounts:
                     session['active_account_id'] = user.linked_accounts[0].id
@@ -282,13 +338,13 @@ async def activate_account(id):
         account = await s.get(LinkedAccount, id)
         if account and account.user_id == session['user_id']:
             session['active_account_id'] = account.id
-            session.pop('sigaa_cookies', None)
+            _clear_sigaa_session()
     return redirect(url_for('main.dashboard'))
 
 
 @bp.route('/dashboard')
 async def dashboard():
-    if 'user_id' in session and not session.get('sigaa_cookies'):
+    if 'user_id' in session and not session.get('sigaa_state'):
         active_id = session.get('active_account_id')
         async with db_session() as s:
             if not active_id:
@@ -305,43 +361,22 @@ async def dashboard():
             password = account.get_password()
             if not password:
                 return redirect(url_for('main.profile'))
-            if account.institution == 'UFAL':
-                inst_type = InstitutionType.UFAL
-                url = "https://sigaa.sig.ufal.br"
-            elif account.institution == 'UFPE':
-                inst_type = InstitutionType.UFPE
-                url = "https://sigaa.ufpe.br"
-            else:
-                inst_type = InstitutionType.IFAL
-                url = SIGAA_URL
-
             acct_username = account.username
             acct_institution = account.institution
 
-        async def perform_auto_login():
-            sigaa = Sigaa(url, inst_type)
-            try:
-                await sigaa.login(acct_username, password)
-                client_session = await sigaa.session._get_session()
-                cookies = {}
-                for cookie in client_session.cookie_jar:
-                    cookies[cookie.key] = cookie.value
-                return cookies
-            finally:
-                await sigaa.close()
-
         try:
-            cookies = await perform_auto_login()
-            session['sigaa_cookies'] = cookies
-            session['sigaa_url'] = url
-            session['sigaa_inst'] = acct_institution
+            url = institution_url(acct_institution)
+            gateway = await SigaaGateway.login(
+                url, acct_institution, acct_username, password,
+                credentials={'username': acct_username, 'password': password},
+            )
+            _save_gateway(gateway)
             session['username'] = acct_username
             return redirect(url_for('main.dashboard'))
         except Exception as e:
             logger.error(f"Auto-login failed for {acct_username}: {e}")
             return redirect(url_for('main.profile'))
-    cookies = session.get('sigaa_cookies')
-    if not cookies:
+    if not session.get('sigaa_state'):
         if 'user_id' in session:
              return redirect(url_for('main.profile'))
         return redirect(url_for('main.login'))
@@ -355,108 +390,76 @@ async def dashboard():
     return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'))
 
 
+def _scrub_active_semester_from_cache(cached_data):
+    if cached_data and cached_data.get('semesters') and cached_data.get('history_raw'):
+        try:
+            highest_sem = sorted([s['semester'] for s in cached_data['semesters']], reverse=True)[0]
+            hist_classes = cached_data['history_raw'].get(highest_sem, [])
+            final_statuses = ['aprovado', 'reprovado', 'trancado', 'cancelado', 'dispensado']
+            has_final = False
+            for hc in hist_classes:
+                st = hc.get('status', '').strip().lower()
+                if any(fs in st for fs in final_statuses):
+                    has_final = True
+                    break
+            if not has_final:
+                cached_data['semesters'] = [s for s in cached_data['semesters'] if s['semester'] != highest_sem]
+                cached_data['history_raw'].pop(highest_sem, None)
+        except Exception as e:
+            logger.error(f"Error scrubbing active semester: {e}")
+    return cached_data
+
 @bp.route('/api/academic_profile')
 async def academic_profile():
-    cookies = session.get('sigaa_cookies')
-    
-    # Rate limiting / Smart delay against brute-force reloads
+
     last_req = session.get('last_academic_req', 0)
     now = time.time()
     if now - last_req < 5:
         await asyncio.sleep(5 - (now - last_req))
     session['last_academic_req'] = time.time()
 
-    if not cookies:
+    if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
     force_update = request.args.get('force') == 'true'
     active_account_id = session.get('active_account_id')
     linked_account = None
     if active_account_id:
         linked_account = await g.db_session.get(LinkedAccount, active_account_id)
-    # Redis cache fallback (using 'profile' namespace → 10 min TTL)
-    cache_key = f"{session.get('user_id')}_{session.get('sigaa_inst')}_profile"
+                                                                   
+    cache_key = f"{session.get('user_id')}_{session.get('username')}_{session.get('sigaa_inst')}_profile"
     if not force_update:
         cached = await cache_get('profile', cache_key)
         if cached:
             logger.info("Redis cache hit for academic profile")
-            return jsonify(cached)
-    # Existing DB cache check
+            return jsonify(_scrub_active_semester_from_cache(cached))
+                             
     if linked_account and not force_update and linked_account.history_json and linked_account.history_updated_at:
         if datetime.utcnow() - linked_account.history_updated_at < timedelta(days=3):
             try:
                 cipher = get_cipher_suite()
                 decrypted_json = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
                 cached_data = json.loads(decrypted_json)
-                return jsonify(cached_data)
+                return jsonify(_scrub_active_semester_from_cache(cached_data))
             except Exception as e:
                 logger.error(f"Cache decryption failed: {e}")
                 pass
-    url = session.get('sigaa_url', SIGAA_URL)
-    inst_str = session.get('sigaa_inst', 'IFAL')
-    try:
-        inst_type = InstitutionType[inst_str]
-    except KeyError:
-        inst_type = InstitutionType.IFAL
+    inst_type = _inst_type()
 
-    credentials = None
-    if linked_account:
-        try:
-            dec_pwd = linked_account.get_password()
-            if dec_pwd:
-                credentials = {
-                    'username': linked_account.username,
-                    'password': dec_pwd,
-                    'url': url,
-                    'inst_type': inst_type
-                }
-        except Exception:
-            pass
-
-    if not credentials and session.get('sigaa_temp_password') and session.get('username'):
-        temp_pass_enc = session.get('sigaa_temp_password')
-        temp_pass = None
-        if temp_pass_enc:
-            cipher = get_cipher_suite()
-            try:
-                temp_pass = cipher.decrypt(temp_pass_enc.encode('utf-8')).decode('utf-8')
-            except Exception:
-                pass
-        if temp_pass:
-            credentials = {
-                'username': session.get('username'),
-                'password': temp_pass,
-                'url': url,
-                'inst_type': inst_type
-            }
-
-    async def fetch_academic_profile():
-        sigaa = Sigaa(url, inst_type, cookies=cookies)
-        try:
-            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-            if "login" in response.url.path:
-                 return {"error": "Session expired", "status": 401}
-            from .sigaa_api.account import Account
-            account = Account(sigaa.session, response)
-            if not account.active_bonds:
-                return {"error": "No active bonds", "status": 404}
-            bond = account.active_bonds[0]
-            history = await bond.get_history(credentials=credentials)
-            return {"history": history, "status": 200}
-        finally:
-            await sigaa.close()
+    gateway = await _get_gateway()
+    if gateway is None:
+        return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
     try:
         start_time = time.time()
-        res = await fetch_academic_profile()
+        async with gateway.scope():
+            bonds = _active_student_bonds(await gateway.get_bonds())
+            if not bonds:
+                return jsonify({"error": "No active bonds"}), 404
+            history = await gateway.get_history(bonds[0]['bond_id'])
+        _save_gateway(gateway)
         duration = time.time() - start_time
         logger.info(f"Historical data fetch took {duration:.2f}s")
-        if res["status"] != 200:
-            if res["status"] == 401:
-                session.pop('sigaa_cookies', None)
-                return jsonify({"error": res["error"], "session_expired": True}), 401
-            return jsonify({"error": res["error"]}), res["status"]
-            
-        history = res["history"]
+
         total_grades = []
         best_grade = 0
         best_subject = "-"
@@ -506,18 +509,21 @@ async def academic_profile():
             except Exception as e:
                 logger.error(f"Cache encryption failed: {e}")
 
-        # Redis cache store (profile namespace → 10 min TTL)
+                                                            
         try:
-            cache_key = f"{session.get('user_id')}_{session.get('sigaa_inst')}_profile"
+            cache_key = f"{session.get('user_id')}_{session.get('username')}_{session.get('sigaa_inst')}_profile"
             await cache_set('profile', cache_key, final_data)
             logger.info("Redis cache set for academic profile")
         except Exception as e:
             logger.error(f"Redis cache set failed: {e}")
 
         return jsonify(final_data)
-    except SigaaQuestionnaireError as e:
+    except SigaaQuestionnaire as e:
         logger.warning(f"Profile error - questionnaire: {e}")
-        return jsonify({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}), 403
+        return jsonify({"error": QUESTIONNAIRE_MESSAGE, "is_questionnaire": True}), 403
+    except SigaaSessionExpired:
+        _clear_sigaa_session()
+        return jsonify({"error": "Session expired", "session_expired": True}), 401
     except Exception as e:
         logger.error(f"Profile error: {e}")
         return jsonify({"error": "Failed to fetch profile"}), 500
@@ -560,49 +566,22 @@ async def stream_demo():
 
 @bp.route('/api/update_course/<int:course_id>', methods=['POST'])
 async def update_course(course_id):
-    cookies = session.get('sigaa_cookies')
-    if not cookies:
+    gateway = await _get_gateway()
+    if gateway is None:
         return Response(json.dumps({"error": "Unauthorized", "session_expired": True}), status=401, mimetype='application/json')
-    url = session.get('sigaa_url', SIGAA_URL)
-    inst_str = session.get('sigaa_inst', 'IFAL')
-    try: inst_type = InstitutionType[inst_str]
-    except KeyError: inst_type = InstitutionType.IFAL
-
-    async def perform_update():
-        sigaa = Sigaa(url, inst_type, cookies=cookies)
-        try:
-            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-            if "login" in response.url.path: return {"error": "Session expired", "status": 401}
-            from .sigaa_api.account import Account
-            account = Account(sigaa.session, response)
-            target_course = None
-            current_id = 0
-            if account.active_bonds:
-                for bond in account.active_bonds:
-                    courses = await bond.get_courses()
-                    if courses:
-                        for course in courses:
-                            current_id += 1
-                            if current_id == course_id:
-                                target_course = course
-                                break
-                    if target_course: break
-            if not target_course: return {"error": "Course not found", "status": 404}
-            
-            raw_grades, freq_data = await target_course.get_grades_and_frequency()
-            return {"status": 200, "grades": raw_grades, "frequency": freq_data}
-        finally:
-            await sigaa.close()
+    inst_type = _inst_type()
 
     try:
-        res = await perform_update()
-        if res.get("status") != 200:
-            if res.get("status") == 401:
-                session.pop('sigaa_cookies', None)
-            return Response(json.dumps({"error": res.get("error"), "session_expired": res.get("status") == 401}), status=res.get("status", 500), mimetype='application/json')
-            
-        raw_grades = res["grades"]
-        freq_data = res.get("frequency")
+        async with gateway.scope():
+            _, listing = await _enumerate_courses(gateway)
+            target = next((item for item in listing if item['id'] == course_id), None)
+            if not target:
+                return Response(json.dumps({"error": "Course not found"}), status=404, mimetype='application/json')
+            details = await gateway.get_course_details(target['bond_id'], target['course_id'])
+        _save_gateway(gateway)
+
+        raw_grades = details.get("grades") or []
+        freq_data = details.get("frequency")
         calculator = CalculatorFactory.get_calculator(inst_type)
         course_result = calculator.calculate(raw_grades)
         response_data = {
@@ -615,9 +594,12 @@ async def update_course(course_id):
         if freq_data:
             response_data['frequency'] = freq_data
         return Response(json.dumps(response_data), mimetype='application/json')
-    except SigaaQuestionnaireError as e:
+    except SigaaQuestionnaire as e:
         logger.warning(f"Single update error - questionnaire: {e}")
-        return Response(json.dumps({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}), status=403, mimetype='application/json')
+        return Response(json.dumps({"error": QUESTIONNAIRE_MESSAGE, "is_questionnaire": True}), status=403, mimetype='application/json')
+    except SigaaSessionExpired:
+        _clear_sigaa_session()
+        return Response(json.dumps({"error": "Session expired", "session_expired": True}), status=401, mimetype='application/json')
     except Exception as e:
         logger.error(f"Single update error: {e}")
         return Response(json.dumps({"error": "Internal Server Error"}), status=500, mimetype='application/json')
@@ -625,59 +607,28 @@ async def update_course(course_id):
 
 @bp.route('/api/stream_grades')
 async def stream_grades():
-    cookies = session.get('sigaa_cookies')
-    
-    # Rate limiting / Smart delay against brute-force reloads
+                                                             
     last_req = session.get('last_stream_req', 0)
     now = time.time()
     if now - last_req < 5:
         await asyncio.sleep(5 - (now - last_req))
     session['last_stream_req'] = time.time()
 
-    username = session.get('username', 'anonymous')
-    if not cookies:
+    if not session.get('sigaa_state'):
         return Response(json.dumps({"error": "Unauthorized", "session_expired": True}) + "\n", status=401, mimetype='application/x-ndjson')
-    priority_ids = [int(x) for x in request.args.get('priority', '').split(',') if x.strip().isdigit()]
     skip_ids = [int(x) for x in request.args.get('skip', '').split(',') if x.strip().isdigit()]
-    # Extract all needed context data
-    url = session.get('sigaa_url', SIGAA_URL)
-    inst_str = session.get('sigaa_inst', 'IFAL')
+                                     
+    inst_type = _inst_type()
+    student_name = session.get('sigaa_name')
     active_account_id = session.get('active_account_id')
 
-    app_obj = current_app._get_current_object()
     cached_profile = None
-    credentials = None
     has_linked_account = False
-    
+
     if active_account_id:
-        logger.warning(f"Credentials: active_account_id is {active_account_id}")
         linked_account = await g.db_session.get(LinkedAccount, active_account_id)
         if linked_account:
             has_linked_account = True
-            logger.warning("Credentials: linked_account found in DB.")
-            
-            # Fetch decrypted password for parallel fetching
-            try:
-                decrypted_pwd = linked_account.get_password()
-                if decrypted_pwd:
-                    logger.warning("Credentials: password decrypted successfully from DB.")
-                    from .sigaa_api.types import InstitutionType
-                    try:
-                        c_inst_type = InstitutionType[inst_str]
-                    except KeyError:
-                        c_inst_type = InstitutionType.IFAL
-
-                    credentials = {
-                        'username': linked_account.username,
-                        'password': decrypted_pwd,
-                        'url': url,
-                        'inst_type': c_inst_type
-                    }
-                else:
-                    logger.warning("Credentials: password from DB was None or empty.")
-            except Exception as e:
-                logger.warning(f"Failed to decrypt password for parallel fetch: {e}")
-                
             if linked_account.history_json:
                 try:
                     cipher = get_cipher_suite()
@@ -686,229 +637,169 @@ async def stream_grades():
                 except Exception as e:
                     logger.warning(f"Failed to load cached history: {e}")
         else:
-            logger.warning("Credentials: active_account_id exists in session, but not found in DB.")
-    else:
-        logger.warning("Credentials: No active_account_id in session.")
+            logger.warning("active_account_id existe na sessão mas não no banco.")
 
-    # Fallback to temporary session password if db decryption failed or user is not linked
-    if not credentials:
-        logger.warning(f"Credentials: DB method failed. Trying fallback. Has temp_pass: {'sigaa_temp_password' in session}. Has username: {'username' in session}")
-        if session.get('sigaa_temp_password') and session.get('username'):
-            from .sigaa_api.types import InstitutionType
-            try:
-                c_inst_type = InstitutionType[inst_str]
-            except KeyError:
-                c_inst_type = InstitutionType.IFAL
+    gateway = await _get_gateway()
+    if gateway is None:
+        return Response(json.dumps({"error": "Unauthorized", "session_expired": True}) + "\n", status=401, mimetype='application/x-ndjson')
 
-            temp_pass_enc = session.get('sigaa_temp_password')
-            temp_pass = None
-            if temp_pass_enc:
-                cipher = get_cipher_suite()
-                try:
-                    temp_pass = cipher.decrypt(temp_pass_enc.encode('utf-8')).decode('utf-8')
-                    logger.warning("Credentials: Fallback password decrypted successfully.")
-                except Exception as e:
-                    logger.warning(f"Credentials: Fallback decryption failed: {e}")
-                    pass
-                    
-            if temp_pass:
-                credentials = {
-                    'username': session.get('username'),
-                    'password': temp_pass,
-                    'url': url,
-                    'inst_type': c_inst_type
-                }
-            else:
-                logger.warning("Credentials: Fallback temp_pass was None after decryption attempt.")
-        else:
-             logger.warning("Credentials: Fallback failed because sigaa_temp_password or username is missing in session.")
-    else:
-        logger.warning("Credentials: DB method succeeded.")
+    async def get_supporters_task():
+        try:
+            async with aiohttp.ClientSession() as http_client_session:
+                async with http_client_session.get(SUPPORTERS_URL, timeout=3) as resp:
+                    if resp.status == 200: return await resp.json(content_type=None)
+        except: pass
+        return []
 
     async def async_generate():
-        try: inst_type = InstitutionType[inst_str]
-        except KeyError: inst_type = InstitutionType.IFAL
-        sigaa = Sigaa(url, inst_type, cookies=cookies)
-        
         if cached_profile:
             yield json.dumps({"type": "profile_data", "data": cached_profile}) + "\n"
             logger.info("SIGAA: Emitted cached history_json for instant UI rendering.")
-        
+
         try:
-            response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-            if "login" in response.url.path:
-                session.pop('sigaa_cookies', None)
-                yield json.dumps({"error": "Session expired", "session_expired": True}) + "\n"
-                return
-            from .sigaa_api.account import Account
-            account = Account(sigaa.session, response)
-            
-            async def get_supporters_task():
-                try:
-                    async with aiohttp.ClientSession() as http_client_session:
-                        async with http_client_session.get(SUPPORTERS_URL, timeout=3) as resp:
-                            if resp.status == 200: return await resp.json(content_type=None)
-                except: pass
-                return []
-            
-            name = await account.get_name()
-            
-            # Check for actual supporters in background
-            supporters = await get_supporters_task()
-            is_supporter = False
-            registration = None
-            if account.active_bonds: registration = account.active_bonds[0].registration
-            if registration and str(registration) in {str(s) for s in supporters}: is_supporter = True
+            async with gateway.scope():
+                bonds = _active_student_bonds(await gateway.get_bonds())
 
-            yield json.dumps({"type": "user_info", "name": name, "is_supporter": is_supporter}) + "\n"
+                                                           
+                supporters = await get_supporters_task()
+                registration = bonds[0].get('registration') if bonds else None
+                is_supporter = bool(registration and str(registration) in {str(s) for s in supporters})
 
-            if account and account.active_bonds:
-                calculator = CalculatorFactory.get_calculator(inst_type)
-                
-                bonds_to_process = []
-                total_current_courses = 0
-                for bond in account.active_bonds:
-                    courses = await bond.get_courses()
-                    bonds_to_process.append({'program': bond.program, 'courses': courses, 'bond_obj': bond})
-                    if courses:
-                        total_current_courses += len(courses)
+                yield json.dumps({"type": "user_info", "name": student_name, "is_supporter": is_supporter}) + "\n"
 
-                yield json.dumps({"type": "sync_start", "total_courses": total_current_courses}) + "\n"
+                if bonds:
+                    calculator = CalculatorFactory.get_calculator(inst_type)
+                    _, listing = await _enumerate_courses(gateway, bonds)
 
-                # Phase 1: Mapping (Fast)
-                for b_item in bonds_to_process:
-                    courses = b_item['courses']
-                    if not courses: continue
-                    
-                    course_list_with_ids = []
-                    for i, course in enumerate(courses):
-                        course_list_with_ids.append({'id': i + 1, 'course': course})
-                    b_item['_course_list'] = course_list_with_ids # Save for phase 2
-                    
-                    for item in course_list_with_ids:
-                        course_id = item['id']
-                        course = item['course']
-                        yield json.dumps({"type": "course_start", "id": course_id, "name": course.title, "obs": b_item['program']}) + "\n"
+                    yield json.dumps({"type": "sync_start", "total_courses": len(listing)}) + "\n"
 
-                # Phase 2: Slow Data Fetching
-                for b_item in bonds_to_process:
-                    bond_obj = b_item.get('bond_obj')
-                    course_list_with_ids = b_item.get('_course_list', [])
-                    for item in course_list_with_ids:
-                        course_id = item['id']
-                        course = item['course']
+                                             
+                    for item in listing:
+                        yield json.dumps({"type": "course_start", "id": item['id'], "name": item['title'], "obs": item['program']}) + "\n"
 
-                        if course_id in skip_ids:
-                            yield json.dumps({"type": "course_skipped", "id": course_id}) + "\n"
-                            continue
+                                                 
+                    for bond in bonds:
+                        bond_id = bond['bond_id']
+                        bond_courses = [item for item in listing if item['bond_id'] == bond_id]
+                        for item in bond_courses:
+                            course_id = item['id']
 
-                        yield json.dumps({"type": "course_loading", "id": course_id, "step": "notas"}) + "\n"
+                            if course_id in skip_ids:
+                                yield json.dumps({"type": "course_skipped", "id": course_id}) + "\n"
+                                continue
+
+                            yield json.dumps({"type": "course_loading", "id": course_id, "step": "notas"}) + "\n"
+
+                            try:
+                                details = await gateway.get_course_details(bond_id, item['course_id'])
+                                raw_grades = details.get("grades") or []
+                                freq_data = details.get("frequency")
+                                course_result = calculator.calculate(raw_grades)
+                                result_data = {
+                                    "grades": raw_grades,
+                                    "status": course_result.to_dict(),
+                                    "professor": details.get("professor")
+                                }
+                                yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
+
+                                yield json.dumps({"type": "course_loading", "id": course_id, "step": "frequencia"}) + "\n"
+                                if freq_data:
+                                    yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
+                            except Exception:
+                                empty_result = calculator.calculate([])
+                                fallback_data = {
+                                    "grades": [],
+                                    "status": empty_result.to_dict()
+                                }
+                                yield json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n"
+
+                            yield json.dumps({"type": "course_loading", "id": course_id, "step": "done"}) + "\n"
 
                         try:
-                            raw_grades, freq_data = await course.get_grades_and_frequency()
-                            course_result = calculator.calculate(raw_grades)
-                            result_data = {
-                                "grades": raw_grades,
-                                "status": course_result.to_dict()
-                            }
-                            yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
-                            
-                            yield json.dumps({"type": "course_loading", "id": course_id, "step": "frequencia"}) + "\n"
-                            if freq_data:
-                                yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
-                        except Exception:
-                            empty_result = calculator.calculate([])
-                            fallback_data = {
-                                "grades": [],
-                                "status": empty_result.to_dict()
-                            }
-                            yield json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n"
-                        
-                        yield json.dumps({"type": "course_loading", "id": course_id, "step": "done"}) + "\n"
-                            
-                    try:
-                        if bond_obj:
                             c_hist = cached_profile.get('history_raw', {}) if cached_profile else None
                             start_time = time.time()
-                            history = await bond_obj.get_history(cached_history=c_hist, credentials=credentials)
+                            history = await gateway.get_history(bond_id, cached_history=c_hist)
                             duration = time.time() - start_time
                             logger.info(f"Historical data fetch took {duration:.2f}s")
-                        else:
-                            history = {}
-                    except Exception as e:
-                        logger.error(f"Error fetching history: {e}")
-                        history = {}
-
-                    # Calculate precise averages using the domain calculator
-                    for sem, subjects in history.items():
-                        unique_subjects = []
-                        seen_names = set()
-                        for subj in subjects:
-                            if subj['name'] in seen_names:
-                                continue
-                            seen_names.add(subj['name'])
-                            try:
-                                res = calculator.calculate(subj.get('grades', []))
-                                subj['final_grade'] = res.average
-                                subj['status_dict'] = res.to_dict()
-                                logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
-                            except Exception as e:
-                                logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
-                            unique_subjects.append(subj)
-                        history[sem] = unique_subjects
-
-                    total_grades = []
-                    best_grade = 0
-                    best_subject = "-"
-                    semesters_data = []
-                    for sem, subjects in history.items():
-                        sem_grades = []
-                        for subj in subjects:
-                            grade = subj.get('final_grade')
-                            if grade is not None:
-                                sem_grades.append(grade)
-                                total_grades.append(grade)
-                                if grade > best_grade:
-                                    best_grade = grade
-                                    best_subject = subj.get('name')
-                        sem_avg = sum(sem_grades)/len(sem_grades) if sem_grades else 0
-                        if sem_grades:
-                            semesters_data.append({
-                                "semester": sem,
-                                "average": round(sem_avg, 2),
-                                "count": len(sem_grades)
-                            })
-                    general_avg = sum(total_grades)/len(total_grades) if total_grades else 0
-                    profile_data = {
-                        "general_average": round(general_avg, 2),
-                        "best_subject": best_subject,
-                        "best_grade": best_grade,
-                        "semesters": semesters_data,
-                        "history_raw": history
-                    }
-                    if has_linked_account and active_account_id:
-                        try:
-                            cipher = get_cipher_suite()
-                            json_str = json.dumps(profile_data)
-                            encrypted_data = cipher.encrypt(json_str.encode('utf-8')).decode('utf-8')
-                            
-                            async with db_session() as s:
-                                db_account = await s.get(LinkedAccount, active_account_id)
-                                if db_account:
-                                    db_account.history_json = encrypted_data
-                                    db_account.history_updated_at = datetime.utcnow()
-                                    await s.commit()
-                                    logger.info("Successfully persisted history_json in stream_grades")
                         except Exception as e:
-                            logger.error(f"Failed to cache history in stream_grades: {e}")
+                            logger.error(f"Error fetching history: {e}")
+                            history = {}
 
-                    yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
-                
-                # Final sync end
+                                                                                
+                        for sem, subjects in history.items():
+                            unique_subjects = []
+                            seen_names = set()
+                            for subj in subjects:
+                                if subj['name'] in seen_names:
+                                    continue
+                                seen_names.add(subj['name'])
+                                try:
+                                    res = calculator.calculate(subj.get('grades', []))
+                                    subj['final_grade'] = res.average
+                                    subj['status_dict'] = res.to_dict()
+                                    logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
+                                except Exception as e:
+                                    logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
+                                unique_subjects.append(subj)
+                            history[sem] = unique_subjects
+
+                        total_grades = []
+                        best_grade = 0
+                        best_subject = "-"
+                        semesters_data = []
+                        for sem, subjects in history.items():
+                            sem_grades = []
+                            for subj in subjects:
+                                grade = subj.get('final_grade')
+                                if grade is not None:
+                                    sem_grades.append(grade)
+                                    total_grades.append(grade)
+                                    if grade > best_grade:
+                                        best_grade = grade
+                                        best_subject = subj.get('name')
+                            sem_avg = sum(sem_grades)/len(sem_grades) if sem_grades else 0
+                            if sem_grades:
+                                semesters_data.append({
+                                    "semester": sem,
+                                    "average": round(sem_avg, 2),
+                                    "count": len(sem_grades)
+                                })
+                        general_avg = sum(total_grades)/len(total_grades) if total_grades else 0
+                        profile_data = {
+                            "general_average": round(general_avg, 2),
+                            "best_subject": best_subject,
+                            "best_grade": best_grade,
+                            "semesters": semesters_data,
+                            "history_raw": history
+                        }
+                        profile_data = _scrub_active_semester_from_cache(profile_data)
+                        if has_linked_account and active_account_id:
+                            try:
+                                cipher = get_cipher_suite()
+                                json_str = json.dumps(profile_data)
+                                encrypted_data = cipher.encrypt(json_str.encode('utf-8')).decode('utf-8')
+
+                                async with db_session() as s:
+                                    db_account = await s.get(LinkedAccount, active_account_id)
+                                    if db_account:
+                                        db_account.history_json = encrypted_data
+                                        db_account.history_updated_at = datetime.utcnow()
+                                        await s.commit()
+                                        logger.info("Successfully persisted history_json in stream_grades")
+                            except Exception as e:
+                                logger.error(f"Failed to cache history in stream_grades: {e}")
+
+                        yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
+
+                                                                            
+                                                                 
                 yield json.dumps({"type": "sync_end"}) + "\n"
-        except SigaaQuestionnaireError as e:
+        except SigaaQuestionnaire as e:
             logger.warning(f"Stream blocked by questionnaire: {e}")
-            yield json.dumps({"error": "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.", "is_questionnaire": True}) + "\n"
+            yield json.dumps({"error": QUESTIONNAIRE_MESSAGE, "is_questionnaire": True}) + "\n"
+        except SigaaSessionExpired:
+            logger.info("Stream interrompido: sessão do SIGAA expirada.")
+            yield json.dumps({"error": "Session expired", "session_expired": True}) + "\n"
         except Exception as e:
             err_msg = str(e)
             logger.error(f"Stream error: {err_msg}")
@@ -916,13 +807,17 @@ async def stream_grades():
                 yield json.dumps({"error": "Session expired", "session_expired": True}) + "\n"
             else:
                 yield json.dumps({"error": "Erro no carregamento dos dados."}) + "\n"
-        finally: await sigaa.close()
 
     return Response(async_generate(), mimetype='application/x-ndjson')
 
 
 @bp.route('/logout')
 async def logout():
+                                                                     
+                                                                 
+    gateway = await _get_gateway()
+    if gateway is not None:
+        await gateway.logout()
     session.clear()
     return redirect(url_for('main.login'))
 
@@ -937,18 +832,18 @@ async def admin():
     total_users = await g.db_session.scalar(select(func.count()).select_from(User))
     total_linked_accounts = await g.db_session.scalar(select(func.count()).select_from(LinkedAccount))
 
-    # Users with at least one linked account
+                                            
     users_with_accounts = await g.db_session.scalar(
         select(func.count(distinct(LinkedAccount.user_id)))
     )
 
-    # Percentage of active users (users with accounts)
+                                                      
     active_percentage = round((users_with_accounts / total_users * 100) if total_users > 0 else 0, 1)
 
-    # Average accounts per user (only counting users who have at least one account)
+                                                                                   
     avg_accounts = round((total_linked_accounts / users_with_accounts) if users_with_accounts > 0 else 0, 1)
 
-    # Count by institution
+                          
     result = await g.db_session.execute(
         select(LinkedAccount.institution, func.count(LinkedAccount.id))
         .group_by(LinkedAccount.institution)
@@ -964,14 +859,14 @@ async def admin():
         'institutions': dict(inst_counts)
     }
 
-    # Fetch all users for the detailed list, masking sensitive data
+                                                                   
     result2 = await g.db_session.execute(select(User).order_by(User.id.desc()))
     all_users = result2.scalars().all()
     user_list = []
     for u in all_users:
         accounts = []
         for acc in u.linked_accounts:
-            # Mask username (e.g., show only first 3 and last 2 characters)
+                                                                           
             masked_username = acc.username[:3] + "***" + acc.username[-2:] if len(acc.username) > 5 else "***"
             accounts.append({
                 'institution': acc.institution,
@@ -987,17 +882,16 @@ async def admin():
 
     return await render_template('admin.html', user=user, stats=stats, user_list=user_list)
 
-# ----------------- MATRICULA ONLINE ROUTE ENDPOINTS -----------------
+                                                                      
 @bp.route('/api/matricula/status')
 async def api_matricula_status():
-    cookies = session.get('sigaa_cookies')
-    if not cookies:
+    if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
     is_dev = os.environ.get('IS_DEV', '0') == '1'
     
     if is_dev:
-        # Emulation mode
+                        
         try:
             from .sigaa_api.enrollment_parser import parse_enrollment_page
             ufal_dir = os.path.join(
@@ -1007,7 +901,7 @@ async def api_matricula_status():
                 selecao_body = f.read()
                 
             levels = parse_enrollment_page(selecao_body)
-            # Save mock state
+                             
             session['mock_view_state'] = 'mock_view_state_123'
             return jsonify({
                 "is_dev": True,
@@ -1020,46 +914,33 @@ async def api_matricula_status():
             return jsonify({"error": f"Erro na emulação: {str(e)}"}), 500
             
     else:
-        # Live SIGAA mode
-        url = session.get('sigaa_url', SIGAA_URL)
-        inst_str = session.get('sigaa_inst', 'IFAL')
-        try:
-            inst_type = InstitutionType[inst_str]
-        except KeyError:
-            inst_type = InstitutionType.IFAL
-
-        async def fetch_enrollment():
-            sigaa = Sigaa(url, inst_type, cookies=cookies)
-            try:
-                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-                if "login" in response.url.path:
-                    return {"error": "Session expired", "status": 401}
-                from .sigaa_api.account import Account
-                account = Account(sigaa.session, response)
-                if not account.active_bonds:
-                    return {"error": "No active bonds", "status": 404}
-                bond = account.active_bonds[0]
-                result = await bond.get_enrollment_disciplines()
-                return {"result": result, "status": 200}
-            finally:
-                await sigaa.close()
+                         
+        gateway = await _get_gateway()
+        if gateway is None:
+            return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
         try:
-            res = await fetch_enrollment()
-            if res["status"] != 200:
-                if res["status"] == 401:
-                    session.pop('sigaa_cookies', None)
-                return jsonify({"error": res["error"], "session_expired": res["status"] == 401}), res["status"]
-            
-            result = res["result"]
-            # Save view state in session for submission
-            session['sigaa_view_state'] = result["view_state"]
+            async with gateway.scope():
+                bonds = _active_student_bonds(await gateway.get_bonds())
+                if not bonds:
+                    return jsonify({"error": "No active bonds"}), 404
+                bond_id = bonds[0]['bond_id']
+                result = await gateway.get_enrollment(bond_id)
+                                                                    
+                                                                      
+            session['sigaa_enrollment_bond'] = bond_id
+            _save_gateway(gateway)
             return jsonify({
                 "is_dev": False,
-                "levels": result["levels"],
-                "view_state": result["view_state"],
+                "levels": result.get("levels"),
+                "view_state": result.get("view_state"),
                 "status": "success"
             })
+        except SigaaSessionExpired:
+            _clear_sigaa_session()
+            return jsonify({"error": "Session expired", "session_expired": True}), 401
+        except SigaaQuestionnaire:
+            return jsonify({"error": QUESTIONNAIRE_MESSAGE, "is_questionnaire": True}), 403
         except Exception as e:
             logger.error(f"Error loading live matricula: {e}")
             return jsonify({"error": f"Erro ao acessar o SIGAA: {str(e)}"}), 500
@@ -1067,22 +948,20 @@ async def api_matricula_status():
 
 @bp.route('/api/matricula/submit', methods=['POST'])
 async def api_matricula_submit():
-    cookies = session.get('sigaa_cookies')
-    if not cookies:
+    if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
     is_dev = os.environ.get('IS_DEV', '0') == '1'
     data = (await request.get_json()) or {}
     selected_class_ids = data.get('selected_class_ids', [])
-    view_state = data.get('view_state') or session.get('sigaa_view_state') or session.get('mock_view_state')
-    
+
     if not selected_class_ids:
         return jsonify({"error": "Nenhuma turma selecionada"}), 400
 
     if is_dev:
-        # Emulation mode
+                        
         try:
-            # Load debug confirm_page
+                                     
             tests_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tests")
             confirm_path = os.path.join(tests_dir, "confirm_page_debug.html")
             
@@ -1102,40 +981,26 @@ async def api_matricula_submit():
             logger.error(f"Error submitting mock matricula: {e}")
             return jsonify({"error": f"Erro na emulação: {str(e)}"}), 500
     else:
-        # Live SIGAA mode
-        url = session.get('sigaa_url', SIGAA_URL)
-        inst_str = session.get('sigaa_inst', 'IFAL')
-        try:
-            inst_type = InstitutionType[inst_str]
-        except KeyError:
-            inst_type = InstitutionType.IFAL
-
-        async def post_enrollment():
-            sigaa = Sigaa(url, inst_type, cookies=cookies)
-            try:
-                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-                from .sigaa_api.account import Account
-                account = Account(sigaa.session, response)
-                bond = account.active_bonds[0]
-                confirm_page = await bond.submit_enrollment(selected_class_ids, view_state)
-                return {
-                    "html": confirm_page.body,
-                    "view_state": confirm_page.view_state,
-                    "status": 200
-                }
-            finally:
-                await sigaa.close()
+                         
+        gateway = await _get_gateway()
+        bond_id = session.get('sigaa_enrollment_bond')
+        if gateway is None:
+            return jsonify({"error": "Unauthorized", "session_expired": True}), 401
+        if not bond_id:
+            return jsonify({"error": "Consulte as turmas disponíveis antes de submeter."}), 409
 
         try:
-            res = await post_enrollment()
-            session['sigaa_confirm_view_state'] = res["view_state"]
-            session['sigaa_confirm_page_body'] = res["html"]
+            res = await gateway.submit_enrollment(bond_id, selected_class_ids)
+            _save_gateway(gateway)
             return jsonify({
                 "is_dev": False,
-                "html": res["html"],
-                "view_state": res["view_state"],
+                "html": res.get("html"),
+                "view_state": res.get("view_state"),
                 "status": "success"
             })
+        except SigaaSessionExpired:
+            _clear_sigaa_session()
+            return jsonify({"error": "Session expired", "session_expired": True}), 401
         except Exception as e:
             logger.error(f"Error submitting live matricula: {e}")
             return jsonify({"error": f"Erro ao submeter ao SIGAA: {str(e)}"}), 500
@@ -1143,8 +1008,7 @@ async def api_matricula_submit():
 
 @bp.route('/api/matricula/confirm', methods=['POST'])
 async def api_matricula_confirm():
-    cookies = session.get('sigaa_cookies')
-    if not cookies:
+    if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
     is_dev = os.environ.get('IS_DEV', '0') == '1'
@@ -1155,7 +1019,7 @@ async def api_matricula_confirm():
         return jsonify({"error": "Senha é obrigatória para confirmação"}), 400
 
     if is_dev:
-        # Emulation mode
+                        
         if password == "erro":
             return jsonify({
                 "status": "error",
@@ -1167,43 +1031,18 @@ async def api_matricula_confirm():
                 "message": "Matrícula realizada com sucesso! (Emulado)"
             })
     else:
-        # Live SIGAA mode
-        url = session.get('sigaa_url', SIGAA_URL)
-        inst_str = session.get('sigaa_inst', 'IFAL')
-        try:
-            inst_type = InstitutionType[inst_str]
-        except KeyError:
-            inst_type = InstitutionType.IFAL
-
-        confirm_view_state = session.get('sigaa_confirm_view_state')
-        confirm_page_body = session.get('sigaa_confirm_page_body')
-        
-        if not confirm_view_state or not confirm_page_body:
+                         
+        gateway = await _get_gateway()
+        bond_id = session.get('sigaa_enrollment_bond')
+        if gateway is None:
+            return jsonify({"error": "Unauthorized", "session_expired": True}), 401
+        if not bond_id:
             return jsonify({"error": "Sessão inválida ou expirada"}), 400
 
-        async def finalize_enrollment():
-            sigaa = Sigaa(url, inst_type, cookies=cookies)
-            try:
-                response = await sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-                from .sigaa_api.account import Account
-                account = Account(sigaa.session, response)
-                bond = account.active_bonds[0]
-                
-                # 1. Request password page
-                password_page = await bond.request_confirmation_page(confirm_view_state)
-                
-                # 2. Submit password page
-                final_res = await bond.confirm_enrollment(password, password_page.view_state, password_page.body)
-                return {
-                    "html": final_res.body,
-                    "status": 200
-                }
-            finally:
-                await sigaa.close()
-
         try:
-            res = await finalize_enrollment()
-            html = res["html"]
+            res = await gateway.confirm_enrollment(bond_id, password)
+            _save_gateway(gateway)
+            html = res.get("html") or ""
             from bs4 import BeautifulSoup
             soup = BeautifulSoup(html, 'lxml')
             
@@ -1221,6 +1060,9 @@ async def api_matricula_confirm():
                 "status": "success",
                 "message": "Matrícula gravada com sucesso no SIGAA!"
             })
+        except SigaaSessionExpired:
+            _clear_sigaa_session()
+            return jsonify({"error": "Session expired", "session_expired": True}), 401
         except Exception as e:
             logger.error(f"Error finalizing live matricula: {e}")
             return jsonify({"error": f"Erro de confirmação: {str(e)}"}), 500
@@ -1255,11 +1097,11 @@ async def pending_reviews():
     past_courses = set()
     past_professors = set()
 
-    # Extract all courses and professors from history
+                                                     
     for sem, classes in history_raw.items():
         for cls in classes:
             status = cls.get('status', '')
-            # Allow evaluation only if the user has essentially completed or failed the course
+                                                                                              
             if status not in ['Matriculado', 'Cursando', 'Indefinido']:
                 c_name = cls.get('name')
                 p_name = cls.get('professor')
@@ -1269,7 +1111,7 @@ async def pending_reviews():
                 if p_name and p_name.strip() and p_name.strip().upper() != "DESCONHECIDO":
                     past_professors.add(p_name.strip().upper())
 
-    # Check which ones are already reviewed (or declined)
+                                                         
     institution = linked_account.institution
 
     result_c = await g.db_session.execute(select(CourseReview).filter_by(user_id=user_id, institution=institution))
@@ -1312,7 +1154,7 @@ async def submit_reviews():
 
     institution = linked_account.institution
     
-    # data format: {"courses": [{"name": "...", "rating": 4.0, "declined": false}], "professors": [...]}
+                                                                                                        
     courses_data = data.get('courses', [])
     professors_data = data.get('professors', [])
 
@@ -1355,7 +1197,7 @@ async def submit_reviews():
 
 @bp.route('/api/reviews/stats', methods=['GET'])
 async def get_review_stats():
-    # Public endpoint (for logged in users) to get average stats
+                                                                
     active_account_id = session.get('active_account_id')
     user_id = session.get('user_id')
     
@@ -1412,3 +1254,47 @@ async def get_review_stats():
             stats['professor'] = None
 
     return jsonify(stats)
+
+
+@bp.route('/delete_account', methods=['POST'])
+async def delete_account():
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('main.login'))
+        
+    async with db_session() as s:
+                           
+        user = await s.get(User, user_id)
+        if not user:
+            session.clear()
+            return redirect(url_for('main.login'))
+            
+                                                                
+        result = await s.execute(select(User).filter_by(email="anonimo@boletimapp.com"))
+        anon_user = result.scalars().first()
+        if not anon_user:
+            anon_user = User(
+                google_id="anonymous_virtual_account",
+                email="anonimo@boletimapp.com",
+                name="Anônimo",
+                profile_pic=None
+            )
+            s.add(anon_user)
+            await s.flush()
+            
+                                              
+        result_cr = await s.execute(select(CourseReview).filter_by(user_id=user_id))
+        for cr in result_cr.scalars().all():
+            cr.user_id = anon_user.id
+            
+                                                 
+        result_pr = await s.execute(select(ProfessorReview).filter_by(user_id=user_id))
+        for pr in result_pr.scalars().all():
+            pr.user_id = anon_user.id
+            
+                                                                            
+        await s.delete(user)
+        await s.commit()
+        
+    session.clear()
+    return redirect(url_for('main.login'))
