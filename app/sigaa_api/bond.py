@@ -243,12 +243,7 @@ class StudentBond:
                      if row_status and row_status.strip().lower() in CURRENT_STATUSES:
                          logger.info(f"SIGAA: Skipping '{title}' ({row_status!r}) — detected as current-semester, not history.")
                          continue
-                         
-                     # Deduplicate: if this class is currently active and it's the latest semester, it's not history!
-                     if active_course_titles and title in active_course_titles and current_semester == latest_semester:
-                         logger.info(f"SIGAA: Skipping '{title}' in {current_semester} — it is an active course.")
-                         continue
-                         
+
                      if row_status is None:
                          row_status = "Concluído"
                              

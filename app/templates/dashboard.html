@@ -1573,28 +1573,8 @@
     const CURRENT_USER = {{ session['username']|default ('guest') | tojson }};
     const CACHE_KEY = `grades_${CURRENT_USER}`;
 
-    function cleanProfileData() {
-      if (!profileData || !profileData.history_raw || !profileData.semesters) return;
-      const activeData = (typeof data !== 'undefined' && data.length > 0) ? data : ((typeof liveData !== 'undefined' && liveData.length > 0) ? liveData : []);
-      if (activeData.length > 0 && profileData.semesters.length > 0) {
-        let sems = profileData.semesters.map(s => s.semester).sort().reverse();
-        const highestSem = sems[0];
-        const activeClassNames = activeData.map(d => d.name.trim().toLowerCase());
-        const histClasses = profileData.history_raw[highestSem] || [];
-        const hasOverlap = histClasses.some(hc => {
-           const hcName = hc.name.trim().toLowerCase();
-           return activeClassNames.some(ac => ac.includes(hcName) || hcName.includes(ac));
-        });
-        if (hasOverlap) {
-           profileData.semesters = profileData.semesters.filter(s => s.semester !== highestSem);
-           delete profileData.history_raw[highestSem];
-        }
-      }
-    }
-
 
     function applyMobileLayout() {
-      // Mobile layout is now default for all screen sizes
       document.body.classList.add('mobile-layout');
     }
     applyMobileLayout();
@@ -1839,6 +1819,13 @@
 
     function renderMatriculaSelection() {
       const listContainer = document.getElementById('matricula-levels-list');
+      if (!listContainer._equivBound) {
+        listContainer._equivBound = true;
+        listContainer.addEventListener('click', (event) => {
+          const btn = event.target.closest('[data-equiv-code]');
+          if (btn) showEquivalents(btn.dataset.equivCode, btn.dataset.equivPayload);
+        });
+      }
       listContainer.innerHTML = '';
       
       if (matriculaLevels.length === 0) {
@@ -1849,7 +1836,7 @@
       matriculaLevels.forEach(level => {
         const levelDiv = document.createElement('div');
         levelDiv.style.marginBottom = '24px';
-        levelDiv.innerHTML = `<h4 style="color:var(--accent); font-weight:800; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px;">${level.level}</h4>`;
+        levelDiv.innerHTML = `<h4 style="color:var(--accent); font-weight:800; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px;">${escapeHtml(level.level)}</h4>`;
 
         level.disciplines.forEach(disc => {
           const discDiv = document.createElement('div');
@@ -1857,11 +1844,11 @@
 
           // Equivalents trigger JS
           const equivBtnHtml = disc.equiv_onclick ? 
-            `<button class="m-btn m-btn-secondary" style="padding:4px 8px; font-size:11px; border-radius:8px;" onclick="showEquivalents('${disc.code}', '${disc.equiv_onclick.replace(/'/g, "\\'")}')">🔗 Equivalentes</button>` : '';
+            `<button class="m-btn m-btn-secondary" style="padding:4px 8px; font-size:11px; border-radius:8px;" data-equiv-code="${escapeHtml(disc.code)}" data-equiv-payload="${escapeHtml(disc.equiv_onclick)}">🔗 Equivalentes</button>` : '';
 
           discDiv.innerHTML = `
             <div class="m-disc-title">
-              <span>${disc.code} - ${disc.name}</span>
+              <span>${escapeHtml(disc.code)} - ${escapeHtml(disc.name)}</span>
               ${equivBtnHtml}
             </div>
             <div class="m-classes-list"></div>
@@ -1879,9 +1866,9 @@
             classItem.innerHTML = `
               <div class="m-class-chk"></div>
               <div class="m-class-details">
-                <div class="m-class-code">${cls.class_code}</div>
-                <div class="m-class-info"><strong>Prof:</strong> ${cls.teacher || 'A definir'}</div>
-                <div class="m-class-info"><strong>Horário:</strong> ${cls.schedule} | <strong>Local:</strong> ${cls.location || 'A definir'}</div>
+                <div class="m-class-code">${escapeHtml(cls.class_code)}</div>
+                <div class="m-class-info"><strong>Prof:</strong> ${escapeHtml(cls.teacher || 'A definir')}</div>
+                <div class="m-class-info"><strong>Horário:</strong> ${escapeHtml(cls.schedule)} | <strong>Local:</strong> ${escapeHtml(cls.location || 'A definir')}</div>
               </div>
             `;
             classesList.appendChild(classItem);
@@ -2007,7 +1994,7 @@
         const item = findClassById(id);
         if (item) {
           const div = document.createElement('div');
-          div.innerHTML = `• ${item.disc.code} - ${item.cls.class_code} (${item.cls.schedule})`;
+          div.innerHTML = `• ${escapeHtml(item.disc.code)} - ${escapeHtml(item.cls.class_code)} (${escapeHtml(item.cls.schedule)})`;
           listEl.appendChild(div);
         }
       });
@@ -2155,7 +2142,7 @@
             });
 
             if (occupiedClass) {
-              tableHtml += `<td class="m-timetable-slot-active" title="${occupiedDisc.name}">${occupiedDisc.code}</td>`;
+              tableHtml += `<td class="m-timetable-slot-active" title="${escapeHtml(occupiedDisc.name)}">${escapeHtml(occupiedDisc.code)}</td>`;
             } else {
               tableHtml += `<td>---</td>`;
             }
@@ -2364,7 +2351,7 @@
         else if (msg.is_questionnaire) {
           const strip = document.getElementById('m-alert-strip');
           if (strip) {
-            strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${msg.error}`;
+            strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${escapeHtml(msg.error)}`;
             strip.style.background = 'rgba(250,204,21,0.1)';
             strip.style.borderLeftColor = '#facc15';
             strip.style.color = '#facc15';
@@ -2640,7 +2627,7 @@
             erroMsg = j.error;
             const strip = document.getElementById('m-alert-strip');
             if (strip) {
-              strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${erroMsg}`;
+              strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${escapeHtml(erroMsg)}`;
               strip.style.background = 'rgba(250,204,21,0.1)';
               strip.style.borderLeftColor = '#facc15';
               strip.style.color = '#facc15';
@@ -2670,8 +2657,24 @@
       }
     }
 
+    function _bindFrequencyHandlers(container) {
+      if (container._freqBound) return;
+      container._freqBound = true;
+      container.addEventListener('click', (event) => {
+        const toggle = event.target.closest('[data-freq-toggle]');
+        if (toggle) { toggleFreqDetails(toggle.dataset.freqToggle); return; }
+        const help = event.target.closest('[data-freq-help]');
+        if (help) {
+          const d = help.dataset;
+          showFreqHelp(d.fhName, Number(d.fhTf), Number(d.fhMf), Number(d.fhP),
+                       Number(d.fhNr), Number(d.fhAf), Number(d.fhPs), event);
+        }
+      });
+    }
+
     function renderFrequency() {
       const container = document.getElementById('frequency-container');
+      _bindFrequencyHandlers(container);
       container.innerHTML = '';
 
       if (isHistoryMode) {
@@ -2798,7 +2801,7 @@
  
               logsHtml = `
                 <div style="margin-top:16px; border-top: 1px solid var(--border); padding-top:12px;">
-                  <button onclick="toggleFreqDetails('${item.id}')" style="background:none; border:none; width:100%; display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:11px; font-weight:700; text-transform:uppercase; cursor:pointer; padding:6px 0; outline:none; transition: color 0.2s;">
+                  <button data-freq-toggle="${item.id}" style="background:none; border:none; width:100%; display:flex; justify-content:space-between; align-items:center; color:var(--text-muted); font-size:11px; font-weight:700; text-transform:uppercase; cursor:pointer; padding:6px 0; outline:none; transition: color 0.2s;">
                     <span>Detalhamento Diário</span>
                     <span id="freq-arrow-${item.id}" style="font-size:12px; transition: transform 0.3s ease;">▼</span>
                   </button>
@@ -2817,7 +2820,7 @@
               <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; display:flex; align-items:center; gap:4px;">
                 <span>Faltas / Limite</span>
                 <span class="help-icon-style" style="display:inline-flex; align-items:center; justify-content:center; width:12px; height:12px; border-radius:50%; border:1px solid var(--text-muted); font-size:9px; font-weight:800; color:var(--text-muted); cursor:pointer; user-select:none; line-height:1; transition:all 0.2s;" 
-                      onclick="showFreqHelp('${escapeHtml(item.name)}', ${total_faltas ?? 0}, ${max_faltas ?? 0}, ${safePresencas}, ${safeNaoReg}, ${aulas_futuras}, ${perSession}, event)" 
+                      data-freq-help="1" data-fh-name="${escapeHtml(item.name)}" data-fh-tf="${total_faltas ?? 0}" data-fh-mf="${max_faltas ?? 0}" data-fh-p="${safePresencas}" data-fh-nr="${safeNaoReg}" data-fh-af="${aulas_futuras}" data-fh-ps="${perSession}" 
                       title="Como funciona o cálculo?">?</span>
               </div>
               <div style="font-size:20px; font-weight:900; color:#fff; margin-top:2px;">
@@ -2846,7 +2849,7 @@
         `;
         }
         div.innerHTML = `
-          <div class="row-top" onclick="toggleFreqDetails('${item.id}')" style="cursor:pointer; user-select:none;">
+          <div class="row-top" data-freq-toggle="${item.id}" style="cursor:pointer; user-select:none;">
             <div class="subj-name">${escapeHtml(item.name)}</div>
           </div>
           ${freqContent}
@@ -2925,7 +2928,7 @@
             if (errData.is_questionnaire) {
               const strip = document.getElementById('m-alert-strip');
               if (strip) {
-                strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${errData.error}`;
+                strip.innerHTML = `⚠️ <strong>Atenção:</strong> ${escapeHtml(errData.error)}`;
                 strip.style.background = 'rgba(250,204,21,0.1)';
                 strip.style.borderLeftColor = '#facc15';
                 strip.style.color = '#facc15';
@@ -2946,7 +2949,12 @@
           dropdownEl.style.display = 'inline-block';
           contentEl.innerHTML = '<button onclick="switchSemester(\'Atual\')">Atual</button>';
           profileData.semesters.map(s => s.semester).sort().reverse().forEach(sem => {
-            if (!sem.includes('(Atual)')) contentEl.innerHTML += `<button onclick="switchSemester('${sem}')">${sem}</button>`;
+            if (!sem.includes('(Atual)')) {
+              const semBtn = document.createElement('button');
+              semBtn.textContent = sem;
+              semBtn.addEventListener('click', () => switchSemester(sem));
+              contentEl.appendChild(semBtn);
+            }
           });
         };
         populateSems(document.getElementById('semDropdown'), document.getElementById('semDropdownContent'));
@@ -3004,13 +3012,21 @@
       if (!mDrop || !mContent || !profileData || !profileData.history_raw) return;
       mDrop.style.display = 'inline-block';
       const current = activeSem || 'Atual';
-      let html = `<button onclick="switchSemesterM('Atual')" class="${current === 'Atual' ? 'sem-active' : ''}">Atual</button>`;
+      mContent.innerHTML = '';
+      const atualBtn = document.createElement('button');
+      atualBtn.textContent = 'Atual';
+      atualBtn.className = current === 'Atual' ? 'sem-active' : '';
+      atualBtn.addEventListener('click', () => switchSemesterM('Atual'));
+      mContent.appendChild(atualBtn);
       profileData.semesters.map(s => s.semester).sort().reverse().forEach(sem => {
         if (!sem.includes('(Atual)')) {
-          html += `<button onclick="switchSemesterM('${sem}')" class="${current === sem ? 'sem-active' : ''}">${sem}</button>`;
+          const btn = document.createElement('button');
+          btn.textContent = sem;
+          btn.className = current === sem ? 'sem-active' : '';
+          btn.addEventListener('click', () => switchSemesterM(sem));
+          mContent.appendChild(btn);
         }
       });
-      mContent.innerHTML = html;
     }
 
     function switchSemesterM(sem) {

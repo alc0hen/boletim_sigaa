@@ -8,28 +8,24 @@ from datetime import timedelta
 from dotenv import load_dotenv
 load_dotenv()
 from .logger_config import setup_logging, format_http_start, format_http_end
+from .security import is_production, load_secret_key
 
 
 def create_app():
-    is_prod = os.environ.get('Render') or os.environ.get('FLASK_ENV') == 'production'
-    
+
+    is_prod = is_production()
+
     # Configure global logging (centralizado em logger_config.py)
     setup_logging(is_prod)
-    
+
     app = Quart(__name__)
-    if is_prod:
-        if not os.environ.get('SECRET_KEY'):
-            raise ValueError("SECRET_KEY environment variable is required in production!")
-        app.secret_key = os.environ.get('SECRET_KEY')
-        app.config['SESSION_COOKIE_SECURE'] = True
-        app.config['REMEMBER_COOKIE_SECURE'] = True
-    else:
-        app.secret_key = os.environ.get('SECRET_KEY', 'dev_secret_key')
-        app.config['SESSION_COOKIE_SECURE'] = False
-        app.config['REMEMBER_COOKIE_SECURE'] = False
+    app.secret_key = load_secret_key()
+    app.config['SESSION_COOKIE_SECURE'] = is_prod
+    app.config['REMEMBER_COOKIE_SECURE'] = is_prod
     app.config['SESSION_COOKIE_HTTPONLY'] = True
     app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=1)
+    app.config['SESSION_PERMANENT'] = True
 
     # Database configuration
     database_url = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
@@ -57,12 +53,19 @@ def create_app():
         return dict(csrf_token=generate_csrf_token, app_version=app_version)
 
     @app.before_request
+    async def enforce_session_lifetime():
+        from quart import session
+        session.permanent = True
+
+    @app.before_request
     async def check_csrf():
         from quart import request, session, abort
-        if request.method in ('POST', 'PUT', 'DELETE'):
+        import hmac
+        if request.method in ('POST', 'PUT', 'PATCH', 'DELETE'):
             form = await request.form
             token = form.get('csrf_token') or request.headers.get('X-CSRFToken')
-            if not token or token != session.get('_csrf_token'):
+            expected = session.get('_csrf_token')
+            if not token or not expected or not hmac.compare_digest(str(token), str(expected)):
                 abort(403)
 
     # Register blueprint
@@ -78,7 +81,9 @@ def create_app():
         app.logger.info(f"⚙️ Sistema de API configurado (SIGAA_BACKEND): {backend_pref.upper()}")
 
         from .sigaa_remote import is_configured, get_client
-        if is_configured():
+        if backend_pref == 'local':
+            app.logger.info("🏠 Backend local forçado. Ignorando configuração da API Remota e conexões de teste.")
+        elif is_configured():
             app.logger.info("📡 API Remota configurada. Testando comunicação...")
             client = get_client()
             if client:
@@ -117,8 +122,21 @@ def create_app():
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self';"
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
+            "img-src 'self' data: https://lh3.googleusercontent.com; "
+            "connect-src 'self'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "object-src 'none'; "
+            "frame-ancestors 'self'"
+        )
         response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=(), payment=()'
         return response
 
     # ── Middleware de logging HTTP ────────────────────────────
@@ -146,6 +164,11 @@ def create_app():
     @app.errorhandler(Exception)
     async def handle_unhandled_exception(exc):
         from quart import request as req, jsonify
+        from werkzeug.exceptions import HTTPException
+
+        if isinstance(exc, HTTPException):
+            return exc
+
         http_log.error(
             f"❌ Exceção não tratada em {req.method} {req.path}\n"
             + traceback.format_exc()
