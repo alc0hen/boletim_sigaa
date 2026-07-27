@@ -14,9 +14,11 @@ from .sigaa_gateway import (
 from .domain.factory import CalculatorFactory
 from .demo_data import get_demo_data
 from .extensions import db_session, google_oauth, generate_csrf_token
+from .security import RateLimiter, is_dev_emulation, sanitize_for_log
 from sqlalchemy import select, func, distinct
 from .models import User, LinkedAccount, CourseReview, ProfessorReview, get_cipher_suite
 import asyncio
+import hmac
 from .cache import get as cache_get, set as cache_set
 import json
 import os
@@ -33,6 +35,55 @@ QUESTIONNAIRE_MESSAGE = (
     "Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. "
     "Acesse o SIGAA para respondê-lo e tente novamente."
 )
+
+_login_limiter = RateLimiter(max_attempts=8, window_seconds=300)
+_data_limiter = RateLimiter(max_attempts=12, window_seconds=60)
+
+
+def _client_ip() -> str:
+    """IP do cliente, considerando o proxy reverso da hospedagem."""
+    forwarded = request.headers.get('X-Forwarded-For', '')
+    if forwarded:
+        return forwarded.split(',')[0].strip()
+    return request.remote_addr or 'desconhecido'
+
+
+def _rate_limited(limiter: RateLimiter, key: str):
+    """Retorna os segundos de espera, ou 0 se a requisição é permitida."""
+    return limiter.check(key)
+
+
+_RATING_MIN = 1.0
+_RATING_MAX = 5.0
+_MAX_REVIEW_NAME = 255
+_MAX_REVIEWS_PER_REQUEST = 200
+
+
+def _parse_rating(value):
+    """Valida a nota. Retorna (ok, valor) — valor None significa 'sem nota'."""
+    if value is None:
+        return True, None
+    try:
+        rating = float(value)
+    except (TypeError, ValueError):
+        return False, None
+    # math.isfinite rejeita NaN e ±Infinity de uma vez.
+    import math
+    if not math.isfinite(rating):
+        return False, None
+    if not (_RATING_MIN <= rating <= _RATING_MAX):
+        return False, None
+    return True, round(rating, 2)
+
+
+def _parse_review_name(value):
+    """Normaliza e valida o nome de disciplina/professor enviado pelo cliente."""
+    if not isinstance(value, str):
+        return None
+    name = value.strip()
+    if not name or len(name) > _MAX_REVIEW_NAME:
+        return None
+    return name
 
 
 def _inst_type(inst_str=None):
@@ -120,14 +171,25 @@ async def index():
 async def login():
     if request.method == 'POST':
         form = await request.form
-        username = form['username']
-        password = form['password']
+        username = form.get('username', '')
+        password = form.get('password', '')
         institution_str = form.get('institution', 'IFAL')
+
+        if not username or not password:
+            return await render_template('login.html', error="Informe usuário e senha.")
+
+        retry_after = _rate_limited(_login_limiter, f"login:{_client_ip()}")
+        if retry_after:
+            logger.warning(f"Rate limit de login atingido para o IP {sanitize_for_log(_client_ip())}")
+            return await render_template(
+                'login.html',
+                error=f"Muitas tentativas de login. Aguarde {int(retry_after) + 1} segundos e tente novamente.",
+            ), 429
 
         try:
             url = resolve_sigaa_url(institution_str, form.get('sigaa_url'))
         except SigaaInstitutionError as e:
-            logger.warning(f"Login recusado por instituição/URL inválida: {e}")
+            logger.warning(f"Login recusado por instituição/URL inválida: {sanitize_for_log(e)}")
             return await render_template('login.html', error="Instituição inválida. Selecione uma das opções da lista.")
 
         try:
@@ -135,20 +197,28 @@ async def login():
                 url, institution_str, username, password,
                 credentials={'username': username, 'password': password},
             )
+            _login_limiter.reset(f"login:{_client_ip()}")
             _save_gateway(gateway)
             session['username'] = username
             cipher = get_cipher_suite()
-            session['sigaa_temp_password'] = cipher.encrypt(password.encode('utf-8')).decode('utf-8')                                                         
+            session['sigaa_temp_password'] = cipher.encrypt(password.encode('utf-8')).decode('utf-8')
             try:
                 async with db_session() as s:
-                    result = await s.execute(
-                        select(LinkedAccount).filter_by(username=username, institution=institution_str)
+                    query = select(LinkedAccount).filter_by(
+                        username=username, institution=institution_str
                     )
+                    session_user_id = session.get('user_id')
+                    if session_user_id:
+                        query = query.filter_by(user_id=session_user_id)
+                    result = await s.execute(query)
                     linked_account = result.scalars().first()
                     if linked_account:
                         session['active_account_id'] = linked_account.id
+                    else:
+                        # Evita herdar o vínculo ativo de um login anterior.
+                        session.pop('active_account_id', None)
             except Exception as e:
-                logger.error(f"Error linking session to account: {e}")
+                logger.error(f"Error linking session to account: {sanitize_for_log(e)}")
             return redirect(url_for('main.dashboard'))
         except SigaaQuestionnaire:
             logger.warning("Login bloqueado por questionário obrigatório do SIGAA.")
@@ -182,15 +252,26 @@ async def authorize_google():
     try:
         code = request.args.get('code')
         state = request.args.get('state')
-        if not code or state != session.pop('oauth_state', None):
+        expected_state = session.pop('oauth_state', None)
+
+        if not code or not state or not expected_state:
+            logger.warning("Callback OAuth rejeitado: code ou state ausente.")
             return redirect(url_for('main.login'))
+        if not hmac.compare_digest(str(state), str(expected_state)):
+            logger.warning("Callback OAuth rejeitado: state não confere.")
+            return redirect(url_for('main.login'))
+
         redirect_uri = url_for('main.authorize_google', _external=True)
         token_data = await google_oauth.exchange_code(code, redirect_uri)
         user_info = await google_oauth.get_userinfo(token_data['access_token'])
-        if not user_info:
+        if not user_info or not user_info.get('sub'):
              return "Falha na autenticação Google (sem info)", 400
+
+        if not user_info.get('email') or not user_info.get('email_verified'):
+            logger.warning("Callback OAuth rejeitado: e-mail do Google não verificado.")
+            return redirect(url_for('main.login'))
     except Exception as e:
-        logger.error(f"Google Auth Error: {e}")
+        logger.error(f"Google Auth Error: {sanitize_for_log(e)}")
         return redirect(url_for('main.login'))
 
     async with db_session() as s:
@@ -241,7 +322,7 @@ async def authorize_google():
                     session['active_account_id'] = new_account.id
                     logger.info(f"Auto-linked SIGAA account {temp_user} ({temp_inst}) to Google user {user.email}")
                 except Exception as e:
-                    logger.error(f"Error auto-linking account: {e}")
+                    logger.error(f"Error auto-linking account: {sanitize_for_log(e)}")
                     await s.rollback()
             else:
                 session['active_account_id'] = existing.id
@@ -391,35 +472,22 @@ async def dashboard():
 
 
 def _scrub_active_semester_from_cache(cached_data):
-    if cached_data and cached_data.get('semesters') and cached_data.get('history_raw'):
-        try:
-            highest_sem = sorted([s['semester'] for s in cached_data['semesters']], reverse=True)[0]
-            hist_classes = cached_data['history_raw'].get(highest_sem, [])
-            final_statuses = ['aprovado', 'reprovado', 'trancado', 'cancelado', 'dispensado']
-            has_final = False
-            for hc in hist_classes:
-                st = hc.get('status', '').strip().lower()
-                if any(fs in st for fs in final_statuses):
-                    has_final = True
-                    break
-            if not has_final:
-                cached_data['semesters'] = [s for s in cached_data['semesters'] if s['semester'] != highest_sem]
-                cached_data['history_raw'].pop(highest_sem, None)
-        except Exception as e:
-            logger.error(f"Error scrubbing active semester: {e}")
+    # Logic removed: bond.py already excludes the active semester and active courses correctly.
+    # Guessing based on hardcoded statuses was erroneously deleting valid previous semesters (e.g., if a status was "Concluído").
     return cached_data
 
 @bp.route('/api/academic_profile')
 async def academic_profile():
 
-    last_req = session.get('last_academic_req', 0)
-    now = time.time()
-    if now - last_req < 5:
-        await asyncio.sleep(5 - (now - last_req))
-    session['last_academic_req'] = time.time()
-
     if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
+
+    retry_after = _rate_limited(_data_limiter, f"profile:{_client_ip()}")
+    if retry_after:
+        return jsonify({
+            "error": "Muitas requisições. Aguarde alguns segundos.",
+            "retry_after": int(retry_after) + 1,
+        }), 429
     force_update = request.args.get('force') == 'true'
     active_account_id = session.get('active_account_id')
     linked_account = None
@@ -608,14 +676,20 @@ async def update_course(course_id):
 @bp.route('/api/stream_grades')
 async def stream_grades():
                                                              
-    last_req = session.get('last_stream_req', 0)
-    now = time.time()
-    if now - last_req < 5:
-        await asyncio.sleep(5 - (now - last_req))
-    session['last_stream_req'] = time.time()
-
     if not session.get('sigaa_state'):
         return Response(json.dumps({"error": "Unauthorized", "session_expired": True}) + "\n", status=401, mimetype='application/x-ndjson')
+
+    retry_after = _rate_limited(_data_limiter, f"stream:{_client_ip()}")
+    if retry_after:
+        return Response(
+            json.dumps({
+                "error": "Muitas requisições. Aguarde alguns segundos.",
+                "retry_after": int(retry_after) + 1,
+            }) + "\n",
+            status=429,
+            mimetype='application/x-ndjson',
+        )
+
     skip_ids = [int(x) for x in request.args.get('skip', '').split(',') if x.strip().isdigit()]
                                      
     inst_type = _inst_type()
@@ -722,7 +796,7 @@ async def stream_grades():
                             duration = time.time() - start_time
                             logger.info(f"Historical data fetch took {duration:.2f}s")
                         except Exception as e:
-                            logger.error(f"Error fetching history: {e}")
+                            logger.error(f"Error fetching history: {sanitize_for_log(e)}")
                             history = {}
 
                                                                                 
@@ -888,7 +962,7 @@ async def api_matricula_status():
     if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
-    is_dev = os.environ.get('IS_DEV', '0') == '1'
+    is_dev = is_dev_emulation()
     
     if is_dev:
                         
@@ -910,8 +984,8 @@ async def api_matricula_status():
                 "status": "success"
             })
         except Exception as e:
-            logger.error(f"Error loading mock matricula: {e}")
-            return jsonify({"error": f"Erro na emulação: {str(e)}"}), 500
+            logger.error(f"Error loading mock matricula: {sanitize_for_log(e)}")
+            return jsonify({"error": "Erro na emulação."}), 500
             
     else:
                          
@@ -942,8 +1016,8 @@ async def api_matricula_status():
         except SigaaQuestionnaire:
             return jsonify({"error": QUESTIONNAIRE_MESSAGE, "is_questionnaire": True}), 403
         except Exception as e:
-            logger.error(f"Error loading live matricula: {e}")
-            return jsonify({"error": f"Erro ao acessar o SIGAA: {str(e)}"}), 500
+            logger.error(f"Error loading live matricula: {sanitize_for_log(e)}")
+            return jsonify({"error": "Erro ao acessar o SIGAA. Tente novamente."}), 500
 
 
 @bp.route('/api/matricula/submit', methods=['POST'])
@@ -951,7 +1025,7 @@ async def api_matricula_submit():
     if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
-    is_dev = os.environ.get('IS_DEV', '0') == '1'
+    is_dev = is_dev_emulation()
     data = (await request.get_json()) or {}
     selected_class_ids = data.get('selected_class_ids', [])
 
@@ -978,8 +1052,8 @@ async def api_matricula_submit():
                 "status": "success"
             })
         except Exception as e:
-            logger.error(f"Error submitting mock matricula: {e}")
-            return jsonify({"error": f"Erro na emulação: {str(e)}"}), 500
+            logger.error(f"Error submitting mock matricula: {sanitize_for_log(e)}")
+            return jsonify({"error": "Erro na emulação."}), 500
     else:
                          
         gateway = await _get_gateway()
@@ -1002,8 +1076,8 @@ async def api_matricula_submit():
             _clear_sigaa_session()
             return jsonify({"error": "Session expired", "session_expired": True}), 401
         except Exception as e:
-            logger.error(f"Error submitting live matricula: {e}")
-            return jsonify({"error": f"Erro ao submeter ao SIGAA: {str(e)}"}), 500
+            logger.error(f"Error submitting live matricula: {sanitize_for_log(e)}")
+            return jsonify({"error": "Erro ao submeter a matrícula ao SIGAA."}), 500
 
 
 @bp.route('/api/matricula/confirm', methods=['POST'])
@@ -1011,7 +1085,7 @@ async def api_matricula_confirm():
     if not session.get('sigaa_state'):
         return jsonify({"error": "Unauthorized", "session_expired": True}), 401
 
-    is_dev = os.environ.get('IS_DEV', '0') == '1'
+    is_dev = is_dev_emulation()
     data = (await request.get_json()) or {}
     password = data.get('password')
     
@@ -1064,8 +1138,8 @@ async def api_matricula_confirm():
             _clear_sigaa_session()
             return jsonify({"error": "Session expired", "session_expired": True}), 401
         except Exception as e:
-            logger.error(f"Error finalizing live matricula: {e}")
-            return jsonify({"error": f"Erro de confirmação: {str(e)}"}), 500
+            logger.error(f"Error finalizing live matricula: {sanitize_for_log(e)}")
+            return jsonify({"error": "Erro ao confirmar a matrícula no SIGAA."}), 500
 
 @bp.route('/api/reviews/pending', methods=['GET'])
 async def pending_reviews():
@@ -1091,7 +1165,7 @@ async def pending_reviews():
         cached_profile = json.loads(decrypted)
         history_raw = cached_profile.get('history_raw', {})
     except Exception as e:
-        logger.error(f"Error parsing history for reviews: {e}")
+        logger.error(f"Error parsing history for reviews: {sanitize_for_log(e)}")
         return jsonify({"courses": [], "professors": []}), 200
 
     past_courses = set()
@@ -1158,34 +1232,49 @@ async def submit_reviews():
     courses_data = data.get('courses', [])
     professors_data = data.get('professors', [])
 
+    if not isinstance(courses_data, list) or not isinstance(professors_data, list):
+        return jsonify({"error": "Invalid payload"}), 400
+    if len(courses_data) + len(professors_data) > _MAX_REVIEWS_PER_REQUEST:
+        return jsonify({"error": "Too many reviews in a single request"}), 400
+
     try:
         for c in courses_data:
-            name = c.get('name')
-            rating = c.get('rating')
-            declined = c.get('declined', False)
-            if not name: continue
-            
+            if not isinstance(c, dict):
+                continue
+            name = _parse_review_name(c.get('name'))
+            if not name:
+                continue
+            ok, rating = _parse_rating(c.get('rating'))
+            if not ok:
+                return jsonify({"error": "Nota inválida: use um valor entre 1 e 5."}), 400
+            declined = bool(c.get('declined', False))
+
             result = await g.db_session.execute(select(CourseReview).filter_by(user_id=user_id, institution=institution, name=name))
             review = result.scalars().first()
             if not review:
                 review = CourseReview(user_id=user_id, institution=institution, name=name)
                 g.db_session.add(review)
-            review.difficulty_rating = float(rating) if rating is not None else None
+            review.difficulty_rating = rating
             review.is_declined = declined
 
         for p in professors_data:
-            name = p.get('name')
-            if name: name = name.strip().upper()
-            rating = p.get('rating')
-            declined = p.get('declined', False)
-            if not name: continue
-            
+            if not isinstance(p, dict):
+                continue
+            name = _parse_review_name(p.get('name'))
+            if not name:
+                continue
+            name = name.upper()
+            ok, rating = _parse_rating(p.get('rating'))
+            if not ok:
+                return jsonify({"error": "Nota inválida: use um valor entre 1 e 5."}), 400
+            declined = bool(p.get('declined', False))
+
             result = await g.db_session.execute(select(ProfessorReview).filter_by(user_id=user_id, institution=institution, name=name))
             review = result.scalars().first()
             if not review:
                 review = ProfessorReview(user_id=user_id, institution=institution, name=name)
                 g.db_session.add(review)
-            review.difficulty_rating = float(rating) if rating is not None else None
+            review.difficulty_rating = rating
             review.is_declined = declined
 
         await g.db_session.commit()

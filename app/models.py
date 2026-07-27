@@ -13,10 +13,12 @@ from functools import lru_cache
 def get_cipher_suite():
     key = os.environ.get('ENCRYPTION_KEY')
     if not key:
-        is_prod = os.environ.get('Render') or os.environ.get('FLASK_ENV') == 'production'
-        if is_prod:
+        from .security import is_production
+        if is_production():
             raise ValueError("ENCRYPTION_KEY environment variable is required in production!")
-        logging.warning("Using an insecure fallback encryption key. Do NOT use this in production!")
+        logging.warning(
+            "⚠️ ENCRYPTION_KEY ausente: usando chave de desenvolvimento INSEGURA. "
+        )
         key = base64.urlsafe_b64encode(b'0'*32)
 
     if isinstance(key, str):
