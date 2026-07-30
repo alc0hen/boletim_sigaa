@@ -19,6 +19,12 @@ def create_app():
     setup_logging(is_prod)
 
     app = Quart(__name__)
+    
+    if not is_prod:
+        app.config['TEMPLATES_AUTO_RELOAD'] = True
+        app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+        app.debug = True
+
     app.secret_key = load_secret_key()
     app.config['SESSION_COOKIE_SECURE'] = is_prod
     app.config['REMEMBER_COOKIE_SECURE'] = is_prod
@@ -142,19 +148,25 @@ def create_app():
     # ── Middleware de logging HTTP ────────────────────────────
     http_log = logging.getLogger('app.http')
 
+    # Rotas de submissão de avaliações anônimas: por design, IP e user_id nunca
+    # são gravados nos logs do servidor para essas requisições.
+    _ANONYMOUS_LOG_PATHS = {'/api/avaliacoes/submeter'}
+
     @app.before_request
     async def log_request_start():
         from quart import request as req, g
         g._req_start = time.perf_counter()
+        is_anonymous_route = req.path in _ANONYMOUS_LOG_PATHS
         http_log.info(format_http_start(
-            req.method, req.path, req.remote_addr or '-'
+            req.method, req.path, '-' if is_anonymous_route else (req.remote_addr or '-')
         ))
 
     @app.after_request
     async def log_request_end(response):
         from quart import request as req, session as sess, g
         elapsed = (time.perf_counter() - getattr(g, '_req_start', time.perf_counter())) * 1000
-        user_id = sess.get('user_id')
+        is_anonymous_route = req.path in _ANONYMOUS_LOG_PATHS
+        user_id = None if is_anonymous_route else sess.get('user_id')
         http_log.info(format_http_end(
             req.method, req.path, response.status_code, elapsed, user_id
         ))

@@ -50,13 +50,13 @@
         <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">{{ user.name }}</h2>
         <p style="margin-bottom: 1.5rem;">{{ user.email }}</p>
         <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
-            <a href="{{ url_for('main.logout') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block;">Sair da Conta</a>
+            <a href="{{ url_for('main.logout') }}" class="btn-secondary" style="font-size: 0.8rem; width: auto; display: inline-block; padding: 6px 12px; margin-top: 0; border-radius: 6px;">Sair da Conta</a>
             <form method="POST" action="{{ url_for('main.delete_account') }}" onsubmit="return confirm('Tem certeza? Isso apagará permanentemente sua conta, todas as suas contas vinculadas do SIGAA e todo o seu cache de histórico. Suas avaliações serão anonimizadas. Esta ação é irreversível.');" style="margin: 0;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block; background: #dc3545; color: #fff; padding: 4px 8px; border-radius: 4px;">Excluir Minha Conta</button>
+                <button type="submit" style="font-size: 0.8rem; width: auto; display: inline-block; background: var(--danger); padding: 6px 12px; border-radius: 6px;">Excluir Conta</button>
             </form>
             {% if user.is_admin %}
-            <a href="{{ url_for('main.admin') }}" class="btn-logout" style="font-size: 0.8rem; letter-spacing: 1px; width: auto; display: inline-block; background: var(--success); color: #fff; padding: 4px 8px; border-radius: 4px;">Painel Admin</a>
+            <a href="{{ url_for('main.admin') }}" class="btn-primary" style="font-size: 0.8rem; width: auto; display: inline-block; background: var(--success); padding: 6px 12px; border-radius: 6px;">Painel Admin</a>
             {% endif %}
         </div>
     </div>
@@ -100,11 +100,13 @@
             {% endfor %}
         </div>
     </section>
+    {% if not user.email.endswith('@anon.sigaa.local') %}
     <div style="margin-top: 2rem; text-align: center;">
         <button onclick="openModal()" class="btn-minimal" style="width: 100%; border-style: dashed; padding: 1rem;">
             + Vincular Nova Conta
         </button>
     </div>
+    {% endif %}
 </div>
 <div id="link-modal" class="modal-overlay">
     <div class="modal-box">

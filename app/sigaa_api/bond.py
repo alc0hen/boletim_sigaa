@@ -139,7 +139,7 @@ class StudentBond:
 
     async def get_history(self, cached_history=None, credentials=None):
         try:
-            logger.info("SIGAA: Starting get_history based on Turmas Anteriores...")
+            logger.info("SIGAA: Starting get_history combining Official History and Turmas Anteriores...")
             page = None
             if self.switch_url:
                 logger.info(f"SIGAA: Switching context via URL: {self.switch_url}")
@@ -148,29 +148,93 @@ class StudentBond:
                 logger.info("SIGAA: Accessing discente.jsf to ensure session context.")
                 page = await self.session.get('/sigaa/portais/discente/discente.jsf')
                 
+            # 1. Fetch Official History for 100% accurate final_grade, status, and absences
+            official_history = {}
+            action_data = self._extract_jscook_action_by_jsf_method(page, 'portalDiscente.boletim')
+            if not action_data:
+                action_data = self._extract_jscook_action_by_jsf_method(page, 'relatorioNotasAluno.gerarRelatorio')
+            if not action_data:
+                action_data = self._extract_jscook_action(page, 'Boletim')
+            if not action_data:
+                action_data = self._extract_jscook_action(page, 'Consultar Minhas Notas')
+            if not action_data:
+                action_data = self._extract_jscook_action_by_jsf_method(page, 'portalDiscente.historico')
+            if not action_data:
+                action_data = self._extract_jscook_action(page, 'Consultar Histórico Escolar')
+            if not action_data:
+                action_data = self._extract_jscook_action(page, 'Emitir Histórico')
+                
+            if action_data:
+                logger.info(f"SIGAA: Found Official History action: {action_data['action_url']}")
+                try:
+                    history_page = await self.session.post(action_data['action_url'], data=action_data['post_values'])
+                    official_history = self._parse_bulletin(history_page)
+                    logger.info(f"SIGAA: Parsed Official History with {len(official_history)} semesters.")
+                except Exception as e:
+                    logger.error(f"SIGAA: Failed to fetch Official History: {e}")
+                    
+            # 2. Navigate back to discente.jsf just in case ViewState got messed up
+            page = await self.session.get('/sigaa/portais/discente/discente.jsf')
+                
+            # 3. Fallback/Complement via Turmas Anteriores (Required for Professor Names)
             active_courses = self._parse_courses(page)
             active_course_titles = {c.title for c in active_courses}
-            logger.info(f"SIGAA: Found {len(active_course_titles)} active courses to exclude from history.")
             
-            # Extract actual current semester
             actual_current_semester = None
             if page and hasattr(page, 'body') and page.body:
                 import re
                 actual_semester_match = re.search(r'Semestre atual:\s*<strong[^>]*>(\d{4}\.\d)</strong>', page.body)
                 if actual_semester_match:
                     actual_current_semester = actual_semester_match.group(1)
-                    logger.info(f"SIGAA: Extracted actual current semester: {actual_current_semester}")
 
-            logger.info("SIGAA: Navigating to Turmas Anteriores: /sigaa/portais/discente/turmas.jsf")
             turmas_page = await self.session.get('/sigaa/portais/discente/turmas.jsf')
+            failed_official = not official_history
+            detailed_history = await self._parse_previous_classes(turmas_page, cached_history, credentials, active_course_titles, actual_current_semester, fetch_grades=failed_official)
             
-            logger.info("SIGAA: Successfully loaded turmas.jsf, proceeding to parse classes.")
-            return await self._parse_previous_classes(turmas_page, cached_history, credentials, active_course_titles, actual_current_semester)
+            # 4. Merge Official History into Detailed History
+            for sem, subjects in detailed_history.items():
+                if sem in official_history:
+                    for subj in subjects:
+                        # Find matching subject in official history
+                        for off_subj in official_history[sem]:
+                            off_name = off_subj['name'].lower().strip()
+                            det_name = subj['name'].lower().strip()
+                            if off_name == det_name or off_name in det_name or det_name in off_name:
+                                # Override with official data
+                                if off_subj.get('final_grade') is not None:
+                                    subj['final_grade'] = off_subj['final_grade']
+                                if off_subj.get('status'):
+                                    subj['status'] = off_subj['status']
+                                if off_subj.get('absences') is not None:
+                                    subj['absences'] = off_subj['absences']
+                                break
+                                
+            # If Turmas Anteriores failed but we have Official History, use it as fallback
+            final_history = detailed_history if detailed_history else (official_history or {})
+            
+            # Remove active semester from history to prevent duplication with liveData
+            overlap_sem = None
+            if active_course_titles:
+                for sem, courses in final_history.items():
+                    overlap = [c for c in courses if c['name'].lower().strip() in active_course_titles]
+                    has_final = any(
+                        any(st in (c.get('status') or '').lower() for st in ['aprovado', 'reprovado', 'concluído', 'cancelado', 'dispensado', 'trancado'])
+                        for c in courses
+                    )
+                    if overlap and not has_final:
+                        overlap_sem = sem
+                        break
+            
+            if overlap_sem:
+                del final_history[overlap_sem]
+
+            return final_history
         except Exception as e:
-            logger.error(f"Get history error: {e}")
+            logger.error(f"Get history error: {e}", exc_info=True)
             return {}
 
-    async def _parse_previous_classes(self, page, cached_history=None, credentials=None, active_course_titles=None, actual_current_semester=None):
+    async def _parse_previous_classes(self, page, cached_history=None, credentials=None, active_course_titles=None,
+                                      actual_current_semester=None, fetch_grades=False):
         history = {}
         classes_to_fetch = []
         try:
@@ -221,17 +285,17 @@ class StudentBond:
                      schedule_code = ""
                      
                      row_status = None
-                     for cell in cells:
-                         t = cell.get_text(strip=True)
+                     cell_texts = [c.get_text(strip=True) for c in cells]
+                     for i, t in enumerate(cell_texts):
                          if '-' in t and len(t) > 5 and not t.replace('.', '').isdigit():
                              if title == "Desconhecido":
                                  title = t
                          t_upper = t.upper()
-                         if 'APROVADO' in t_upper or 'REPROVADO' in t_upper or 'TRANCADO' in t_upper or 'MATRICULADO' in t_upper or 'DISPENSADO' in t_upper or 'CANCELADO' in t_upper:
+                         if 'APROVADO' in t_upper or 'REPROVADO' in t_upper or 'TRANCADO' in t_upper or 'MATRICULADO' in t_upper or 'DISPENSADO' in t_upper or 'CANCELADO' in t_upper or 'CONCLUÍDO' in t_upper or 'CONCLUIDO' in t_upper:
                              row_status = t.title()
                              
                      # Diagnostic log — shows exactly what SIGAA returns for each row
-                     logger.info(f"SIGAA: Row '{title}' [{current_semester}] → row_status={row_status!r}")
+                     logger.info(f"SIGAA: Row '{title}' [{current_semester}] → cells={cell_texts} | status={row_status!r}")
 
                      # Bug fix: skip entire actual_current_semester to avoid treating it as history
                      if actual_current_semester and current_semester == actual_current_semester:
@@ -337,7 +401,7 @@ class StudentBond:
             
         return history
 
-    async def _fetch_batch_parallel(self, credentials, batch):
+    async def _fetch_batch_parallel(self, credentials, batch, fetch_grades=False):
         """Fetch multiple classes using a single authenticated session.
         
         Logs in once and processes each class sequentially within the same
@@ -404,7 +468,7 @@ class StudentBond:
                         
                     form_data = turmas_page.parse_jsfcljs(target_js_code)
                     subj = await self._process_course_sync(
-                        class_info['title'], form_data, class_info['schedule_code'], class_info['row_status'], sigaa_session=sigaa.session
+                        class_info['title'], form_data, class_info['schedule_code'], class_info['row_status'], sigaa_session=sigaa.session, fetch_grades=fetch_grades
                     )
                     results.append((class_info, subj))
                     
@@ -418,54 +482,69 @@ class StudentBond:
         
         return results
 
-    async def _process_course_sync(self, title, form_data, schedule_code, row_status, sigaa_session=None):
+    async def _process_course_sync(self, title, form_data, schedule_code, row_status, sigaa_session=None, fetch_grades=False):
         session = sigaa_session or self.session
         course = Course(session, title, form_data, schedule_code)
         
-        grades, frequency, professor = await course.get_all_details()
-        logger.info(f"SIGAA: Fetched all details for '{title}'.")
-        
-        final_grade = None
-        for g in grades:
-            if g['type'] == 'single' and any(n in g['name'].lower() for n in ['média', 'nota final', 'resultado']):
-                final_grade = g['value']
-            elif g['type'] == 'group':
-                for sg in g['grades']:
-                    if 'média' in sg['name'].lower() or 'final' in sg['name'].lower():
-                        final_grade = sg['value']
-                        
-        if final_grade is None:
-            valid_vals = []
+        if not fetch_grades:
+            grades, frequency, professor = await course.get_professor_only()
+            logger.info(f"SIGAA: Fetched professor for '{title}'.")
+            
+            return {
+                "name": title,
+                "final_grade": None,
+                "absences": None,
+                "status": row_status,
+                "grades": [],
+                "professor": professor
+            }
+        else:
+            grades, frequency, professor = await course.get_all_details()
+            logger.info(f"SIGAA: Fetched all details for '{title}' (fallback mode).")
+            
+            final_grade = None
             for g in grades:
-                if g['type'] == 'single':
-                    valid_vals.append(g['value'])
+                if g['type'] == 'single' and any(n in g['name'].lower() for n in ['média', 'nota final', 'resultado']):
+                    final_grade = g['value']
                 elif g['type'] == 'group':
                     for sg in g['grades']:
-                        valid_vals.append(sg['value'])
+                        if 'média' in sg['name'].lower() or 'final' in sg['name'].lower():
+                            final_grade = sg['value']
+                            
+            if final_grade is None:
+                valid_vals = []
+                for g in grades:
+                    if g['type'] == 'single':
+                        if g['value'] is not None:
+                            valid_vals.append(g['value'])
+                    elif g['type'] == 'group':
+                        for sg in g['grades']:
+                            if sg['value'] is not None:
+                                valid_vals.append(sg['value'])
+                
+                if valid_vals:
+                    final_grade = round(sum(valid_vals) / len(valid_vals), 1)
+                else:
+                    final_grade = 0.0
+                        
+            absences = frequency.get('total_faltas', 0) if frequency else 0
             
-            if valid_vals:
-                final_grade = round(sum(valid_vals) / len(valid_vals), 1)
-            else:
-                final_grade = 0.0
-                    
-        absences = frequency.get('total_faltas', 0) if frequency else 0
-        
-        detailed_grades = []
-        for g in grades:
-            if g['type'] == 'single':
-                detailed_grades.append({'name': g['name'], 'value': g['value']})
-            elif g['type'] == 'group':
-                for sg in g['grades']:
-                    detailed_grades.append({'name': sg['name'], 'value': sg['value']})
-                    
-        return {
-            "name": title,
-            "final_grade": final_grade,
-            "absences": absences,
-            "status": row_status,
-            "grades": detailed_grades,
-            "professor": professor
-        }
+            detailed_grades = []
+            for g in grades:
+                if g['type'] == 'single':
+                    detailed_grades.append({'name': g['name'], 'value': g['value']})
+                elif g['type'] == 'group':
+                    for sg in g['grades']:
+                        detailed_grades.append({'name': sg['name'], 'value': sg['value']})
+                        
+            return {
+                "name": title,
+                "final_grade": final_grade,
+                "absences": absences,
+                "status": row_status,
+                "grades": detailed_grades,
+                "professor": professor
+            }
 
     def _extract_jscook_action(self, page, label):
         try:
@@ -491,6 +570,34 @@ class StudentBond:
                 return {'action_url': urljoin(str(page.url), url), 'post_values': post_values}
         except: pass
         return None
+    def _extract_jscook_action_by_jsf_method(self, page, jsf_method):
+        import re
+        try:
+            form = page.soup.find('form', id=re.compile(r'menu:form_menu_discente|menuForm'))
+            if not form:
+                 form = page.soup.find('input', attrs={'name': 'jscook_action'})
+                 if form: form = form.find_parent('form')
+            if not form: return None
+            post_values = {}
+            for inp in form.find_all('input'):
+                if inp.get('name'): post_values[inp.get('name')] = inp.get('value', '')
+            scripts = page.soup.find_all('script')
+            action = None
+            for s in scripts:
+                if s.string and jsf_method in s.string:
+                    match = re.search(r"['\"]([^'\"]*" + re.escape(jsf_method) + r"[^'\"]*)['\"]", s.string)
+                    if match:
+                        action = match.group(1)
+                        break
+            if action:
+                post_values['jscook_action'] = action
+                url = form.get('action')
+                from urllib.parse import urljoin
+                return {'action_url': urljoin(str(page.url), url), 'post_values': post_values}
+        except Exception as e:
+            logger.error(f"Error extracting by jsf_method {jsf_method}: {e}")
+        return None
+
     def _parse_bulletin(self, page):
         history = {}
         try:

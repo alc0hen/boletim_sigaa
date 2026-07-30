@@ -12,6 +12,9 @@ class Course:
         self.title = title
         self.form_data = form_data
         self.id = form_data['post_values'].get('idTurma')
+        if not self.id:
+            import hashlib
+            self.id = hashlib.md5(title.encode('utf-8')).hexdigest()
         self.grades = []
         self.schedule_code = schedule_code  # e.g. "2N1234", "4T6 4N1234"
         self.professor_name = None
@@ -32,47 +35,62 @@ class Course:
         return self.frequency
 
     async def get_all_details(self):
-        # We chain navigations to avoid redundant _enter_course and ViewState errors
+        course_page = await self._enter_course()
+        current_page = course_page
+
+        # 1. Frequency (Fails fast if not found, saving an HTTP request)
+        try:
+            freq_page = await self._navigate_to_frequency(current_page)
+            self.frequency = self._parse_frequency(freq_page)
+            # Since we navigated, we must return to index.jsf
+            current_page = await self.session.get('/sigaa/ava/index.jsf')
+        except ValueError:
+            # Link not found, no HTTP request made. current_page is still valid!
+            self.frequency = None
+        except Exception as e:
+            logger.warning(f"Could not parse frequency for {self.title}: {e}")
+            self.frequency = None
+            try:
+                current_page = await self.session.get('/sigaa/ava/index.jsf')
+            except Exception:
+                pass
+        
+        # 2. Grades
+        try:
+            grades_page = await self._navigate_to_grades(current_page)
+            self.grades = self._parse_grades(grades_page)
+            current_page = await self.session.get('/sigaa/ava/index.jsf')
+        except ValueError:
+            self.grades = []
+        except Exception as e:
+            logger.error(f"Error parsing grades for {self.title}: {e}", exc_info=True)
+            self.grades = []
+            try:
+                current_page = await self.session.get('/sigaa/ava/index.jsf')
+            except Exception:
+                pass
+
+        # 3. Participantes
+        try:
+            participantes_page = await self._navigate_to_participantes(current_page)
+            self.professor_name = self._parse_professor(participantes_page)
+        except Exception:
+            self.professor_name = "Desconhecido"
+
+        return self.grades, self.frequency, self.professor_name
+
+    async def get_professor_only(self):
         course_page = await self._enter_course()
         current_page = course_page
         
         try:
-            grades_page = await self._navigate_to_grades(current_page)
-            self.grades = self._parse_grades(grades_page)
-            current_page = grades_page
-        except Exception as e:
-            logger.error(f"Error parsing grades for {self.title}: {e}", exc_info=True)
-            self.grades = []
-            
-        try:
-            freq_page = await self._navigate_to_frequency(current_page)
-            self.frequency = self._parse_frequency(freq_page)
-            current_page = freq_page
-        except Exception as e:
-            logger.error(f"Error parsing frequency for {self.title}: {e}", exc_info=True)
-            # Fallback if chaining failed
-            try:
-                course_page = await self._enter_course()
-                current_page = course_page
-                freq_page = await self._navigate_to_frequency(current_page)
-                self.frequency = self._parse_frequency(freq_page)
-                current_page = freq_page
-            except Exception:
-                self.frequency = None
-
-        try:
-            # Try to navigate to professor from the last current_page
             participantes_page = await self._navigate_to_participantes(current_page)
             self.professor_name = self._parse_professor(participantes_page)
         except Exception:
-            # Fallback
-            try:
-                course_page = await self._enter_course()
-                participantes_page = await self._navigate_to_participantes(course_page)
-                self.professor_name = self._parse_professor(participantes_page)
-            except Exception:
-                self.professor_name = "Desconhecido"
-
+            self.professor_name = "Desconhecido"
+            
+        self.grades = []
+        self.frequency = None
         return self.grades, self.frequency, self.professor_name
 
     async def _navigate_to_participantes(self, current_page):
@@ -142,39 +160,56 @@ class Course:
         return page
 
     async def _navigate_to_grades(self, course_page):
-        menu_items = course_page.soup.find_all(string=lambda text: text and "ver notas" in text.lower())
-        for item in menu_items:
-            parent = item.parent
-            while parent:
-                if parent.name in ['td', 'div', 'a']:
+        texts = course_page.soup.find_all(string=lambda text: text and "ver notas" in text.lower())
+        attrs = course_page.soup.find_all(
+            lambda tag: tag.has_attr('title') and "ver notas" in tag['title'].lower() or
+                        tag.has_attr('alt') and "ver notas" in tag['alt'].lower() or
+                        tag.has_attr('value') and "ver notas" in tag['value'].lower()
+        )
+        for item in list(texts) + attrs:
+            parent = item if hasattr(item, 'name') and item.name else item.parent
+            while parent and parent.name != 'body':
+                if parent.name in ['td', 'div', 'a', 'tr', 'li', 'span', 'button']:
+                    js_code = None
                     if parent.get('onclick'):
                         js_code = parent['onclick']
+                    elif parent.get('href') and 'jsfcljs' in parent.get('href'):
+                        js_code = parent['href']
+                    
+                    if js_code:
                         form_data = course_page.parse_jsfcljs(js_code)
                         return await self.session.post(
                             form_data['action'],
                             data=form_data['post_values']
                         )
                 parent = parent.parent
-                if not parent or parent.name == 'body':
-                    break
         raise ValueError("Could not find 'Ver Notas' menu item.")
 
     async def _navigate_to_frequency(self, course_page):
-        menu_items = course_page.soup.find_all(string=lambda text: text and "frequ" in text.lower())
-        for item in menu_items:
-            parent = item.parent
-            while parent:
-                if parent.name in ['td', 'div', 'a']:
+        terms = ['frequ', 'falta', 'assiduidade']
+        texts = course_page.soup.find_all(string=lambda text: text and any(t in text.lower() for t in terms))
+        attrs = course_page.soup.find_all(
+            lambda tag: (tag.has_attr('title') and any(t in tag['title'].lower() for t in terms)) or
+                        (tag.has_attr('alt') and any(t in tag['alt'].lower() for t in terms)) or
+                        (tag.has_attr('value') and any(t in tag['value'].lower() for t in terms))
+        )
+        for item in list(texts) + attrs:
+            parent = item if hasattr(item, 'name') and item.name else item.parent
+            while parent and parent.name != 'body':
+                if parent.name in ['td', 'div', 'a', 'tr', 'li', 'span', 'button']:
+                    js_code = None
                     if parent.get('onclick'):
                         js_code = parent['onclick']
+                    elif parent.get('href') and 'jsfcljs' in parent.get('href'):
+                        js_code = parent['href']
+                        
+                    if js_code:
                         form_data = course_page.parse_jsfcljs(js_code)
                         return await self.session.post(
                             form_data['action'],
                             data=form_data['post_values']
                         )
                 parent = parent.parent
-                if not parent or parent.name == 'body':
-                    break
         raise ValueError("Could not find 'Frequência' menu item.")
 
     def _parse_frequency(self, page):

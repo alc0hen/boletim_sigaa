@@ -8,3 +8,4 @@ instance/
 *.pid
 mime.py
 migrations
+app/sigaa_api/api_important

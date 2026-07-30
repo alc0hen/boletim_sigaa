@@ -1,7 +1,7 @@
 from .session import SigaaSession
 from .login import SigaaLoginImpl
 from .account import Account
-from .types import InstitutionType
+from .enums import InstitutionType
 class Sigaa:
     def __init__(self, url, institution=InstitutionType.IFAL, cookies=None):
         self.url = url

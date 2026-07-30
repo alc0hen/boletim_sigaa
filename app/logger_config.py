@@ -124,6 +124,9 @@ def _configure_levels(is_prod: bool) -> None:
         "sqlalchemy.dialects":   logging.WARNING,
         "sqlalchemy.orm":        logging.WARNING,
 
+        # aiosqlite — loga toda operação de cursor em DEBUG (herdaria o DEBUG do root)
+        "aiosqlite":             logging.WARNING,
+
         # Asyncio — warnings já suficientes
         "asyncio":               logging.WARNING,
 

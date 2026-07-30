@@ -36,7 +36,10 @@
 <nav>
     <div class="container nav-content">
         <div class="logo">Painel de Administração</div>
-        <a href="{{ url_for('main.profile') }}" class="btn-secondary" style="width:auto; padding:8px 16px; margin-top:0;">Voltar</a>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="{{ url_for('main.admin_avaliacoes') }}" class="btn-primary" style="width:auto; padding:8px 16px; margin-top:0; font-size:14px; border-radius:8px;">Avaliações</a>
+            <a href="{{ url_for('main.profile') }}" class="btn-secondary" style="width:auto; padding:8px 16px; margin-top:0; font-size:14px; border-radius:8px; line-height:22px;">Voltar</a>
+        </div>
     </div>
 </nav>
 

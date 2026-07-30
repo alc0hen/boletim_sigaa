@@ -1,6 +1,6 @@
 from quart import Blueprint, render_template, request, redirect, url_for, session, Response, flash, jsonify, g
 
-from .sigaa_api.types import InstitutionType
+from .sigaa_api.enums import InstitutionType
 from .sigaa_gateway import (
     SigaaError,
     SigaaGateway,
@@ -16,7 +16,8 @@ from .demo_data import get_demo_data
 from .extensions import db_session, google_oauth, generate_csrf_token
 from .security import RateLimiter, is_dev_emulation, sanitize_for_log
 from sqlalchemy import select, func, distinct
-from .models import User, LinkedAccount, CourseReview, ProfessorReview, get_cipher_suite
+from sqlalchemy.exc import IntegrityError
+from .models import User, LinkedAccount, Disciplina, Professor, Avaliacao, VotoControle, compute_vote_hash, get_cipher_suite
 import asyncio
 import hmac
 from .cache import get as cache_get, set as cache_set
@@ -53,27 +54,23 @@ def _rate_limited(limiter: RateLimiter, key: str):
     return limiter.check(key)
 
 
-_RATING_MIN = 1.0
-_RATING_MAX = 5.0
+_NOTA_MIN = 1
+_NOTA_MAX = 5
 _MAX_REVIEW_NAME = 255
 _MAX_REVIEWS_PER_REQUEST = 200
+_MIN_VOTES_TO_SHOW_COUNT = 20
 
 
-def _parse_rating(value):
-    """Valida a nota. Retorna (ok, valor) — valor None significa 'sem nota'."""
+def _parse_nota(value):
     if value is None:
         return True, None
     try:
-        rating = float(value)
+        nota = int(value)
     except (TypeError, ValueError):
         return False, None
-    # math.isfinite rejeita NaN e ±Infinity de uma vez.
-    import math
-    if not math.isfinite(rating):
+    if not (_NOTA_MIN <= nota <= _NOTA_MAX):
         return False, None
-    if not (_RATING_MIN <= rating <= _RATING_MAX):
-        return False, None
-    return True, round(rating, 2)
+    return True, nota
 
 
 def _parse_review_name(value):
@@ -203,20 +200,47 @@ async def login():
             cipher = get_cipher_suite()
             session['sigaa_temp_password'] = cipher.encrypt(password.encode('utf-8')).decode('utf-8')
             try:
+                import uuid
                 async with db_session() as s:
                     query = select(LinkedAccount).filter_by(
                         username=username, institution=institution_str
                     )
-                    session_user_id = session.get('user_id')
-                    if session_user_id:
-                        query = query.filter_by(user_id=session_user_id)
                     result = await s.execute(query)
                     linked_account = result.scalars().first()
+
+                    session_user_id = session.get('user_id')
+                    
                     if linked_account:
+                        session['user_id'] = linked_account.user_id
                         session['active_account_id'] = linked_account.id
+                        session['sigaa_inst'] = institution_str
+                        # Also update the password just in case it changed
+                        linked_account.set_password(password)
                     else:
-                        # Evita herdar o vínculo ativo de um login anterior.
-                        session.pop('active_account_id', None)
+                        if not session_user_id:
+                            anon_google_id = f"anon_{uuid.uuid4().hex}"
+                            anon_email = f"anon_{uuid.uuid4().hex}@anon.sigaa.local"
+                            anon_user = User(google_id=anon_google_id, email=anon_email, name="Usuário Anônimo")
+                            s.add(anon_user)
+                            await s.flush()
+                            session_user_id = anon_user.id
+                            session['user_id'] = session_user_id
+                            logger.info(f"Criado novo usuário anônimo (ID {session_user_id}) para {institution_str}")
+                        
+                        linked_account = LinkedAccount(
+                            user_id=session_user_id,
+                            institution=institution_str,
+                            username=username
+                        )
+                        linked_account.set_password(password)
+                        s.add(linked_account)
+                        await s.flush()
+                        
+                        session['active_account_id'] = linked_account.id
+                        session['sigaa_inst'] = institution_str
+                        logger.info(f"Nova LinkedAccount criada para o usuário {username} na instituição {institution_str}.")
+                        
+                    await s.commit()
             except Exception as e:
                 logger.error(f"Error linking session to account: {sanitize_for_log(e)}")
             return redirect(url_for('main.dashboard'))
@@ -349,6 +373,12 @@ async def profile():
 async def link_account():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
+        
+    async with db_session() as s:
+        user = await s.get(User, session['user_id'])
+        if user and user.email.endswith('@anon.sigaa.local'):
+            return await render_template('profile.html', error="Usuários anônimos não podem vincular múltiplas contas. Faça login com o Google para habilitar essa função.", user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
+
     form = await request.form
     institution_str = form.get('institution')
     username = form.get('username')
@@ -357,8 +387,6 @@ async def link_account():
         async with db_session() as s:
             user = await s.get(User, session['user_id'])
             return await render_template('profile.html', error="Preencha todos os campos.", user=user, linked_accounts=user.linked_accounts, active_account_id=session.get('active_account_id'))
-                                                                  
-                            
     try:
         url = resolve_sigaa_url(institution_str)
     except SigaaInstitutionError as e:
@@ -501,16 +529,21 @@ async def academic_profile():
             logger.info("Redis cache hit for academic profile")
             return jsonify(_scrub_active_semester_from_cache(cached))
                              
-    if linked_account and not force_update and linked_account.history_json and linked_account.history_updated_at:
-        if datetime.utcnow() - linked_account.history_updated_at < timedelta(days=3):
-            try:
-                cipher = get_cipher_suite()
-                decrypted_json = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
-                cached_data = json.loads(decrypted_json)
-                return jsonify(_scrub_active_semester_from_cache(cached_data))
-            except Exception as e:
-                logger.error(f"Cache decryption failed: {e}")
-                pass
+    cached_history_raw = None
+    if linked_account and linked_account.history_json:
+        try:
+            cipher = get_cipher_suite()
+            decrypted_json = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
+            cached_data = json.loads(decrypted_json)
+            cached_history_raw = cached_data.get('history_raw')
+            
+            if not force_update and linked_account.history_updated_at:
+                if datetime.utcnow() - linked_account.history_updated_at < timedelta(days=3):
+                    return jsonify(_scrub_active_semester_from_cache(cached_data))
+        except Exception as e:
+            logger.error(f"Cache decryption failed: {e}")
+            pass
+            
     inst_type = _inst_type()
 
     gateway = await _get_gateway()
@@ -520,10 +553,14 @@ async def academic_profile():
     try:
         start_time = time.time()
         async with gateway.scope():
-            bonds = _active_student_bonds(await gateway.get_bonds())
-            if not bonds:
-                return jsonify({"error": "No active bonds"}), 404
-            history = await gateway.get_history(bonds[0]['bond_id'])
+            all_bonds = await gateway.get_bonds()
+            active_bonds = _active_student_bonds(all_bonds)
+            student_bonds = [b for b in all_bonds if b.get('type') == 'student']
+            bonds_to_use = active_bonds if active_bonds else student_bonds
+            
+            if not bonds_to_use:
+                return jsonify({"error": "No student bonds found"}), 404
+            history = await gateway.get_history(bonds_to_use[0]['bond_id'], cached_history=cached_history_raw)
         _save_gateway(gateway)
         duration = time.time() - start_time
         logger.info(f"Historical data fetch took {duration:.2f}s")
@@ -537,10 +574,14 @@ async def academic_profile():
             sem_grades = []
             for subj in subjects:
                 try:
-                    res = calculator.calculate(subj.get('grades', []))
-                    subj['final_grade'] = res.average
-                    subj['status_dict'] = res.to_dict()
-                    logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
+                    if subj.get('final_grade') is None:
+                        res = calculator.calculate(subj.get('grades', []))
+                        subj['final_grade'] = res.average
+                        subj['status_dict'] = res.to_dict()
+                    else:
+                        subj.pop('status_dict', None)
+                    
+                    logger.info(f"Final grade for '{subj.get('name')}': {subj.get('final_grade')} ({subj.get('status', '')})")
                 except Exception as e:
                     logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
                 
@@ -725,6 +766,10 @@ async def stream_grades():
         except: pass
         return []
 
+    sigaa_temp_pwd = session.get('sigaa_temp_password')
+    sigaa_inst_val = session.get('sigaa_inst', 'IFAL')
+    sigaa_username_val = session.get('username')
+
     async def async_generate():
         if cached_profile:
             yield json.dumps({"type": "profile_data", "data": cached_profile}) + "\n"
@@ -732,18 +777,21 @@ async def stream_grades():
 
         try:
             async with gateway.scope():
-                bonds = _active_student_bonds(await gateway.get_bonds())
+                all_bonds = await gateway.get_bonds()
+                active_bonds = _active_student_bonds(all_bonds)
+                student_bonds = [b for b in all_bonds if b.get('type') == 'student']
+                bonds_to_use = active_bonds if active_bonds else student_bonds
 
                                                            
                 supporters = await get_supporters_task()
-                registration = bonds[0].get('registration') if bonds else None
+                registration = bonds_to_use[0].get('registration') if bonds_to_use else None
                 is_supporter = bool(registration and str(registration) in {str(s) for s in supporters})
 
                 yield json.dumps({"type": "user_info", "name": student_name, "is_supporter": is_supporter}) + "\n"
 
-                if bonds:
+                if bonds_to_use:
                     calculator = CalculatorFactory.get_calculator(inst_type)
-                    _, listing = await _enumerate_courses(gateway, bonds)
+                    _, listing = await _enumerate_courses(gateway, bonds_to_use)
 
                     yield json.dumps({"type": "sync_start", "total_courses": len(listing)}) + "\n"
 
@@ -752,52 +800,123 @@ async def stream_grades():
                         yield json.dumps({"type": "course_start", "id": item['id'], "name": item['title'], "obs": item['program']}) + "\n"
 
                                                  
-                    for bond in bonds:
+                    for bond in bonds_to_use:
                         bond_id = bond['bond_id']
                         bond_courses = [item for item in listing if item['bond_id'] == bond_id]
+                        
+                        all_courses = []
                         for item in bond_courses:
-                            course_id = item['id']
+                            if item['id'] in skip_ids:
+                                yield json.dumps({"type": "course_skipped", "id": item['id']}) + "\n"
+                            else:
+                                all_courses.append((bond_id, item))
 
-                            if course_id in skip_ids:
-                                yield json.dumps({"type": "course_skipped", "id": course_id}) + "\n"
-                                continue
-
-                            yield json.dumps({"type": "course_loading", "id": course_id, "step": "notas"}) + "\n"
-
+                        raw_password = None
+                        if sigaa_temp_pwd:
                             try:
-                                details = await gateway.get_course_details(bond_id, item['course_id'])
-                                raw_grades = details.get("grades") or []
-                                freq_data = details.get("frequency")
-                                course_result = calculator.calculate(raw_grades)
-                                result_data = {
-                                    "grades": raw_grades,
-                                    "status": course_result.to_dict(),
-                                    "professor": details.get("professor")
-                                }
-                                yield json.dumps({"type": "course_data", "id": course_id, "data": result_data}) + "\n"
+                                cipher = get_cipher_suite()
+                                raw_password = cipher.decrypt(sigaa_temp_pwd.encode('utf-8')).decode('utf-8')
+                            except: pass
+                        elif active_account_id:
+                            try:
+                                async with db_session() as s:
+                                    db_acc = await s.get(LinkedAccount, active_account_id)
+                                    if db_acc:
+                                        raw_password = db_acc.get_password()
+                            except: pass
 
-                                yield json.dumps({"type": "course_loading", "id": course_id, "step": "frequencia"}) + "\n"
-                                if freq_data:
-                                    yield json.dumps({"type": "course_frequency", "id": course_id, "data": freq_data}) + "\n"
-                            except Exception:
-                                empty_result = calculator.calculate([])
-                                fallback_data = {
-                                    "grades": [],
-                                    "status": empty_result.to_dict()
-                                }
-                                yield json.dumps({"type": "course_data", "id": course_id, "data": fallback_data}) + "\n"
+                        if raw_password and len(all_courses) > 1:
+                            import math
+                            num_workers = min(3, len(all_courses))
+                            chunk_size = math.ceil(len(all_courses) / num_workers)
+                            chunks = [all_courses[i:i + chunk_size] for i in range(0, len(all_courses), chunk_size)]
+                            
+                            queue = asyncio.Queue()
+                            inst_str = sigaa_inst_val
+                            try:
+                                url = resolve_sigaa_url(inst_str)
+                            except:
+                                url = gateway.url
+                            username_val = sigaa_username_val
 
-                            yield json.dumps({"type": "course_loading", "id": course_id, "step": "done"}) + "\n"
+                            async def worker(chunk):
+                                try:
+                                    w_gateway = await SigaaGateway.login(url, inst_str, username_val, raw_password, credentials={'username': username_val, 'password': raw_password})
+                                    for b_id, item in chunk:
+                                        c_id = item['id']
+                                        await queue.put({"type": "course_loading", "id": c_id, "step": "notas"})
+                                        try:
+                                            details = await w_gateway.get_course_details(b_id, item['course_id'])
+                                            raw_grades = details.get("grades") or []
+                                            freq_data = details.get("frequency")
+                                            course_result = calculator.calculate(raw_grades)
+                                            result_data = {
+                                                "grades": raw_grades,
+                                                "status": course_result.to_dict(),
+                                                "professor": details.get("professor")
+                                            }
+                                            await queue.put({"type": "course_data", "id": c_id, "data": result_data})
+                                            await queue.put({"type": "course_loading", "id": c_id, "step": "frequencia"})
+                                            if freq_data:
+                                                await queue.put({"type": "course_frequency", "id": c_id, "data": freq_data})
+                                        except Exception as e:
+                                            empty_result = calculator.calculate([])
+                                            fallback_data = {"grades": [], "status": empty_result.to_dict()}
+                                            await queue.put({"type": "course_data", "id": c_id, "data": fallback_data})
+                                        await queue.put({"type": "course_loading", "id": c_id, "step": "done"})
+                                    await w_gateway.logout()
+                                except Exception as e:
+                                    logger.error(f"Worker login failed in stream_grades: {e}")
+                                    for b_id, item in chunk:
+                                        c_id = item['id']
+                                        empty_result = calculator.calculate([])
+                                        fallback_data = {"grades": [], "status": empty_result.to_dict()}
+                                        await queue.put({"type": "course_data", "id": c_id, "data": fallback_data})
+                                        await queue.put({"type": "course_loading", "id": c_id, "step": "done"})
+                            
+                            tasks = [asyncio.create_task(worker(chunk)) for chunk in chunks]
+                            
+                            async def waiter():
+                                await asyncio.gather(*tasks)
+                                await queue.put(None)
+                            asyncio.create_task(waiter())
+                            
+                            while True:
+                                evt = await queue.get()
+                                if evt is None:
+                                    break
+                                yield json.dumps(evt) + "\n"
+                        else:
+                            for b_id, item in all_courses:
+                                c_id = item['id']
+                                yield json.dumps({"type": "course_loading", "id": c_id, "step": "notas"}) + "\n"
+                                try:
+                                    details = await gateway.get_course_details(b_id, item['course_id'])
+                                    raw_grades = details.get("grades") or []
+                                    freq_data = details.get("frequency")
+                                    course_result = calculator.calculate(raw_grades)
+                                    result_data = {
+                                        "grades": raw_grades,
+                                        "status": course_result.to_dict(),
+                                        "professor": details.get("professor")
+                                    }
+                                    yield json.dumps({"type": "course_data", "id": c_id, "data": result_data}) + "\n"
+                                    
+                                    yield json.dumps({"type": "course_loading", "id": c_id, "step": "frequencia"}) + "\n"
+                                    if freq_data:
+                                        yield json.dumps({"type": "course_frequency", "id": c_id, "data": freq_data}) + "\n"
+                                except Exception:
+                                    empty_result = calculator.calculate([])
+                                    fallback_data = {"grades": [], "status": empty_result.to_dict()}
+                                    yield json.dumps({"type": "course_data", "id": c_id, "data": fallback_data}) + "\n"
+                                    
+                                yield json.dumps({"type": "course_loading", "id": c_id, "step": "done"}) + "\n"
 
-                        try:
-                            c_hist = cached_profile.get('history_raw', {}) if cached_profile else None
-                            start_time = time.time()
-                            history = await gateway.get_history(bond_id, cached_history=c_hist)
-                            duration = time.time() - start_time
-                            logger.info(f"Historical data fetch took {duration:.2f}s")
-                        except Exception as e:
-                            logger.error(f"Error fetching history: {sanitize_for_log(e)}")
-                            history = {}
+                        c_hist = cached_profile.get('history_raw', {}) if cached_profile else {}
+                        history = c_hist
+                        logger.info("Using cached history in stream, skipped heavy fetching.")
+                        
+                        bond_id = bonds_to_use[0]['bond_id'] if bonds_to_use else None
 
                                                                                 
                         for sem, subjects in history.items():
@@ -808,10 +927,13 @@ async def stream_grades():
                                     continue
                                 seen_names.add(subj['name'])
                                 try:
-                                    res = calculator.calculate(subj.get('grades', []))
-                                    subj['final_grade'] = res.average
-                                    subj['status_dict'] = res.to_dict()
-                                    logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
+                                    if subj.get('final_grade') is None:
+                                        res = calculator.calculate(subj.get('grades', []))
+                                        subj['final_grade'] = res.average
+                                        subj['status_dict'] = res.to_dict()
+                                        logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
+                                    else:
+                                        subj.pop('status_dict', None)
                                 except Exception as e:
                                     logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
                                 unique_subjects.append(subj)
@@ -956,6 +1078,44 @@ async def admin():
 
     return await render_template('admin.html', user=user, stats=stats, user_list=user_list)
 
+@bp.route('/admin/avaliacoes')
+async def admin_avaliacoes():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user = await g.db_session.get(User, session['user_id'])
+    if not user or not user.is_admin:
+        return redirect(url_for('main.dashboard'))
+
+    stmt = (
+        select(Avaliacao, Disciplina, Professor)
+        .join(Disciplina, Avaliacao.disciplina_id == Disciplina.id)
+        .join(Professor, Avaliacao.professor_id == Professor.id)
+        .order_by(Avaliacao.created_at.desc())
+    )
+    result = await g.db_session.execute(stmt)
+    rows = result.all()
+
+    disciplina_medias = {}
+    for aval, disc, prof in rows:
+        if disc.id not in disciplina_medias:
+            disciplina_medias[disc.id] = []
+        disciplina_medias[disc.id].append(aval.nota_exigencia)
+        
+    for d_id, notas in disciplina_medias.items():
+        disciplina_medias[d_id] = round(sum(notas) / len(notas), 1)
+
+    avaliacoes = []
+    for aval, disc, prof in rows:
+        avaliacoes.append({
+            'id': aval.id,
+            'disciplina': disc.name,
+            'professor': prof.name,
+            'nota': aval.nota_exigencia,
+            'media_disciplina': disciplina_medias[disc.id],
+            'data': aval.created_at.strftime('%d/%m/%Y %H:%M') if aval.created_at else ''
+        })
+
+    return await render_template('admin_avaliacoes.html', user=user, avaliacoes=avaliacoes)
                                                                       
 @bp.route('/api/matricula/status')
 async def api_matricula_status():
@@ -1141,11 +1301,11 @@ async def api_matricula_confirm():
             logger.error(f"Error finalizing live matricula: {sanitize_for_log(e)}")
             return jsonify({"error": "Erro ao confirmar a matrícula no SIGAA."}), 500
 
-@bp.route('/api/reviews/pending', methods=['GET'])
-async def pending_reviews():
+@bp.route('/api/avaliacoes/pendentes', methods=['GET'])
+async def avaliacoes_pendentes():
     active_account_id = session.get('active_account_id')
     user_id = session.get('user_id')
-    
+
     if active_account_id:
         linked_account = await g.db_session.get(LinkedAccount, active_account_id)
     elif user_id:
@@ -1155,9 +1315,7 @@ async def pending_reviews():
         return jsonify({"error": "Unauthorized"}), 401
 
     if not linked_account or not linked_account.history_json:
-        return jsonify({"courses": [], "professors": []}), 200
-
-    user_id = linked_account.user_id
+        return jsonify({"pendentes": []}), 200
 
     try:
         cipher = get_cipher_suite()
@@ -1166,49 +1324,58 @@ async def pending_reviews():
         history_raw = cached_profile.get('history_raw', {})
     except Exception as e:
         logger.error(f"Error parsing history for reviews: {sanitize_for_log(e)}")
-        return jsonify({"courses": [], "professors": []}), 200
+        return jsonify({"pendentes": []}), 200
 
-    past_courses = set()
-    past_professors = set()
-
-                                                     
+    pares = set()
     for sem, classes in history_raw.items():
         for cls in classes:
             status = cls.get('status', '')
-                                                                                              
             if status not in ['Matriculado', 'Cursando', 'Indefinido']:
-                c_name = cls.get('name')
-                p_name = cls.get('professor')
-                
-                if c_name:
-                    past_courses.add(c_name)
-                if p_name and p_name.strip() and p_name.strip().upper() != "DESCONHECIDO":
-                    past_professors.add(p_name.strip().upper())
+                c_name = (cls.get('name') or '').strip()
+                p_name = (cls.get('professor') or '').strip().upper()
+                if c_name and p_name and p_name != "DESCONHECIDO":
+                    pares.add((c_name, p_name))
 
-                                                         
+    if not pares:
+        return jsonify({"pendentes": []})
+
     institution = linked_account.institution
+    course_names = {c for c, _ in pares}
+    prof_names = {p for _, p in pares}
 
-    result_c = await g.db_session.execute(select(CourseReview).filter_by(user_id=user_id, institution=institution))
-    existing_c_reviews = result_c.scalars().all()
-    reviewed_courses = {r.name for r in existing_c_reviews}
-    
-    result_p = await g.db_session.execute(select(ProfessorReview).filter_by(user_id=user_id, institution=institution))
-    existing_p_reviews = result_p.scalars().all()
-    reviewed_professors = {r.name for r in existing_p_reviews}
+    result_d = await g.db_session.execute(
+        select(Disciplina).filter(Disciplina.institution == institution, Disciplina.name.in_(course_names))
+    )
+    disciplina_by_name = {d.name: d.id for d in result_d.scalars().all()}
 
-    pending_courses = list(past_courses - reviewed_courses)
-    pending_professors = list(past_professors - reviewed_professors)
+    result_p = await g.db_session.execute(
+        select(Professor).filter(Professor.institution == institution, Professor.name.in_(prof_names))
+    )
+    professor_by_name = {p.name: p.id for p in result_p.scalars().all()}
 
-    return jsonify({
-        "courses": pending_courses,
-        "professors": pending_professors
-    })
+    hash_by_pair = {
+        (c_name, p_name): compute_vote_hash(linked_account.id, disciplina_by_name[c_name], professor_by_name[p_name])
+        for c_name, p_name in pares
+        if c_name in disciplina_by_name and p_name in professor_by_name
+    }
 
-@bp.route('/api/reviews/submit', methods=['POST'])
-async def submit_reviews():
+    votados = set()
+    if hash_by_pair:
+        result_v = await g.db_session.execute(
+            select(VotoControle.hash_voto).filter(VotoControle.hash_voto.in_(hash_by_pair.values()))
+        )
+        hashes_existentes = set(result_v.scalars().all())
+        votados = {pair for pair, h in hash_by_pair.items() if h in hashes_existentes}
+
+    pendentes = [{"disciplina": c, "professor": p} for c, p in pares if (c, p) not in votados]
+
+    return jsonify({"pendentes": pendentes})
+
+@bp.route('/api/avaliacoes/submeter', methods=['POST'])
+async def avaliacoes_submeter():
     active_account_id = session.get('active_account_id')
     user_id = session.get('user_id')
-    
+
     if active_account_id:
         linked_account = await g.db_session.get(LinkedAccount, active_account_id)
     elif user_id:
@@ -1220,76 +1387,105 @@ async def submit_reviews():
     if not linked_account:
         return jsonify({"error": "No linked account"}), 400
 
-    user_id = linked_account.user_id
-
     data = await request.get_json()
     if not data:
         return jsonify({"error": "Invalid payload"}), 400
 
-    institution = linked_account.institution
-    
-                                                                                                        
-    courses_data = data.get('courses', [])
-    professors_data = data.get('professors', [])
-
-    if not isinstance(courses_data, list) or not isinstance(professors_data, list):
+    itens = data.get('itens', [])
+    if not isinstance(itens, list):
         return jsonify({"error": "Invalid payload"}), 400
-    if len(courses_data) + len(professors_data) > _MAX_REVIEWS_PER_REQUEST:
+    if len(itens) > _MAX_REVIEWS_PER_REQUEST:
         return jsonify({"error": "Too many reviews in a single request"}), 400
 
+    institution = linked_account.institution
+    aluno_ref = linked_account.id
+
+    parsed = []
+    for item in itens:
+        if not isinstance(item, dict):
+            continue
+        disciplina_nome = _parse_review_name(item.get('disciplina'))
+        professor_nome = _parse_review_name(item.get('professor'))
+        if not disciplina_nome or not professor_nome:
+            continue
+        professor_nome = professor_nome.upper()
+
+        recusado = bool(item.get('recusado', False))
+        ok, nota = _parse_nota(item.get('nota'))
+        if not ok:
+            return jsonify({"error": "Nota inválida: use um valor inteiro entre 1 e 5."}), 400
+        if not recusado and nota is None:
+            continue
+
+        parsed.append((disciplina_nome, professor_nome, recusado, nota))
+
+    if not parsed:
+        return jsonify({"status": "success"})
+
     try:
-        for c in courses_data:
-            if not isinstance(c, dict):
-                continue
-            name = _parse_review_name(c.get('name'))
-            if not name:
-                continue
-            ok, rating = _parse_rating(c.get('rating'))
-            if not ok:
-                return jsonify({"error": "Nota inválida: use um valor entre 1 e 5."}), 400
-            declined = bool(c.get('declined', False))
+        disciplina_names = {d for d, p, r, n in parsed}
+        professor_names = {p for d, p, r, n in parsed}
 
-            result = await g.db_session.execute(select(CourseReview).filter_by(user_id=user_id, institution=institution, name=name))
-            review = result.scalars().first()
-            if not review:
-                review = CourseReview(user_id=user_id, institution=institution, name=name)
-                g.db_session.add(review)
-            review.difficulty_rating = rating
-            review.is_declined = declined
+        result_d = await g.db_session.execute(
+            select(Disciplina).filter(Disciplina.institution == institution, Disciplina.name.in_(disciplina_names))
+        )
+        disciplina_by_name = {d.name: d for d in result_d.scalars().all()}
 
-        for p in professors_data:
-            if not isinstance(p, dict):
-                continue
-            name = _parse_review_name(p.get('name'))
-            if not name:
-                continue
-            name = name.upper()
-            ok, rating = _parse_rating(p.get('rating'))
-            if not ok:
-                return jsonify({"error": "Nota inválida: use um valor entre 1 e 5."}), 400
-            declined = bool(p.get('declined', False))
+        result_p = await g.db_session.execute(
+            select(Professor).filter(Professor.institution == institution, Professor.name.in_(professor_names))
+        )
+        professor_by_name = {p.name: p for p in result_p.scalars().all()}
 
-            result = await g.db_session.execute(select(ProfessorReview).filter_by(user_id=user_id, institution=institution, name=name))
-            review = result.scalars().first()
-            if not review:
-                review = ProfessorReview(user_id=user_id, institution=institution, name=name)
-                g.db_session.add(review)
-            review.difficulty_rating = rating
-            review.is_declined = declined
+        for name in disciplina_names - disciplina_by_name.keys():
+            d = Disciplina(institution=institution, name=name)
+            g.db_session.add(d)
+            disciplina_by_name[name] = d
+
+        for name in professor_names - professor_by_name.keys():
+            p = Professor(institution=institution, name=name)
+            g.db_session.add(p)
+            professor_by_name[name] = p
+
+        if len(disciplina_by_name) or len(professor_by_name):
+            await g.db_session.flush()  # atribui os ids às linhas recém-criadas
+
+        hashes = []
+        for disciplina_nome, professor_nome, recusado, nota in parsed:
+            d_id = disciplina_by_name[disciplina_nome].id
+            p_id = professor_by_name[professor_nome].id
+            hashes.append((compute_vote_hash(aluno_ref, d_id, p_id), d_id, p_id, recusado, nota))
+
+        result_v = await g.db_session.execute(
+            select(VotoControle.hash_voto).filter(VotoControle.hash_voto.in_({h for h, *_ in hashes}))
+        )
+        ja_votados = set(result_v.scalars().all())
+
+        novos = set()
+        for hash_voto, d_id, p_id, recusado, nota in hashes:
+            if hash_voto in ja_votados or hash_voto in novos:
+                continue
+            novos.add(hash_voto)
+            if recusado:
+                g.db_session.add(VotoControle(hash_voto=hash_voto, voto_computado=False))
+            else:
+                g.db_session.add(Avaliacao(disciplina_id=d_id, professor_id=p_id, nota_exigencia=nota))
+                g.db_session.add(VotoControle(hash_voto=hash_voto, voto_computado=True))
 
         await g.db_session.commit()
+        return jsonify({"status": "success"})
+    except IntegrityError:
+        await g.db_session.rollback()
         return jsonify({"status": "success"})
     except Exception as e:
         await g.db_session.rollback()
         logger.error(f"Failed to submit reviews: {e}")
         return jsonify({"error": "Database error"}), 500
 
-@bp.route('/api/reviews/stats', methods=['GET'])
-async def get_review_stats():
-                                                                
+@bp.route('/api/avaliacoes/media', methods=['GET'])
+async def avaliacoes_media():
     active_account_id = session.get('active_account_id')
     user_id = session.get('user_id')
-    
+
     if active_account_id:
         linked_account = await g.db_session.get(LinkedAccount, active_account_id)
     elif user_id:
@@ -1300,49 +1496,41 @@ async def get_review_stats():
 
     if not linked_account:
         return jsonify({"error": "No linked account"}), 400
-        
-    course_name = request.args.get('course')
-    professor_name = request.args.get('professor')
+
+    disciplina_nome = _parse_review_name(request.args.get('disciplina'))
+    professor_nome = _parse_review_name(request.args.get('professor'))
+    if not disciplina_nome or not professor_nome:
+        return jsonify({"average": None, "count": None})
+    professor_nome = professor_nome.upper()
+
     institution = linked_account.institution
 
-    stats = {}
+    result_d = await g.db_session.execute(
+        select(Disciplina).filter_by(institution=institution, name=disciplina_nome)
+    )
+    disciplina = result_d.scalars().first()
 
-    if course_name:
-        result = await g.db_session.execute(
-            select(CourseReview).filter(
-                CourseReview.institution == institution,
-                CourseReview.name == course_name,
-                CourseReview.is_declined == False,
-                CourseReview.difficulty_rating != None
-            )
+    result_p = await g.db_session.execute(
+        select(Professor).filter_by(institution=institution, name=professor_nome)
+    )
+    professor = result_p.scalars().first()
+
+    if not disciplina or not professor:
+        return jsonify({"average": None, "count": None})
+
+    result = await g.db_session.execute(
+        select(func.avg(Avaliacao.nota_exigencia), func.count(Avaliacao.id)).filter(
+            Avaliacao.disciplina_id == disciplina.id,
+            Avaliacao.professor_id == professor.id,
         )
-        reviews = result.scalars().all()
-        
-        if reviews:
-            avg = sum(r.difficulty_rating for r in reviews) / len(reviews)
-            stats['course'] = {"average": round(avg, 1), "count": len(reviews)}
-        else:
-            stats['course'] = None
+    )
+    avg, count = result.one()
+    count = count or 0
 
-    if professor_name:
-        professor_name = professor_name.strip().upper()
-        result = await g.db_session.execute(
-            select(ProfessorReview).filter(
-                ProfessorReview.institution == institution,
-                ProfessorReview.name == professor_name,
-                ProfessorReview.is_declined == False,
-                ProfessorReview.difficulty_rating != None
-            )
-        )
-        reviews = result.scalars().all()
-        
-        if reviews:
-            avg = sum(r.difficulty_rating for r in reviews) / len(reviews)
-            stats['professor'] = {"average": round(avg, 1), "count": len(reviews)}
-        else:
-            stats['professor'] = None
-
-    return jsonify(stats)
+    return jsonify({
+        "average": round(avg, 1) if count >= 1 else None,
+        "count": count if count >= _MIN_VOTES_TO_SHOW_COUNT else None,
+    })
 
 
 @bp.route('/delete_account', methods=['POST'])
@@ -1352,36 +1540,11 @@ async def delete_account():
         return redirect(url_for('main.login'))
         
     async with db_session() as s:
-                           
         user = await s.get(User, user_id)
         if not user:
             session.clear()
             return redirect(url_for('main.login'))
-            
-                                                                
-        result = await s.execute(select(User).filter_by(email="anonimo@boletimapp.com"))
-        anon_user = result.scalars().first()
-        if not anon_user:
-            anon_user = User(
-                google_id="anonymous_virtual_account",
-                email="anonimo@boletimapp.com",
-                name="Anônimo",
-                profile_pic=None
-            )
-            s.add(anon_user)
-            await s.flush()
-            
-                                              
-        result_cr = await s.execute(select(CourseReview).filter_by(user_id=user_id))
-        for cr in result_cr.scalars().all():
-            cr.user_id = anon_user.id
-            
-                                                 
-        result_pr = await s.execute(select(ProfessorReview).filter_by(user_id=user_id))
-        for pr in result_pr.scalars().all():
-            pr.user_id = anon_user.id
-            
-                                                                            
+
         await s.delete(user)
         await s.commit()
         
