@@ -1177,12 +1177,33 @@ async def admin_avaliacoes():
 
     disciplina_medias = {}
     for aval, disc, prof in rows:
-        if disc.id not in disciplina_medias:
-            disciplina_medias[disc.id] = []
-        disciplina_medias[disc.id].append(aval.nota_exigencia)
+        key = (disc.id, prof.id)
+        if key not in disciplina_medias:
+            disciplina_medias[key] = {
+                'notas': [],
+                'disc_name': disc.name,
+                'prof_name': prof.name
+            }
+        disciplina_medias[key]['notas'].append(aval.nota_exigencia)
         
-    for d_id, notas in disciplina_medias.items():
-        disciplina_medias[d_id] = round(sum(notas) / len(notas), 1)
+    medias_list = []
+    # Usaremos um dict temporário para facilitar o lookup do id no loop seguinte
+    lookup_medias = {}
+    
+    for (d_id, p_id), data in disciplina_medias.items():
+        notas = data['notas']
+        media = round(sum(notas) / len(notas), 1)
+        lookup_medias[(d_id, p_id)] = media
+        
+        medias_list.append({
+            'disciplina': data['disc_name'],
+            'professor': data['prof_name'],
+            'media': media,
+            'quantidade': len(notas)
+        })
+
+    # Sort by discipline name then professor name
+    medias_list.sort(key=lambda x: (x['disciplina'], x['professor']))
 
     avaliacoes = []
     for aval, disc, prof in rows:
@@ -1191,11 +1212,11 @@ async def admin_avaliacoes():
             'disciplina': disc.name,
             'professor': prof.name,
             'nota': aval.nota_exigencia,
-            'media_disciplina': disciplina_medias[disc.id],
+            'media_disciplina': lookup_medias[(disc.id, prof.id)],
             'data': aval.created_at.strftime('%d/%m/%Y %H:%M') if aval.created_at else ''
         })
 
-    return await render_template('admin_avaliacoes.html', user=user, avaliacoes=avaliacoes)
+    return await render_template('admin_avaliacoes.html', user=user, avaliacoes=avaliacoes, medias_list=medias_list)
                                                                       
 @bp.route('/api/matricula/status')
 async def api_matricula_status():

@@ -35,6 +35,42 @@
         .n3 { color: #facc15; background: rgba(250,204,21,0.12); }
         .n4 { color: #fb923c; background: rgba(251,146,60,0.12); }
         .n5 { color: #f43f5e; background: rgba(244,63,94,0.14); }
+        .admin-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.09);
+        }
+        button.admin-tab-btn {
+            width: auto;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            color: #8891a3;
+            padding: 0.75rem 1.5rem;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+        }
+        button.admin-tab-btn:hover {
+            color: #f2f4f8;
+            background: transparent;
+            transform: none;
+            box-shadow: none;
+        }
+        button.admin-tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            background: transparent;
+        }
+        .admin-tab-content {
+            display: none;
+        }
+        .admin-tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -50,48 +86,108 @@
 <div class="container" style="margin-top: 2rem; max-width: 1000px;">
     <h2 style="margin-bottom: 1.5rem;">Listagem de Avaliações</h2>
 
-    <div class="card" style="overflow-x: auto; padding: 0;">
-        {% if avaliacoes %}
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Disciplina</th>
-                    <th>Professor</th>
-                    <th>Exigência</th>
-                    <th>Média Global (Exigência)</th>
-                    <th>Data</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in avaliacoes %}
-                <tr>
-                    <td style="color: #8891a3;">#{{ a.id }}</td>
-                    <td style="font-weight: 700;">{{ a.disciplina }}</td>
-                    <td>{{ a.professor }}</td>
-                    <td>
-                        <span class="badge-nota n{{ a.nota }}">
-                            {% if a.nota == 1 %}1 - Muito Baixa
-                            {% elif a.nota == 2 %}2 - Baixa
-                            {% elif a.nota == 3 %}3 - Média
-                            {% elif a.nota == 4 %}4 - Alta
-                            {% elif a.nota == 5 %}5 - Altíssima
-                            {% else %}{{ a.nota }}
-                            {% endif %}
-                        </span>
-                    </td>
-                    <td style="font-weight: 800; color: #f2f4f8;">{{ a.media_disciplina }}</td>
-                    <td style="color: #8891a3; font-size: 12px;">{{ a.data }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else %}
-        <div style="padding: 2rem; text-align: center; color: #8891a3;">
-            Nenhuma avaliação registrada ainda.
+    <div class="admin-tabs">
+        <button class="admin-tab-btn active" onclick="switchTab('todas')">Todas as Avaliações</button>
+        <button class="admin-tab-btn" onclick="switchTab('disciplinas')">Médias por Disciplina</button>
+    </div>
+
+    <!-- Tab 1: Todas as Avaliações -->
+    <div id="tab-todas" class="admin-tab-content active">
+        <div class="card" style="overflow-x: auto; padding: 0;">
+            {% if avaliacoes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Disciplina</th>
+                        <th>Professor</th>
+                        <th>Exigência</th>
+                        <th>Média Global (Exigência)</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in avaliacoes %}
+                    <tr>
+                        <td style="color: #8891a3;">#{{ a.id }}</td>
+                        <td style="font-weight: 700;">{{ a.disciplina }}</td>
+                        <td>{{ a.professor }}</td>
+                        <td>
+                            <span class="badge-nota n{{ a.nota }}">
+                                {% if a.nota == 1 %}1 - Muito Baixa
+                                {% elif a.nota == 2 %}2 - Baixa
+                                {% elif a.nota == 3 %}3 - Média
+                                {% elif a.nota == 4 %}4 - Alta
+                                {% elif a.nota == 5 %}5 - Altíssima
+                                {% else %}{{ a.nota }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td style="font-weight: 800; color: #f2f4f8;">{{ a.media_disciplina }}</td>
+                        <td style="color: #8891a3; font-size: 12px;">{{ a.data }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 2rem; text-align: center; color: #8891a3;">
+                Nenhuma avaliação registrada ainda.
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
+    </div>
+
+    <!-- Tab 2: Médias por Disciplina -->
+    <div id="tab-disciplinas" class="admin-tab-content">
+        <div class="card" style="overflow-x: auto; padding: 0;">
+            {% if medias_list %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Disciplina</th>
+                        <th>Professor</th>
+                        <th>Avaliações Registradas</th>
+                        <th>Média de Exigência</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in medias_list %}
+                    <tr>
+                        <td style="font-weight: 700;">{{ item.disciplina }}</td>
+                        <td>{{ item.professor }}</td>
+                        <td>{{ item.quantidade }} avaliações</td>
+                        <td style="font-weight: 800; color: #f2f4f8;">
+                            {% if item.media >= 4.0 %}
+                                <span style="color: #f43f5e;">{{ item.media }} (Alta)</span>
+                            {% elif item.media <= 2.0 %}
+                                <span style="color: #34d399;">{{ item.media }} (Baixa)</span>
+                            {% else %}
+                                <span style="color: #facc15;">{{ item.media }} (Média)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div style="padding: 2rem; text-align: center; color: #8891a3;">
+                Nenhuma avaliação registrada ainda.
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+<script>
+    function switchTab(tabId) {
+        // Remove active class from all buttons and contents
+        document.querySelectorAll('.admin-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.admin-tab-content').forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked button and target content
+        document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
+</script>
 </body>
 </html>
