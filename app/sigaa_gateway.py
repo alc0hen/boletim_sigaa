@@ -163,7 +163,7 @@ class _LocalBackend:
 
 
     def _institution_type(self):
-        from .sigaa_api.types import InstitutionType
+        from .sigaa_api.enums import InstitutionType
 
         try:
             return InstitutionType[(self.institution or "IFAL").upper()]
@@ -417,7 +417,7 @@ class SigaaGateway:
     @classmethod
     async def _login_local(cls, url, institution, username, password, credentials=None):
         from .sigaa_api.sigaa import Sigaa
-        from .sigaa_api.types import InstitutionType
+        from .sigaa_api.enums import InstitutionType
         from .sigaa_api.exceptions import (
             SigaaException,
             SigaaInvalidCredentials,
@@ -516,6 +516,18 @@ class SigaaGateway:
             raise
 
     async def _call(self, method, *args, **kwargs):
+        pref = _backend_preference()
+        needs_relogin = False
+        
+        if pref == LOCAL and self.backend_name == REMOTE:
+            needs_relogin = True
+        elif pref == REMOTE and self.backend_name == LOCAL and is_configured():
+            needs_relogin = True
+            
+        if needs_relogin:
+            if not await self._relogin():
+                raise SigaaSessionExpired("Sessão do SIGAA expirada devido a mudança de backend.")
+
         try:
             return await self._invoke(method, *args, **kwargs)
         except (RemoteSessionExpired, SigaaSessionExpired):

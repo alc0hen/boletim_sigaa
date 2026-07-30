@@ -1,4 +1,4 @@
-from app.sigaa_api.types import InstitutionType
+from app.sigaa_api.enums import InstitutionType
 from .calculators import AcademicCalculator, IFAcademicCalculator, UFAcademicCalculator
 class CalculatorFactory:
     @staticmethod

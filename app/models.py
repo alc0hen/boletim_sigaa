@@ -1,12 +1,15 @@
 from .extensions import Base
-from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, ForeignKey, LargeBinary, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, ForeignKey, LargeBinary, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import os
 import base64
+import hmac
+import hashlib
 import logging
+from datetime import datetime
 from functools import lru_cache
 
 @lru_cache(maxsize=1)
@@ -84,23 +87,61 @@ class LinkedAccount(Base):
         return f'<LinkedAccount {self.institution}:{self.username}>'
 
 
-class CourseReview(Base):
-    __tablename__ = 'course_reviews'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    institution = Column(String(50), nullable=False)
-    name = Column(String(255), nullable=False)
-    difficulty_rating = Column(Float, nullable=True) # 1.0 to 5.0
-    is_declined = Column(Boolean, default=False)
-    __table_args__ = (UniqueConstraint('user_id', 'institution', 'name', name='uq_course_review'),)
+@lru_cache(maxsize=1)
+def get_vote_hash_key() -> bytes:
+    key = os.environ.get('ENCRYPTION_KEY')
+    if not key:
+        from .security import is_production
+        if is_production():
+            raise ValueError("ENCRYPTION_KEY environment variable is required in production!")
+        key = base64.urlsafe_b64encode(b'0' * 32)
+
+    if isinstance(key, str):
+        key = key.encode('utf-8')
+
+    salt = b'sigaa-api-vote-hash-salt-v1'
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=480000,
+    )
+    return kdf.derive(key)
 
 
-class ProfessorReview(Base):
-    __tablename__ = 'professor_reviews'
+def compute_vote_hash(aluno_ref: int, disciplina_id: int, professor_id: int) -> str:
+    msg = f"{aluno_ref}:{disciplina_id}:{professor_id}".encode('utf-8')
+    return hmac.new(get_vote_hash_key(), msg, hashlib.sha256).hexdigest()
+
+
+class Disciplina(Base):
+    __tablename__ = 'disciplinas'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     institution = Column(String(50), nullable=False)
     name = Column(String(255), nullable=False)
-    difficulty_rating = Column(Float, nullable=True) # 1.0 to 5.0
-    is_declined = Column(Boolean, default=False)
-    __table_args__ = (UniqueConstraint('user_id', 'institution', 'name', name='uq_professor_review'),)
+    __table_args__ = (UniqueConstraint('institution', 'name', name='uq_disciplina'),)
+
+
+class Professor(Base):
+    __tablename__ = 'professores'
+    id = Column(Integer, primary_key=True)
+    institution = Column(String(50), nullable=False)
+    name = Column(String(255), nullable=False)
+    __table_args__ = (UniqueConstraint('institution', 'name', name='uq_professor'),)
+
+
+class Avaliacao(Base):
+    __tablename__ = 'avaliacoes'
+    id = Column(Integer, primary_key=True)
+    disciplina_id = Column(Integer, ForeignKey('disciplinas.id'), nullable=False)
+    professor_id = Column(Integer, ForeignKey('professores.id'), nullable=False)
+    nota_exigencia = Column(Integer, nullable=False)  # 1 (baixa exigência) .. 5 (altíssima exigência)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    __table_args__ = (Index('ix_avaliacao_oferta', 'disciplina_id', 'professor_id'),)
+
+
+class VotoControle(Base):
+    __tablename__ = 'votos_controle'
+    id = Column(Integer, primary_key=True)
+    hash_voto = Column(String(64), unique=True, nullable=False, index=True)
+    voto_computado = Column(Boolean, nullable=False, default=True)

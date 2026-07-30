@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Avaliações | Boletim App</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.09);
+        }
+        th {
+            font-weight: 800;
+            color: #8891a3;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+        .badge-nota {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .n1 { color: #34d399; background: rgba(52,211,153,0.12); }
+        .n2 { color: #a3e635; background: rgba(163,230,53,0.12); }
+        .n3 { color: #facc15; background: rgba(250,204,21,0.12); }
+        .n4 { color: #fb923c; background: rgba(251,146,60,0.12); }
+        .n5 { color: #f43f5e; background: rgba(244,63,94,0.14); }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="container nav-content">
+        <div class="logo">Avaliações Registradas</div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <a href="{{ url_for('main.admin') }}" class="btn-secondary" style="width:auto; padding:8px 16px; margin-top:0;">Voltar</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container" style="margin-top: 2rem; max-width: 1000px;">
+    <h2 style="margin-bottom: 1.5rem;">Listagem de Avaliações</h2>
+
+    <div class="card" style="overflow-x: auto; padding: 0;">
+        {% if avaliacoes %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Disciplina</th>
+                    <th>Professor</th>
+                    <th>Exigência</th>
+                    <th>Média Global (Exigência)</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in avaliacoes %}
+                <tr>
+                    <td style="color: #8891a3;">#{{ a.id }}</td>
+                    <td style="font-weight: 700;">{{ a.disciplina }}</td>
+                    <td>{{ a.professor }}</td>
+                    <td>
+                        <span class="badge-nota n{{ a.nota }}">
+                            {% if a.nota == 1 %}1 - Muito Baixa
+                            {% elif a.nota == 2 %}2 - Baixa
+                            {% elif a.nota == 3 %}3 - Média
+                            {% elif a.nota == 4 %}4 - Alta
+                            {% elif a.nota == 5 %}5 - Altíssima
+                            {% else %}{{ a.nota }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td style="font-weight: 800; color: #f2f4f8;">{{ a.media_disciplina }}</td>
+                    <td style="color: #8891a3; font-size: 12px;">{{ a.data }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div style="padding: 2rem; text-align: center; color: #8891a3;">
+            Nenhuma avaliação registrada ainda.
+        </div>
+        {% endif %}
+    </div>
+</div>
+</body>
+</html>

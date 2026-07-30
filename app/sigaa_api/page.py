@@ -2,7 +2,7 @@ import json
 import re
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
-from .types import HTTPMethod
+from .enums import HTTPMethod
 from .exceptions import SigaaSessionExpired
 class SigaaPage:
     def __init__(self, url, body, headers, method, status_code, request_headers=None):

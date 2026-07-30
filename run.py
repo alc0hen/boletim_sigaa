@@ -48,6 +48,7 @@ async def main():
     config = Config()
     config.bind = [f"0.0.0.0:{os.getenv('PORT', '5000')}"]
     config.loglevel = "info" if is_prod else "debug"
+    config.use_reloader = not is_prod
 
     # Only start the Redis bridge in dev when WS_URL is configured
     if WS_URL:

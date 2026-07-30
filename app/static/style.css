@@ -1,21 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
 :root {
-    --bg-main: #231f20;
-    --bg-card: #2d2a2b;
-    --text-main: #eae0d5;
-    --text-muted: #a89f99;
-    --accent: #c05621;
-    --accent-hover: #9c4221;
-    --border: #3f3b3a;
+    --bg-main: #0a0b0e;
+    --bg-card: rgba(255, 255, 255, 0.035);
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --border: rgba(255, 255, 255, 0.09);
     --font-serif: 'Lora', serif;
     --font-sans: 'Inter', sans-serif;
     --shadow: 0 15px 35px rgba(0,0,0,0.3);
-    --danger: #cf6679;
-    --success: #a3d4a5;
+    --danger: #ef4444;
+    --success: #10b981;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
     font-family: var(--font-sans);
+    background: radial-gradient(circle at 50% -10%, #101623 0%, var(--bg-main) 55%);
     background-color: var(--bg-main);
     color: var(--text-main);
     line-height: 1.6;
@@ -28,12 +29,13 @@ nav {
     height: 90px;
     display: flex;
     align-items: center;
-    background: var(--bg-card);
+    background: rgba(10, 11, 14, 0.85);
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
     z-index: 100;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
 .container {
     width: 100%;
@@ -96,7 +98,7 @@ label {
 input {
     width: 100%;
     padding: 1rem;
-    background-color: #1a1e1c;
+    background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
     border-radius: 8px;
     color: var(--text-main);
@@ -108,16 +110,16 @@ input {
 input:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.1);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
 }
-button {
+button, .btn-primary {
     display: inline-flex;
     justify-content: center;
     align-items: center;
     gap: 0.5rem;
     width: 100%;
     background: var(--accent);
-    color: #1e2321;
+    color: #fff;
     padding: 1rem 2rem;
     border-radius: 100px;
     font-weight: 600;
@@ -126,27 +128,28 @@ button {
     transition: all 0.3s;
     font-size: 1rem;
     font-family: var(--font-sans);
+    text-decoration: none;
 }
-button:hover {
+button:hover, .btn-primary:hover {
     background: var(--accent-hover);
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(212, 163, 115, 0.15);
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.15);
 }
-button:disabled {
+button:disabled, .btn-primary:disabled {
     background: var(--text-muted);
     cursor: not-allowed;
     transform: none;
 }
 .btn-secondary {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border);
-    color: var(--text-muted);
+    color: var(--text-main);
     margin-top: 10px;
 }
 .btn-secondary:hover {
-    border-color: var(--danger);
-    color: var(--danger);
-    background: transparent;
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
 }
 .alert {
     padding: 1rem;

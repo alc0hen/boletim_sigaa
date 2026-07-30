@@ -6,6 +6,7 @@ manual CSRF protection, and manual OAuth2 via httpx.
 """
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy import text
 import secrets
 from quart import session, request, abort
 from functools import wraps
@@ -47,6 +48,8 @@ async def create_tables():
     """Create all tables defined in models. Call during app startup."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        for legacy_table in ("course_reviews", "professor_reviews"):
+            await conn.execute(text(f"DROP TABLE IF EXISTS {legacy_table}"))
 
 
 async def close_db():
