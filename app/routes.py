@@ -564,8 +564,12 @@ async def dashboard():
             user = await s.get(User, session['user_id'])
             if user:
                 linked_accounts = user.linked_accounts
-    return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'))
+    return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'), has_completed_onboarding=user.has_completed_onboarding if user else False)
 
+
+@bp.route('/test_onboarding')
+async def test_onboarding():
+    return await render_template('dashboard.html', user=None, linked_accounts=[], active_account_id=None, has_completed_onboarding=False)
 
 def _scrub_active_semester_from_cache(cached_data):
     # Logic removed: bond.py already excludes the active semester and active courses correctly.
@@ -1702,3 +1706,18 @@ async def delete_account():
         
     session.clear()
     return redirect(url_for('main.login'))
+
+
+@bp.route('/api/user/complete_onboarding', methods=['POST'])
+async def complete_onboarding():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    async with db_session() as s:
+        user = await s.get(User, user_id)
+        if user:
+            user.has_completed_onboarding = True
+            await s.commit()
+            return jsonify({"success": True})
+    return jsonify({"error": "User not found"}), 404
