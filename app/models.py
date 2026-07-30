@@ -145,3 +145,13 @@ class VotoControle(Base):
     id = Column(Integer, primary_key=True)
     hash_voto = Column(String(64), unique=True, nullable=False, index=True)
     voto_computado = Column(Boolean, nullable=False, default=True)
+
+
+class MediaExigencia(Base):
+    __tablename__ = 'medias_exigencia'
+    id = Column(Integer, primary_key=True)
+    disciplina_id = Column(Integer, ForeignKey('disciplinas.id'), nullable=False)
+    professor_id = Column(Integer, ForeignKey('professores.id'), nullable=False)
+    media_exigencia = Column(Float, nullable=False, default=0.0)
+    total_votos = Column(Integer, nullable=False, default=0)
+    __table_args__ = (UniqueConstraint('disciplina_id', 'professor_id', name='uq_media_exigencia'),)

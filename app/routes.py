@@ -117,6 +117,74 @@ async def _load_credentials(db=None):
     return None
 
 
+async def _get_single_media(institution, d_name, p_name):
+    if not d_name or not p_name: return None
+    from app.models import MediaExigencia, Disciplina, Professor
+    from app.extensions import db_session
+    from sqlalchemy import select
+    d_name_parsed = _parse_review_name(d_name)
+    p_name_parsed = _parse_review_name(p_name)
+    if not d_name_parsed or not p_name_parsed: return None
+    p_name_parsed = p_name_parsed.upper()
+    async with db_session() as s:
+        result = await s.execute(
+            select(MediaExigencia.media_exigencia)
+            .join(Disciplina, MediaExigencia.disciplina_id == Disciplina.id)
+            .join(Professor, MediaExigencia.professor_id == Professor.id)
+            .filter(
+                Disciplina.institution == institution,
+                Disciplina.name == d_name_parsed,
+                Professor.name == p_name_parsed
+            )
+        )
+        val = result.scalar()
+        return round(float(val), 1) if val is not None else None
+
+async def _inject_exigencia_medias(institution, profile_dict):
+    history_raw = profile_dict.get('history_raw', {})
+    if not history_raw:
+        return profile_dict
+        
+    c_names = set()
+    p_names = set()
+    for classes in history_raw.values():
+        for cls in classes:
+            c = (cls.get('name') or '').strip()
+            p = (cls.get('professor') or '').strip().upper()
+            if c and p and p != 'DESCONHECIDO':
+                c_names.add(c)
+                p_names.add(p)
+                
+    if not c_names or not p_names:
+        return profile_dict
+        
+    from app.extensions import db_session
+    from app.models import MediaExigencia
+    async with db_session() as s:
+        result = await s.execute(
+            select(Disciplina.name, Professor.name, MediaExigencia.media_exigencia)
+            .select_from(MediaExigencia)
+            .join(Disciplina, MediaExigencia.disciplina_id == Disciplina.id)
+            .join(Professor, MediaExigencia.professor_id == Professor.id)
+            .filter(
+                Disciplina.institution == institution,
+                Disciplina.name.in_(c_names),
+                Professor.name.in_(p_names)
+            )
+        )
+        
+        medias = {f"{d}|{p}": round(float(a), 1) for d, p, a in result.all() if a is not None}
+        
+    for classes in history_raw.values():
+        for cls in classes:
+            c = (cls.get('name') or '').strip()
+            p = (cls.get('professor') or '').strip().upper()
+            if c and p:
+                avg = medias.get(f"{c}|{p}")
+                cls['exigencia_media'] = avg
+                    
+    return profile_dict
+
 async def _get_gateway(db=None):
     state = session.get('sigaa_state')
     if not state:
@@ -772,7 +840,8 @@ async def stream_grades():
 
     async def async_generate():
         if cached_profile:
-            yield json.dumps({"type": "profile_data", "data": cached_profile}) + "\n"
+            injected_profile = await _inject_exigencia_medias(sigaa_inst_val, cached_profile)
+            yield json.dumps({"type": "profile_data", "data": injected_profile}) + "\n"
             logger.info("SIGAA: Emitted cached history_json for instant UI rendering.")
 
         try:
@@ -850,10 +919,13 @@ async def stream_grades():
                                             raw_grades = details.get("grades") or []
                                             freq_data = details.get("frequency")
                                             course_result = calculator.calculate(raw_grades)
+                                            prof = details.get("professor")
+                                            exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
                                             result_data = {
                                                 "grades": raw_grades,
                                                 "status": course_result.to_dict(),
-                                                "professor": details.get("professor")
+                                                "professor": prof,
+                                                "exigencia_media": exigencia
                                             }
                                             await queue.put({"type": "course_data", "id": c_id, "data": result_data})
                                             await queue.put({"type": "course_loading", "id": c_id, "step": "frequencia"})
@@ -895,10 +967,13 @@ async def stream_grades():
                                     raw_grades = details.get("grades") or []
                                     freq_data = details.get("frequency")
                                     course_result = calculator.calculate(raw_grades)
+                                    prof = details.get("professor")
+                                    exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
                                     result_data = {
                                         "grades": raw_grades,
                                         "status": course_result.to_dict(),
-                                        "professor": details.get("professor")
+                                        "professor": prof,
+                                        "exigencia_media": exigencia
                                     }
                                     yield json.dumps({"type": "course_data", "id": c_id, "data": result_data}) + "\n"
                                     
@@ -985,6 +1060,7 @@ async def stream_grades():
                             except Exception as e:
                                 logger.error(f"Failed to cache history in stream_grades: {e}")
 
+                        profile_data = await _inject_exigencia_medias(sigaa_inst_val, profile_data)
                         yield json.dumps({"type": "profile_data", "data": profile_data}) + "\n"
 
                                                                             
@@ -1411,7 +1487,7 @@ async def avaliacoes_submeter():
         professor_nome = professor_nome.upper()
 
         recusado = bool(item.get('recusado', False))
-        ok, nota = _parse_nota(item.get('nota'))
+        ok, nota = _parse_nota(item.get('nota') or item.get('nota_exigencia'))
         if not ok:
             return jsonify({"error": "Nota inválida: use um valor inteiro entre 1 e 5."}), 400
         if not recusado and nota is None:
@@ -1461,6 +1537,7 @@ async def avaliacoes_submeter():
         ja_votados = set(result_v.scalars().all())
 
         novos = set()
+        affected_pairs = set()
         for hash_voto, d_id, p_id, recusado, nota in hashes:
             if hash_voto in ja_votados or hash_voto in novos:
                 continue
@@ -1470,8 +1547,39 @@ async def avaliacoes_submeter():
             else:
                 g.db_session.add(Avaliacao(disciplina_id=d_id, professor_id=p_id, nota_exigencia=nota))
                 g.db_session.add(VotoControle(hash_voto=hash_voto, voto_computado=True))
+                affected_pairs.add((d_id, p_id))
 
         await g.db_session.commit()
+        
+        if affected_pairs:
+            from app.models import MediaExigencia
+            for d_id, p_id in affected_pairs:
+                aggs = await g.db_session.execute(
+                    select(
+                        func.avg(Avaliacao.nota_exigencia).label('media'),
+                        func.count(Avaliacao.id).label('total')
+                    ).filter_by(disciplina_id=d_id, professor_id=p_id)
+                )
+                r = aggs.first()
+                if r and r.total > 0:
+                    media_val = float(r.media)
+                    total_val = r.total
+                    existing = await g.db_session.execute(
+                        select(MediaExigencia).filter_by(disciplina_id=d_id, professor_id=p_id)
+                    )
+                    m_row = existing.scalars().first()
+                    if m_row:
+                        m_row.media_exigencia = media_val
+                        m_row.total_votos = total_val
+                    else:
+                        g.db_session.add(MediaExigencia(
+                            disciplina_id=d_id, 
+                            professor_id=p_id, 
+                            media_exigencia=media_val, 
+                            total_votos=total_val
+                        ))
+            await g.db_session.commit()
+
         return jsonify({"status": "success"})
     except IntegrityError:
         await g.db_session.rollback()
@@ -1505,32 +1613,76 @@ async def avaliacoes_media():
 
     institution = linked_account.institution
 
-    result_d = await g.db_session.execute(
-        select(Disciplina).filter_by(institution=institution, name=disciplina_nome)
-    )
-    disciplina = result_d.scalars().first()
-
-    result_p = await g.db_session.execute(
-        select(Professor).filter_by(institution=institution, name=professor_nome)
-    )
-    professor = result_p.scalars().first()
-
-    if not disciplina or not professor:
-        return jsonify({"average": None, "count": None})
-
+    from app.models import MediaExigencia
     result = await g.db_session.execute(
-        select(func.avg(Avaliacao.nota_exigencia), func.count(Avaliacao.id)).filter(
-            Avaliacao.disciplina_id == disciplina.id,
-            Avaliacao.professor_id == professor.id,
+        select(MediaExigencia.media_exigencia, MediaExigencia.total_votos)
+        .join(Disciplina, MediaExigencia.disciplina_id == Disciplina.id)
+        .join(Professor, MediaExigencia.professor_id == Professor.id)
+        .filter(
+            Disciplina.institution == institution,
+            Disciplina.name == disciplina_nome,
+            Professor.name == professor_nome
         )
     )
-    avg, count = result.one()
-    count = count or 0
+    row = result.first()
+    if row:
+        avg, count = row
+    else:
+        avg, count = None, 0
 
     return jsonify({
         "average": round(avg, 1) if count >= 1 else None,
         "count": count if count >= _MIN_VOTES_TO_SHOW_COUNT else None,
     })
+
+@bp.route('/api/avaliacoes/medias_lote', methods=['POST'])
+async def avaliacoes_medias_lote():
+    active_account_id = session.get('active_account_id')
+    user_id = session.get('user_id')
+
+    if active_account_id:
+        linked_account = await g.db_session.get(LinkedAccount, active_account_id)
+    elif user_id:
+        result = await g.db_session.execute(select(LinkedAccount).filter_by(user_id=user_id))
+        linked_account = result.scalars().first()
+    else:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not linked_account:
+        return jsonify({"error": "No linked account"}), 400
+
+    data = request.json or {}
+    pares = data.get('pares', [])
+    if not pares:
+        return jsonify({})
+
+    institution = linked_account.institution
+    c_names = {p.get('disciplina') for p in pares if p.get('disciplina')}
+    p_names = {p.get('professor') for p in pares if p.get('professor')}
+    
+    if not c_names or not p_names:
+        return jsonify({})
+
+    from app.models import MediaExigencia
+    result = await g.db_session.execute(
+        select(Disciplina.name, Professor.name, MediaExigencia.media_exigencia)
+        .select_from(MediaExigencia)
+        .join(Disciplina, MediaExigencia.disciplina_id == Disciplina.id)
+        .join(Professor, MediaExigencia.professor_id == Professor.id)
+        .filter(
+            Disciplina.institution == institution,
+            Disciplina.name.in_(c_names),
+            Professor.name.in_(p_names)
+        )
+    )
+    
+    rows = result.all()
+    medias = {}
+    for d_name, p_name, avg in rows:
+        if avg is not None:
+            medias[f"{d_name}|{p_name}"] = round(float(avg), 1)
+
+    return jsonify(medias)
 
 
 @bp.route('/delete_account', methods=['POST'])
