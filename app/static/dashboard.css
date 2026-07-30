@@ -1642,3 +1642,126 @@
       font-size: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09);
       padding: 3px 8px; border-radius: 10px; color: #8891a3;
     }
+/* Onboarding Modal Styles Premium */
+#onboarding-modal .modal-content {
+  background: linear-gradient(145deg, #1f1f2e, #13131f);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: modalEnter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+  position: relative;
+}
+
+#onboarding-modal .modal-content::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(37, 99, 235, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#onboarding-modal h2 {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #fff, #a1a1aa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+#onboarding-modal p {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px;
+  position: relative;
+  z-index: 1;
+  color: #a1a1aa !important;
+}
+
+.onboarding-steps-container {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+.onboarding-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-icon.spinner {
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent);
+  background: transparent;
+  animation: spin 1s linear infinite;
+}
+
+.step-icon.check {
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 0 15px var(--accent-soft);
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.step-icon.check::after {
+  content: '?';
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.step-text {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e4e4e7;
+  transition: all 0.5s ease;
+}
+
+
+/* Ring Onboarding Modal Styles */
+#onboarding-modal .ring-wrap { position: relative; width: 96px; height: 96px; margin: 0 auto 26px; }
+#onboarding-modal .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+#onboarding-modal .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 4; }
+#onboarding-modal .ring-fg {
+  fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round;
+  stroke-dasharray: 264; stroke-dashoffset: 264;
+  transition: stroke-dashoffset .6s cubic-bezier(0.4,0,0.2,1), stroke .4s ease;
+}
+#onboarding-modal .ring-pct {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em; color: var(--text-main);
+}
+#onboarding-modal .status-text {
+  font-size: 13px; font-weight: 500; color: var(--text-muted);
+  min-height: 18px;
+  transition: opacity .3s ease;
+}
+#onboarding-modal .status-text.swap { opacity: 0; }
+

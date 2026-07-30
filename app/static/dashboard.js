@@ -1939,6 +1939,75 @@ let data = [];
     document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
 
+    // --- ONBOARDING FLOW ---
+    let isOnboardingActive = false;
+    function startOnboardingFlow() {
+        isOnboardingActive = true;
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) modal.style.display = 'flex';
+        
+        const steps = [
+            { text: 'Montando boletim atual', pct: 15 },
+            { text: 'Recuperando histórico', pct: 55 },
+            { text: 'Finalizando perfil', pct: 88 },
+            { text: 'Tudo pronto', pct: 100 }
+        ];
+        const CIRC = 264;
+        const ringFg = document.getElementById('ring-fg');
+        const ringPct = document.getElementById('ring-pct');
+        const statusText = document.getElementById('status-text');
+        
+        if (!ringFg || !ringPct || !statusText) return;
+
+        function setProgress(pct, text) {
+            ringFg.style.strokeDashoffset = CIRC - (CIRC * pct / 100);
+            ringPct.textContent = pct + '%';
+            if (pct === 100) ringFg.style.stroke = '#10b981';
+            statusText.classList.add('swap');
+            setTimeout(() => {
+                statusText.textContent = text;
+                statusText.classList.remove('swap');
+            }, 200);
+        }
+
+        ringFg.style.stroke = '#3b82f6';
+        ringFg.style.strokeDashoffset = CIRC;
+        ringPct.textContent = '0%';
+        statusText.textContent = steps[0].text;
+        
+        setTimeout(() => setProgress(steps[0].pct, steps[0].text), 50);
+
+        for (let i = 1; i < steps.length; i++) {
+            setTimeout(() => setProgress(steps[i].pct, steps[i].text), i * 1500);
+        }
+
+        setTimeout(() => {
+            if (modal) {
+                modal.style.opacity = '0';
+                modal.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    isOnboardingActive = false;
+                    fetch('/api/user/complete_onboarding', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': window.APP_CONFIG.csrfToken
+                        }
+                    }).catch(e => console.error(e));
+                    
+                    if (window.pendingReviewsList && window.pendingReviewsList.length > 0) {
+                        showReviewsModal({ pendentes: window.pendingReviewsList });
+                    }
+                }, 500);
+            }
+        }, steps.length * 1500 + 500);
+    }
+
+    if (window.APP_CONFIG && window.APP_CONFIG.hasCompletedOnboarding === false) {
+        startOnboardingFlow();
+    }
+
     startDataStream();
 
     // --- REVIEW SYSTEM (ANTI-BOMBING) ---
@@ -1954,7 +2023,7 @@ let data = [];
                 const data = await response.json();
                 window.pendingReviewsList = data.pendentes || [];
                 mRenderGroupedList(); // Re-render to hide buttons for already evaluated classes
-                if (data.pendentes && data.pendentes.length > 0) {
+                if (data.pendentes && data.pendentes.length > 0 && !isOnboardingActive) {
                     showReviewsModal(data);
                 }
             }
