@@ -51,6 +51,36 @@ async def create_tables():
         for legacy_table in ("course_reviews", "professor_reviews"):
             await conn.execute(text(f"DROP TABLE IF EXISTS {legacy_table}"))
 
+    # Populate MediaExigencia if empty
+    from app.models import MediaExigencia, Avaliacao
+    from sqlalchemy import select, func, insert
+    
+    async with db_session() as s:
+        result = await s.execute(select(MediaExigencia.id).limit(1))
+        if not result.scalar():
+            aggs = await s.execute(
+                select(
+                    Avaliacao.disciplina_id,
+                    Avaliacao.professor_id,
+                    func.avg(Avaliacao.nota_exigencia).label('media'),
+                    func.count(Avaliacao.id).label('total')
+                ).group_by(Avaliacao.disciplina_id, Avaliacao.professor_id)
+            )
+            rows = aggs.all()
+            if rows:
+                await s.execute(
+                    insert(MediaExigencia).values([
+                        {
+                            "disciplina_id": r.disciplina_id,
+                            "professor_id": r.professor_id,
+                            "media_exigencia": float(r.media),
+                            "total_votos": r.total
+                        }
+                        for r in rows
+                    ])
+                )
+                await s.commit()
+
 
 async def close_db():
     """Dispose of the engine connection pool. Call during app shutdown."""

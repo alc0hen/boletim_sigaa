@@ -1053,23 +1053,25 @@
     }
     
     .status-widget {
-      background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%);
-      border: 1px solid rgba(245, 158, 11, 0.1);
-      border-top: 1px solid rgba(245, 158, 11, 0.4);
+      --sw-rgb: 245, 158, 11;
+      --sw-color: #fbbf24;
+      background: linear-gradient(180deg, rgba(var(--sw-rgb), 0.08) 0%, rgba(var(--sw-rgb), 0.02) 100%);
+      border: 1px solid rgba(var(--sw-rgb), 0.1);
+      border-top: 1px solid rgba(var(--sw-rgb), 0.4);
       border-radius: 16px;
       padding: 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 36px;
-      box-shadow: 0 10px 30px -10px rgba(245, 158, 11, 0.15);
+      margin-bottom: 0;
+      box-shadow: 0 10px 30px -10px rgba(var(--sw-rgb), 0.15);
     }
     .sw-info { display: flex; flex-direction: column; gap: 4px; }
-    .sw-label { font-size: 11px; color: #fbbf24; text-transform: uppercase; font-weight: 800; letter-spacing: 0.08em; }
+    .sw-label { font-size: 11px; color: var(--sw-color); text-transform: uppercase; font-weight: 800; letter-spacing: 0.08em; }
     .sw-value { font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -0.02em; }
     .ring-container { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
     .ring-container svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-    .ring-val { font-size: 16px; font-weight: 800; z-index: 1; color: #fbbf24; }
+    .ring-val { font-size: 16px; font-weight: 800; z-index: 1; color: var(--sw-color); }
 
     .section-label {
       font-size: 10px;

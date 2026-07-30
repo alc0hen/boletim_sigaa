@@ -685,20 +685,63 @@ let data = [];
       }
       return parts[0] + ' ' + parts[1];
     }
-    function renderDifficultyBadge(elementId, average) {
-        const el = document.getElementById(elementId);
+    
+    // Helper to hide the row if both widgets are hidden
+    function updateWidgetsRowVisibility() {
+        const wRow = document.getElementById('m-widgets-row');
+        const wStatus = document.getElementById('m-status-widget');
+        const wDiff = document.getElementById('m-diff-widget');
+        if (wRow && wStatus && wDiff) {
+            if (wStatus.style.display === 'none' && wDiff.style.display === 'none') {
+                wRow.style.display = 'none';
+            } else {
+                wRow.style.display = 'flex';
+            }
+        }
+    }
+
+    function renderDifficultyWidget(average) {
+        const widget = document.getElementById('m-diff-widget');
+        if (!widget) return;
+        
+        const widgetVal = document.getElementById('m-diff-val');
+        const svgCircle = widget.querySelector('.ring-container svg circle:nth-child(2)');
+        const svgBgCircle = widget.querySelector('.ring-container svg circle:nth-child(1)');
+        const iconSpan = document.getElementById('m-diff-icon');
+
         if (average === null || average === undefined) {
-            el.innerHTML = '<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800; text-transform:uppercase;">Sem Dados</span>';
+            widget.style.display = 'none';
+            updateWidgetsRowVisibility();
             return;
         }
-        let text = 'Altíssima Exigência';
-        let color = '#f44336'; // Red
-        if (average < 1.5) { text = 'Baixa Exigência'; color = '#4caf50'; } // Green
-        else if (average < 2.5) { text = 'Leve'; color = '#8bc34a'; } // Light Green
-        else if (average < 3.5) { text = 'Médio'; color = '#facc15'; } // Yellow
-        else if (average < 4.5) { text = 'Difícil'; color = '#ff9800'; } // Orange
 
-        el.innerHTML = `<span style="background:${color}20; border: 1px solid ${color}50; color:${color}; padding:4px 8px; border-radius:12px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">${text}</span>`;
+        widget.style.display = 'flex';
+        updateWidgetsRowVisibility();
+        
+        let text = 'Altíssima Exigência';
+        let colorRgb = '244, 67, 54';
+        let hexColor = '#f44336';
+        let displayAvg = (Math.round(average * 10) / 10).toFixed(1);
+        
+        if (average < 1.5) { text = 'Baixa Exigência'; colorRgb = '76, 175, 80'; hexColor = '#4caf50'; } 
+        else if (average < 2.5) { text = 'Leve'; colorRgb = '139, 195, 74'; hexColor = '#8bc34a'; } 
+        else if (average < 3.5) { text = 'Médio'; colorRgb = '250, 204, 21'; hexColor = '#facc15'; } 
+        else if (average < 4.5) { text = 'Difícil'; colorRgb = '255, 152, 0'; hexColor = '#ff9800'; }
+
+        if (widgetVal) widgetVal.textContent = text;
+        widget.style.setProperty('--sw-rgb', colorRgb);
+        widget.style.setProperty('--sw-color', hexColor);
+        
+        if (svgCircle) {
+            svgCircle.setAttribute('stroke', hexColor);
+            let offset = 119 * (1 - (average / 5));
+            svgCircle.setAttribute('stroke-dashoffset', offset);
+        }
+        if (svgBgCircle) svgBgCircle.setAttribute('stroke', `rgba(${colorRgb}, 0.15)`);
+        
+        if (iconSpan) {
+            iconSpan.textContent = displayAvg;
+        }
     }
     function roundSigga(val) { return Math.round(val * 2) / 2; }
     function deepEqual(obj1, obj2) {
@@ -1542,6 +1585,7 @@ let data = [];
             
             return {
               id: 1000 + index, name: subj.name, obs: subj.status, grades: subj.grades || [], professor: subj.professor,
+              exigencia_media: subj.exigencia_media,
               status: { status: normalizedStatus, average: finalAvg, needed: needed, is_critical: isCritical, message: message, details: details },
               frequency: { total_faltas: subj.absences || 0, max_faltas: 0, percent: 0 },
               isLoading: false, isRefreshing: false
@@ -1656,6 +1700,30 @@ let data = [];
         badge.textContent = status;
         badge.className = 'badge ' + getStatusColor(status);
         
+        const diffWidget = document.getElementById('m-diff-widget');
+        if (diffWidget) {
+            diffWidget.style.display = 'none';
+            updateWidgetsRowVisibility();
+        }
+
+        if (item.professor && item.professor !== 'Desconhecido') {
+            const cacheKey = `${item.name}|${item.professor}`;
+            if (item.exigencia_media !== undefined) {
+                renderDifficultyWidget(item.exigencia_media);
+            } else if (window.courseRatings && window.courseRatings[cacheKey] !== undefined) {
+                renderDifficultyWidget(window.courseRatings[cacheKey]);
+            } else {
+                fetch(`/api/avaliacoes/media?disciplina=${encodeURIComponent(item.name)}&professor=${encodeURIComponent(item.professor)}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (window.courseRatings) window.courseRatings[cacheKey] = d.average;
+                        item.exigencia_media = d.average; // Save to item for next time
+                        renderDifficultyWidget(d.average);
+                    })
+                    .catch(e => console.error(e));
+            }
+        }
+        
         // Status Widget (Atenção/Observação)
         const widget = document.getElementById('m-status-widget');
         const widgetVal = document.getElementById('m-status-val');
@@ -1664,9 +1732,53 @@ let data = [];
         if (hasMsg) {
           widget.style.display = 'flex';
           widgetVal.textContent = item.status.message;
+          
+          const msgUpper = item.status.message.toUpperCase();
+          const svgCircle = widget.querySelector('.ring-container svg circle:nth-child(2)');
+          const svgBgCircle = widget.querySelector('.ring-container svg circle:nth-child(1)');
+          const ringVal = widget.querySelector('.ring-val');
+          
+          let colorVar = 'var(--warning)';
+          let bgColor = 'rgba(245,158,11,0.15)';
+          let icon = '!';
+          
+          let swRgb = '245, 158, 11';
+          let swColor = '#fbbf24';
+          
+          if (msgUpper.includes('APROVAD') || msgUpper.includes('CUMPRID') || msgUpper.includes('DISPENSAD')) {
+            colorVar = 'var(--success)';
+            bgColor = 'rgba(16,185,129,0.15)';
+            icon = '✓';
+            swRgb = '16, 185, 129';
+            swColor = 'var(--success)';
+          } else if (msgUpper.includes('REPROVAD') || msgUpper.includes('TRANCAD') || msgUpper.includes('CANCELAD')) {
+            colorVar = 'var(--danger)';
+            bgColor = 'rgba(239,68,68,0.15)';
+            icon = '✕';
+            swRgb = '239, 68, 68';
+            swColor = 'var(--danger)';
+          } else if (msgUpper.includes('MATRICULAD')) {
+            colorVar = 'var(--accent)';
+            bgColor = 'rgba(59,130,246,0.15)';
+            icon = 'i';
+            swRgb = '59, 130, 246';
+            swColor = 'var(--accent)';
+          }
+          
+          widget.style.setProperty('--sw-rgb', swRgb);
+          widget.style.setProperty('--sw-color', swColor);
+          
+          if (svgCircle) svgCircle.setAttribute('stroke', colorVar);
+          if (svgBgCircle) svgBgCircle.setAttribute('stroke', bgColor);
+          if (ringVal) {
+            ringVal.textContent = icon;
+          }
+          
         } else {
           widget.style.display = 'none';
         }
+        
+        updateWidgetsRowVisibility();
         
         // Grades Timeline
         const container = document.getElementById('m-grades-timeline');
@@ -1738,6 +1850,11 @@ let data = [];
 
         // Inline Evaluation Logic
         const temProfessor = item.professor && item.professor !== 'Desconhecido';
+        const isPendente = window.pendingReviewsList 
+            ? window.pendingReviewsList.some(p => p.disciplina === item.name && p.professor === item.professor) 
+            : true;
+        const shouldShowEvaluate = temProfessor && isPendente;
+
         const btnEvaluate = document.getElementById('m-btn-evaluate');
         const evalSection = document.getElementById('m-eval-section');
         const btnCancel = document.getElementById('m-btn-eval-cancel');
@@ -1759,7 +1876,7 @@ let data = [];
         const newBtnSubmit = btnSubmit.cloneNode(true);
         btnSubmit.parentNode.replaceChild(newBtnSubmit, btnSubmit);
 
-        if (!temProfessor) {
+        if (!shouldShowEvaluate) {
             newBtnEvaluate.style.display = 'none';
         } else {
             newBtnEvaluate.style.display = 'flex';
@@ -1780,7 +1897,7 @@ let data = [];
               if(!checked) return alert("Por favor, selecione um nível de exigência de 1 a 5.");
               
               const val = parseInt(checked.value);
-              const payload = { itens: [{ disciplina: item.name, professor: item.professor, nota_exigencia: val }] };
+              const payload = { itens: [{ disciplina: item.name, professor: item.professor, nota: val }] };
               
               const oldText = newBtnSubmit.textContent;
               newBtnSubmit.textContent = "Enviando...";
@@ -1789,11 +1906,17 @@ let data = [];
               try {
                 const response = await fetch('/api/avaliacoes/submeter', {
                   method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': window.APP_CONFIG.csrfToken
+                  },
                   body: JSON.stringify(payload)
                 });
                 if (response.ok) {
                   alert('Avaliação enviada com sucesso! Muito obrigado.');
+                  if (window.pendingReviewsList) {
+                      window.pendingReviewsList = window.pendingReviewsList.filter(p => !(p.disciplina === item.name && p.professor === item.professor));
+                  }
                   evalSection.classList.remove('active');
                   newBtnEvaluate.classList.remove('active');
                   newBtnEvaluate.style.display = 'none';
@@ -1823,15 +1946,43 @@ let data = [];
     async function checkPendingReviews() {
         if (hasCheckedPendingReviews) return;
         hasCheckedPendingReviews = true;
+        
+        // Fetch avaliacoes pendentes
         try {
             const response = await fetch('/api/avaliacoes/pendentes');
             if (response.ok) {
                 const data = await response.json();
+                window.pendingReviewsList = data.pendentes || [];
+                mRenderGroupedList(); // Re-render to hide buttons for already evaluated classes
                 if (data.pendentes && data.pendentes.length > 0) {
                     showReviewsModal(data);
                 }
             }
         } catch (e) { console.error("Error checking pending reviews", e); }
+
+        // Fetch medias em lote para cache rapido no modal
+        try {
+            const pares = [];
+            if (typeof data !== 'undefined' && Array.isArray(data)) {
+                data.forEach(d => {
+                    if (d.name && d.professor && d.professor !== 'Desconhecido') {
+                        pares.push({disciplina: d.name, professor: d.professor});
+                    }
+                });
+            }
+            if (pares.length > 0) {
+                const response = await fetch('/api/avaliacoes/medias_lote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+                    body: JSON.stringify({ pares })
+                });
+                if (response.ok) {
+                    window.courseRatings = await response.json();
+                }
+            } else {
+                window.courseRatings = {};
+            }
+        } catch (e) { console.error("Error fetching medias em lote", e); }
     }
 
     function showReviewsModal(pendingData) {

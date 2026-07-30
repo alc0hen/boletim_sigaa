@@ -340,16 +340,31 @@
           </div>
         </div>
 
-        <!-- Widget de Status/Atenção -->
-        <div id="m-status-widget" class="status-widget" style="display:none;">
-          <div class="sw-info">
-            <span class="sw-label">Observação</span>
-            <span id="m-status-val" class="sw-value" style="font-size: 16px;"></span>
+        <div id="m-widgets-row" style="display:flex; gap:16px; margin-bottom:36px; flex-wrap:wrap;">
+          <!-- Widget de Status/Atenção -->
+          <div id="m-status-widget" class="status-widget" style="display:none; flex:1; min-width:140px;">
+            <div class="sw-info">
+              <span class="sw-label">Observação</span>
+              <span id="m-status-val" class="sw-value" style="font-size: 16px;"></span>
+            </div>
+            <div class="ring-container">
+              <svg><circle cx="22" cy="22" r="19" fill="none" stroke="rgba(245,158,11,0.15)" stroke-width="4"></circle>
+                   <circle cx="22" cy="22" r="19" fill="none" stroke="var(--warning)" stroke-width="4" stroke-dasharray="119" stroke-dashoffset="65" stroke-linecap="round"></circle></svg>
+              <span class="ring-val">!</span>
+            </div>
           </div>
-          <div class="ring-container">
-            <svg><circle cx="22" cy="22" r="19" fill="none" stroke="rgba(245,158,11,0.15)" stroke-width="4"></circle>
-                 <circle cx="22" cy="22" r="19" fill="none" stroke="var(--warning)" stroke-width="4" stroke-dasharray="119" stroke-dashoffset="65" stroke-linecap="round"></circle></svg>
-            <span class="ring-val">!</span>
+
+          <!-- Widget de Dificuldade -->
+          <div id="m-diff-widget" class="status-widget" style="display:none; flex:1; min-width:140px;">
+            <div class="sw-info">
+              <span class="sw-label">Dificuldade</span>
+              <span id="m-diff-val" class="sw-value" style="font-size: 16px;"></span>
+            </div>
+            <div class="ring-container">
+              <svg><circle cx="22" cy="22" r="19" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"></circle>
+                   <circle id="m-diff-ring" cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="119" stroke-dashoffset="0" stroke-linecap="round"></circle></svg>
+              <span class="ring-val" id="m-diff-icon"></span>
+            </div>
           </div>
         </div>
 
