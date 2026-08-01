@@ -1,93 +1,60 @@
-
-
 import logging
 import os
 import time
 import uuid
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
-
-from .sigaa_remote import (
-    RemoteApiError,
-    RemoteQuestionnaireError,
-    RemoteSessionExpired,
-    RemoteUnavailable,
-    get_client,
-    is_configured,
-)
-
+from .sigaa_remote import RemoteApiError, RemoteQuestionnaireError, RemoteSessionExpired, RemoteUnavailable, get_client, is_configured
 logger = logging.getLogger(__name__)
-
-SIGAA_URL = "https://sigaa.ifal.edu.br"
-INSTITUTION_URLS = {
-    "IFAL": SIGAA_URL,
-    "UFAL": "https://sigaa.sig.ufal.br",
-    "UFPE": "https://sigaa.ufpe.br",
-}
-
-REMOTE = "remote"
-LOCAL = "local"
-
+SIGAA_URL = 'https://sigaa.ifal.edu.br'
+INSTITUTION_URLS = {'IFAL': SIGAA_URL, 'UFAL': 'https://sigaa.sig.ufal.br', 'UFPE': 'https://sigaa.ufpe.br'}
+REMOTE = 'remote'
+LOCAL = 'local'
 
 class SigaaError(Exception):
-    """Falha ao conversar com o SIGAA, independente do backend."""
-
+    pass
 
 class SigaaSessionExpired(SigaaError):
-    """A sessão do SIGAA não vale mais; é preciso refazer o login."""
-
+    pass
 
 class SigaaQuestionnaire(SigaaError):
-    """Questionário obrigatório do SIGAA bloqueando o acesso."""
-
+    pass
 
 class SigaaLoginFailed(SigaaError):
-    """Credenciais recusadas pelo SIGAA."""
-
+    pass
 
 class SigaaInstitutionError(SigaaError):
-    """Instituição desconhecida, ou URL que não confere com a cadastrada."""
-
+    pass
 
 def institution_url(institution: str) -> str:
     try:
-        return INSTITUTION_URLS[(institution or "").upper()]
+        return INSTITUTION_URLS[(institution or '').upper()]
     except KeyError:
-        raise SigaaInstitutionError(f"Instituição sem URL cadastrada: {institution!r}")
-
+        raise SigaaInstitutionError(f'Instituição sem URL cadastrada: {institution!r}')
 
 def _canonical_url(url: str):
-    parsed = urlparse((url or "").strip())
+    parsed = urlparse((url or '').strip())
     if not parsed.scheme or not parsed.netloc:
         return None
     return f"{parsed.scheme.lower()}://{parsed.netloc.lower()}{parsed.path.rstrip('/')}"
 
-
-def resolve_sigaa_url(institution: str, submitted_url: str = None) -> str:
-
+def resolve_sigaa_url(institution: str, submitted_url: str=None) -> str:
     expected = institution_url(institution)
     if not submitted_url:
         return expected
     if _canonical_url(submitted_url) != _canonical_url(expected):
-        raise SigaaInstitutionError(
-            f"URL {submitted_url!r} não confere com a cadastrada para {institution!r}."
-        )
+        raise SigaaInstitutionError(f'URL {submitted_url!r} não confere com a cadastrada para {institution!r}.')
     return expected
 
-
 def _backend_preference() -> str:
-    return os.environ.get("SIGAA_BACKEND", "auto").strip().lower()
-
+    return os.environ.get('SIGAA_BACKEND', 'auto').strip().lower()
 _local_enrollment: dict[str, dict] = {}
 _LOCAL_ENROLLMENT_TTL = 900
 
-
 def _prune_local_enrollment():
     cutoff = time.time() - _LOCAL_ENROLLMENT_TTL
-    for token in [t for t, s in _local_enrollment.items() if s["updated_at"] < cutoff]:
+    for token in [t for t, s in _local_enrollment.items() if s['updated_at'] < cutoff]:
         _local_enrollment.pop(token, None)
-
-
 
 class _RemoteBackend:
     name = REMOTE
@@ -109,28 +76,24 @@ class _RemoteBackend:
 
     async def get_bonds(self):
         data = await get_client().list_bonds(self.session_id)
-        return data.get("bonds", [])
+        return data.get('bonds', [])
 
     async def get_courses(self, bond_id):
         data = await get_client().list_courses(self.session_id, bond_id)
-        return data.get("courses", [])
+        return data.get('courses', [])
 
     async def get_course_details(self, bond_id, course_id):
         return await get_client().course_details(self.session_id, bond_id, course_id)
 
     async def get_history(self, bond_id, cached_history=None):
-        data = await get_client().history(
-            self.session_id, bond_id, cached_history=cached_history
-        )
-        return data.get("history", {})
+        data = await get_client().history(self.session_id, bond_id, cached_history=cached_history)
+        return data.get('history', {})
 
     async def get_enrollment(self, bond_id):
         return await get_client().enrollment_disciplines(self.session_id, bond_id)
 
     async def submit_enrollment(self, bond_id, selected_class_ids):
-        return await get_client().enrollment_selection(
-            self.session_id, bond_id, selected_class_ids
-        )
+        return await get_client().enrollment_selection(self.session_id, bond_id, selected_class_ids)
 
     async def confirm_enrollment(self, bond_id, password):
         return await get_client().enrollment_confirm(self.session_id, bond_id, password)
@@ -139,16 +102,12 @@ class _RemoteBackend:
         try:
             await get_client().close_session(self.session_id)
         except Exception as e:
-            logger.info("Falha ao encerrar sessão remota (ignorada): %s", e)
+            logger.info('Falha ao encerrar sessão remota (ignorada): %s', e)
 
     def state(self):
-        return {"backend": REMOTE, "session_id": self.session_id}
-
-
+        return {'backend': REMOTE, 'session_id': self.session_id}
 
 class _LocalBackend:
-
-
     name = LOCAL
 
     def __init__(self, cookies, url, institution, enrollment_token=None):
@@ -161,26 +120,22 @@ class _LocalBackend:
         self._account = None
         self._courses = {}
 
-
     def _institution_type(self):
         from .sigaa_api.enums import InstitutionType
-
         try:
-            return InstitutionType[(self.institution or "IFAL").upper()]
+            return InstitutionType[(self.institution or 'IFAL').upper()]
         except KeyError:
             return InstitutionType.IFAL
 
     async def open(self):
-
         from .sigaa_api.sigaa import Sigaa
         from .sigaa_api.account import Account
         from .sigaa_api.exceptions import SigaaQuestionnaireError
-
         self._sigaa = Sigaa(self.url, self._institution_type(), cookies=self.cookies)
         try:
-            response = await self._sigaa.session.get("/sigaa/portais/discente/discente.jsf")
-            if "login" in str(getattr(response.url, "path", response.url)):
-                raise SigaaSessionExpired("Sessão do SIGAA expirada.")
+            response = await self._sigaa.session.get('/sigaa/portais/discente/discente.jsf')
+            if 'login' in str(getattr(response.url, 'path', response.url)):
+                raise SigaaSessionExpired('Sessão do SIGAA expirada.')
             self._account = Account(self._sigaa.session, response)
         except SigaaQuestionnaireError as e:
             await self.close_scope()
@@ -195,13 +150,7 @@ class _LocalBackend:
 
     @staticmethod
     def translate(exc):
-        from .sigaa_api.exceptions import (
-            SigaaException,
-            SigaaInvalidCredentials,
-            SigaaQuestionnaireError,
-            SigaaSessionExpired as ScraperSessionExpired,
-        )
-
+        from .sigaa_api.exceptions import SigaaException, SigaaInvalidCredentials, SigaaQuestionnaireError, SigaaSessionExpired as ScraperSessionExpired
         if isinstance(exc, SigaaQuestionnaireError):
             return SigaaQuestionnaire(str(exc))
         if isinstance(exc, ScraperSessionExpired):
@@ -221,62 +170,46 @@ class _LocalBackend:
                 self._account = None
                 self._courses = {}
 
-
     def _bond_lists(self):
-        return {
-            "active": self._account.active_bonds or [],
-            "inactive": getattr(self._account, "inactive_bonds", None) or [],
-        }
+        return {'active': self._account.active_bonds or [], 'inactive': getattr(self._account, 'inactive_bonds', None) or []}
 
     def _find_bond(self, bond_id):
         try:
-            status, index = bond_id.split(":", 1)
+            status, index = bond_id.split(':', 1)
             index = int(index)
         except (ValueError, AttributeError):
-            raise SigaaError(f"bond_id inválido: {bond_id!r}")
+            raise SigaaError(f'bond_id inválido: {bond_id!r}')
         bonds = self._bond_lists().get(status)
-        if bonds is None or not (0 <= index < len(bonds)):
-            raise SigaaError(f"Vínculo não encontrado: {bond_id}")
+        if bonds is None or not 0 <= index < len(bonds):
+            raise SigaaError(f'Vínculo não encontrado: {bond_id}')
         return bonds[index]
 
     def _enrollment_state(self):
         _prune_local_enrollment()
         if not self.enrollment_token:
             self.enrollment_token = uuid.uuid4().hex
-        return _local_enrollment.setdefault(
-            self.enrollment_token, {"updated_at": time.time()}
-        )
+        return _local_enrollment.setdefault(self.enrollment_token, {'updated_at': time.time()})
 
     @staticmethod
     def _bond_summary(bond_id, status, bond):
-        if hasattr(bond, "registration"):
-            return {
-                "bond_id": bond_id,
-                "status": status,
-                "type": "student",
-                "registration": bond.registration,
-                "program": bond.program,
-            }
-        return {"bond_id": bond_id, "status": status, "type": "teacher"}
-
+        if hasattr(bond, 'registration'):
+            return {'bond_id': bond_id, 'status': status, 'type': 'student', 'registration': bond.registration, 'program': bond.program}
+        return {'bond_id': bond_id, 'status': status, 'type': 'teacher'}
 
     async def get_bonds(self):
         summaries = []
         for status, bonds in self._bond_lists().items():
             for i, bond in enumerate(bonds):
-                summaries.append(self._bond_summary(f"{status}:{i}", status, bond))
+                summaries.append(self._bond_summary(f'{status}:{i}', status, bond))
         return summaries
 
     async def get_courses(self, bond_id):
         bond = self._find_bond(bond_id)
-        if not hasattr(bond, "get_courses"):
-            raise SigaaError("Vínculo docente não possui disciplinas.")
+        if not hasattr(bond, 'get_courses'):
+            raise SigaaError('Vínculo docente não possui disciplinas.')
         courses = await bond.get_courses()
         self._courses[bond_id] = courses
-        return [
-            {"id": i, "title": c.title, "schedule_code": getattr(c, "schedule_code", "")}
-            for i, c in enumerate(courses)
-        ]
+        return [{'id': i, 'title': c.title, 'schedule_code': getattr(c, 'schedule_code', '')} for i, c in enumerate(courses)]
 
     async def _course_objects(self, bond_id):
         if bond_id not in self._courses:
@@ -285,91 +218,60 @@ class _LocalBackend:
 
     async def get_course_details(self, bond_id, course_id):
         courses = await self._course_objects(bond_id)
-        if not (0 <= course_id < len(courses)):
-            raise SigaaError(f"Disciplina não encontrada: {course_id}")
+        if not 0 <= course_id < len(courses):
+            raise SigaaError(f'Disciplina não encontrada: {course_id}')
         course = courses[course_id]
         grades, frequency, professor = await course.get_all_details()
-        return {
-            "id": course_id,
-            "title": course.title,
-            "schedule_code": getattr(course, "schedule_code", ""),
-            "grades": grades,
-            "frequency": frequency,
-            "professor": professor,
-        }
+        return {'id': course_id, 'title': course.title, 'schedule_code': getattr(course, 'schedule_code', ''), 'grades': grades, 'frequency': frequency, 'professor': professor}
 
     async def get_history(self, bond_id, cached_history=None):
         bond = self._find_bond(bond_id)
         credentials = self._parallel_credentials()
-        return await bond.get_history(
-            cached_history=cached_history, credentials=credentials
-        )
+        return await bond.get_history(cached_history=cached_history, credentials=credentials)
 
     def _parallel_credentials(self):
-        creds = getattr(self, "credentials", None)
+        creds = getattr(self, 'credentials', None)
         if not creds:
             return None
-        return {
-            "username": creds["username"],
-            "password": creds["password"],
-            "url": self.url,
-            "inst_type": self._institution_type(),
-        }
+        return {'username': creds['username'], 'password': creds['password'], 'url': self.url, 'inst_type': self._institution_type()}
 
     async def get_enrollment(self, bond_id):
         bond = self._find_bond(bond_id)
         result = await bond.get_enrollment_disciplines()
         state = self._enrollment_state()
-        state.update(
-            {
-                "view_state": result.get("view_state"),
-                "action_url": result.get("action_url"),
-                "updated_at": time.time(),
-            }
-        )
-        return {"levels": result.get("levels"), "view_state": result.get("view_state")}
+        state.update({'view_state': result.get('view_state'), 'action_url': result.get('action_url'), 'updated_at': time.time()})
+        return {'levels': result.get('levels'), 'view_state': result.get('view_state')}
 
     async def submit_enrollment(self, bond_id, selected_class_ids):
         bond = self._find_bond(bond_id)
         state = self._enrollment_state()
-        if not state.get("view_state"):
-            raise SigaaError("Consulte as turmas antes de submeter a matrícula.")
-        page = await bond.submit_enrollment(
-            selected_class_ids, state["view_state"], action_url=state.get("action_url")
-        )
-        state.update(
-            {
-                "confirm_view_state": page.view_state,
-                "confirm_body": page.body,
-                "updated_at": time.time(),
-            }
-        )
-        return {"html": page.body, "view_state": page.view_state}
+        if not state.get('view_state'):
+            raise SigaaError('Consulte as turmas antes de submeter a matrícula.')
+        page = await bond.submit_enrollment(selected_class_ids, state['view_state'], action_url=state.get('action_url'))
+        state.update({'confirm_view_state': page.view_state, 'confirm_body': page.body, 'updated_at': time.time()})
+        return {'html': page.body, 'view_state': page.view_state}
 
     async def confirm_enrollment(self, bond_id, password):
         bond = self._find_bond(bond_id)
         state = self._enrollment_state()
-        if not state.get("confirm_view_state"):
-            raise SigaaError("Submeta a seleção de turmas antes de confirmar.")
-        password_page = await bond.request_confirmation_page(state["confirm_view_state"])
-        final_page = await bond.confirm_enrollment(
-            password, password_page.view_state, password_page.body
-        )
-        return {"html": final_page.body}
+        if not state.get('confirm_view_state'):
+            raise SigaaError('Submeta a seleção de turmas antes de confirmar.')
+        password_page = await bond.request_confirmation_page(state['confirm_view_state'])
+        final_page = await bond.confirm_enrollment(password, password_page.view_state, password_page.body)
+        return {'html': final_page.body}
 
     async def logout(self):
         if self.enrollment_token:
             _local_enrollment.pop(self.enrollment_token, None)
 
     def state(self):
-        state = {"backend": LOCAL, "cookies": self.cookies}
+        state = {'backend': LOCAL, 'cookies': self.cookies}
         if self.enrollment_token:
-            state["enrollment_token"] = self.enrollment_token
+            state['enrollment_token'] = self.enrollment_token
         return state
 
-
-
 class SigaaGateway:
+
     def __init__(self, backend, url, institution, credentials=None):
         self._backend = backend
         self.url = url
@@ -379,25 +281,20 @@ class SigaaGateway:
         if isinstance(backend, _LocalBackend):
             backend.credentials = credentials
 
-
     @property
     def backend_name(self):
         return self._backend.name
 
     @classmethod
     async def login(cls, url, institution, username, password, credentials=None):
-        institution = (institution or "IFAL").upper()
+        institution = (institution or 'IFAL').upper()
         preference = _backend_preference()
-
         if preference != LOCAL and is_configured():
             try:
                 data = await get_client().create_session(url, institution, username, password)
-                backend = _RemoteBackend(data["session_id"], url, institution)
+                backend = _RemoteBackend(data['session_id'], url, institution)
                 gateway = cls(backend, url, institution, credentials)
-                gateway.login_info = {
-                    "name": data.get("name"),
-                    "bonds": data.get("bonds", []),
-                }
+                gateway.login_info = {'name': data.get('name'), 'bonds': data.get('bonds', [])}
                 return gateway
             except RemoteQuestionnaireError as e:
                 raise SigaaQuestionnaire(str(e))
@@ -405,30 +302,23 @@ class SigaaGateway:
                 raise SigaaLoginFailed(str(e))
             except RemoteUnavailable as e:
                 if preference == REMOTE:
-                    raise SigaaError(f"API do SIGAA indisponível: {e}")
-                logger.warning("API do SIGAA indisponível, usando scraper interno: %s", e)
+                    raise SigaaError(f'API do SIGAA indisponível: {e}')
+                logger.warning('API do SIGAA indisponível, usando scraper interno: %s', e)
             except RemoteApiError as e:
                 if e.status_code == 401:
                     raise SigaaLoginFailed(str(e))
                 raise SigaaError(str(e))
-
         return await cls._login_local(url, institution, username, password, credentials)
 
     @classmethod
     async def _login_local(cls, url, institution, username, password, credentials=None):
         from .sigaa_api.sigaa import Sigaa
         from .sigaa_api.enums import InstitutionType
-        from .sigaa_api.exceptions import (
-            SigaaException,
-            SigaaInvalidCredentials,
-            SigaaQuestionnaireError,
-        )
-
+        from .sigaa_api.exceptions import SigaaException, SigaaInvalidCredentials, SigaaQuestionnaireError
         try:
             inst_type = InstitutionType[institution]
         except KeyError:
             inst_type = InstitutionType.IFAL
-
         sigaa = Sigaa(url, inst_type)
         try:
             account = await sigaa.login(username, password)
@@ -437,9 +327,9 @@ class SigaaGateway:
             name = await account.get_name()
             bonds = []
             for i, bond in enumerate(account.active_bonds or []):
-                bonds.append(_LocalBackend._bond_summary(f"active:{i}", "active", bond))
-            for i, bond in enumerate(getattr(account, "inactive_bonds", None) or []):
-                bonds.append(_LocalBackend._bond_summary(f"inactive:{i}", "inactive", bond))
+                bonds.append(_LocalBackend._bond_summary(f'active:{i}', 'active', bond))
+            for i, bond in enumerate(getattr(account, 'inactive_bonds', None) or []):
+                bonds.append(_LocalBackend._bond_summary(f'inactive:{i}', 'inactive', bond))
         except SigaaQuestionnaireError as e:
             raise SigaaQuestionnaire(str(e))
         except SigaaInvalidCredentials as e:
@@ -448,34 +338,29 @@ class SigaaGateway:
             raise SigaaError(str(e))
         finally:
             await sigaa.close()
-
         backend = _LocalBackend(cookies, url, institution)
         gateway = cls(backend, url, institution, credentials)
-        gateway.login_info = {"name": name, "bonds": bonds}
+        gateway.login_info = {'name': name, 'bonds': bonds}
         return gateway
 
     @classmethod
     def from_state(cls, state, credentials=None):
         if not state:
             return None
-        url = state.get("url") or SIGAA_URL
-        institution = (state.get("institution") or "IFAL").upper()
-
-        if state.get("backend") == REMOTE and state.get("session_id"):
-            backend = _RemoteBackend(state["session_id"], url, institution)
-        elif state.get("cookies"):
-            backend = _LocalBackend(
-                state["cookies"], url, institution, state.get("enrollment_token")
-            )
+        url = state.get('url') or SIGAA_URL
+        institution = (state.get('institution') or 'IFAL').upper()
+        if state.get('backend') == REMOTE and state.get('session_id'):
+            backend = _RemoteBackend(state['session_id'], url, institution)
+        elif state.get('cookies'):
+            backend = _LocalBackend(state['cookies'], url, institution, state.get('enrollment_token'))
         else:
             return None
         return cls(backend, url, institution, credentials)
 
     def state(self):
-        state = {"url": self.url, "institution": self.institution}
+        state = {'url': self.url, 'institution': self.institution}
         state.update(self._backend.state())
         return state
-
 
     @asynccontextmanager
     async def scope(self):
@@ -504,7 +389,6 @@ class SigaaGateway:
         finally:
             await self._exit_scope()
 
-
     async def _invoke(self, method, *args, **kwargs):
         try:
             async with self._auto_scope():
@@ -518,26 +402,23 @@ class SigaaGateway:
     async def _call(self, method, *args, **kwargs):
         pref = _backend_preference()
         needs_relogin = False
-        
         if pref == LOCAL and self.backend_name == REMOTE:
             needs_relogin = True
         elif pref == REMOTE and self.backend_name == LOCAL and is_configured():
             needs_relogin = True
-            
         if needs_relogin:
             if not await self._relogin():
-                raise SigaaSessionExpired("Sessão do SIGAA expirada devido a mudança de backend.")
-
+                raise SigaaSessionExpired('Sessão do SIGAA expirada devido a mudança de backend.')
         try:
             return await self._invoke(method, *args, **kwargs)
         except (RemoteSessionExpired, SigaaSessionExpired):
             if not await self._relogin():
-                raise SigaaSessionExpired("Sessão do SIGAA expirada.")
+                raise SigaaSessionExpired('Sessão do SIGAA expirada.')
             return await self._invoke(method, *args, **kwargs)
         except RemoteQuestionnaireError as e:
             raise SigaaQuestionnaire(str(e))
         except RemoteUnavailable as e:
-            raise SigaaError(f"API do SIGAA indisponível: {e}")
+            raise SigaaError(f'API do SIGAA indisponível: {e}')
         except SigaaError:
             raise
         except RemoteApiError as e:
@@ -547,53 +428,46 @@ class SigaaGateway:
         if not self.credentials:
             return False
         try:
-            fresh = await SigaaGateway.login(
-                self.url,
-                self.institution,
-                self.credentials["username"],
-                self.credentials["password"],
-                credentials=self.credentials,
-            )
+            fresh = await SigaaGateway.login(self.url, self.institution, self.credentials['username'], self.credentials['password'], credentials=self.credentials)
         except SigaaError as e:
-            logger.warning("Re-login automático falhou: %s", e)
+            logger.warning('Re-login automático falhou: %s', e)
             return False
-
-        depth, self._scope_depth = self._scope_depth, 0
+        depth, self._scope_depth = (self._scope_depth, 0)
         try:
             await self._backend.close_scope()
         except Exception:
-            logger.debug("Falha ao fechar o backend antigo no re-login.", exc_info=True)
+            logger.debug('Falha ao fechar o backend antigo no re-login.', exc_info=True)
         self._backend = fresh._backend
         if isinstance(self._backend, _LocalBackend):
             self._backend.credentials = self.credentials
-        self.login_info = getattr(fresh, "login_info", None)
+        self.login_info = getattr(fresh, 'login_info', None)
         for _ in range(depth):
             await self._enter_scope()
         return True
 
     async def get_bonds(self):
-        return await self._call("get_bonds")
+        return await self._call('get_bonds')
 
     async def get_courses(self, bond_id):
-        return await self._call("get_courses", bond_id)
+        return await self._call('get_courses', bond_id)
 
     async def get_course_details(self, bond_id, course_id):
-        return await self._call("get_course_details", bond_id, course_id)
+        return await self._call('get_course_details', bond_id, course_id)
 
     async def get_history(self, bond_id, cached_history=None):
-        return await self._call("get_history", bond_id, cached_history=cached_history)
+        return await self._call('get_history', bond_id, cached_history=cached_history)
 
     async def get_enrollment(self, bond_id):
-        return await self._call("get_enrollment", bond_id)
+        return await self._call('get_enrollment', bond_id)
 
     async def submit_enrollment(self, bond_id, selected_class_ids):
-        return await self._call("submit_enrollment", bond_id, selected_class_ids)
+        return await self._call('submit_enrollment', bond_id, selected_class_ids)
 
     async def confirm_enrollment(self, bond_id, password):
-        return await self._call("confirm_enrollment", bond_id, password)
+        return await self._call('confirm_enrollment', bond_id, password)
 
     async def logout(self):
         try:
             await self._backend.logout()
         except Exception as e:
-            logger.info("Falha ao encerrar sessão do SIGAA (ignorada): %s", e)
+            logger.info('Falha ao encerrar sessão do SIGAA (ignorada): %s', e)
