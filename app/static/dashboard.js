@@ -1602,6 +1602,31 @@ let data = [];
           data = [];
         }
       }
+      
+      // Async fetch for course ratings and user_voted status for the newly selected semester
+      const pares = [];
+      if (typeof data !== 'undefined' && Array.isArray(data)) {
+          data.forEach(d => {
+              if (d.name && d.professor && d.professor !== 'Desconhecido') {
+                  pares.push({disciplina: d.name, professor: d.professor});
+              }
+          });
+      }
+      if (pares.length > 0) {
+          fetch('/api/avaliacoes/medias_lote', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+              body: JSON.stringify({ pares })
+          })
+          .then(response => { if (response.ok) return response.json(); throw new Error("Batch fetch failed"); })
+          .then(loteData => {
+              window.courseRatings = { ...(window.courseRatings || {}), ...(loteData.averages || {}) };
+              window.courseUserVoted = { ...(window.courseUserVoted || {}), ...(loteData.user_voted || {}) };
+              mRenderGroupedList();
+          })
+          .catch(e => console.error("Error fetching medias em lote on switch", e));
+      }
+      
       mRenderGroupedList();
       renderFrequency();
       renderChart();
@@ -1694,6 +1719,16 @@ let data = [];
         
         // Header, subtitle and status badge
         document.getElementById('m-title').textContent = item.name;
+        
+        const mProf = document.getElementById('m-professor');
+        if (mProf) {
+            if (item.professor && item.professor !== 'Desconhecido') {
+                mProf.style.display = 'block';
+                mProf.textContent = `Prof. ${item.professor}`;
+            } else {
+                mProf.style.display = 'none';
+            }
+        }
         
         const status = item.status ? item.status.status : 'Indefinido';
         const badge = document.getElementById('m-status-badge');
@@ -1849,24 +1884,19 @@ let data = [];
         }
 
         // Inline Evaluation Logic
-        const temProfessor = item.professor && item.professor !== 'Desconhecido';
-        const isPendente = window.pendingReviewsList 
-            ? window.pendingReviewsList.some(p => p.disciplina === item.name && p.professor === item.professor) 
-            : true;
-        const shouldShowEvaluate = temProfessor && isPendente;
-
         const btnEvaluate = document.getElementById('m-btn-evaluate');
         const evalSection = document.getElementById('m-eval-section');
         const btnCancel = document.getElementById('m-btn-eval-cancel');
         const btnSubmit = document.getElementById('m-btn-eval-submit');
 
-        // Reset state
+        // Initially hide until we know if user voted
+        btnEvaluate.style.display = 'none';
         evalSection.classList.remove('active');
         btnEvaluate.classList.remove('active');
         const radios = evalSection.querySelectorAll('input[type="radio"]');
         radios.forEach(r => r.checked = false);
-        
-        // Remove event listeners replacing clone
+
+        // Remove old event listeners
         const newBtnEvaluate = btnEvaluate.cloneNode(true);
         btnEvaluate.parentNode.replaceChild(newBtnEvaluate, btnEvaluate);
         
@@ -1876,160 +1906,170 @@ let data = [];
         const newBtnSubmit = btnSubmit.cloneNode(true);
         btnSubmit.parentNode.replaceChild(newBtnSubmit, btnSubmit);
 
-        if (!shouldShowEvaluate) {
-            newBtnEvaluate.style.display = 'none';
-        } else {
-            newBtnEvaluate.style.display = 'flex';
+        function setupEvaluation(userVoted) {
+            const temProfessor = item.professor && item.professor !== 'Desconhecido';
+            const isCompleted = item.status && item.status.status && (
+                item.status.status.includes('Aprovado') || 
+                item.status.status.includes('Reprovado') || 
+                item.status.status.includes('Concluído') || 
+                item.status.status.includes('Cancelado') || 
+                item.status.status.includes('Dispensado') || 
+                item.status.status.includes('Trancado')
+            );
             
-            newBtnEvaluate.addEventListener('click', () => {
-              evalSection.classList.toggle('active');
-              newBtnEvaluate.classList.toggle('active');
-            });
-
-            newBtnCancel.addEventListener('click', () => {
-              evalSection.classList.remove('active');
-              newBtnEvaluate.classList.remove('active');
-              radios.forEach(r => r.checked = false);
-            });
-            
-            newBtnSubmit.addEventListener('click', async () => {
-              const checked = document.querySelector('input[name="m-rating"]:checked');
-              if(!checked) return alert("Por favor, selecione um nível de exigência de 1 a 5.");
-              
-              const val = parseInt(checked.value);
-              const payload = { itens: [{ disciplina: item.name, professor: item.professor, nota: val }] };
-              
-              const oldText = newBtnSubmit.textContent;
-              newBtnSubmit.textContent = "Enviando...";
-              newBtnSubmit.disabled = true;
-              
-              try {
-                const response = await fetch('/api/avaliacoes/submeter', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': window.APP_CONFIG.csrfToken
-                  },
-                  body: JSON.stringify(payload)
+            if (temProfessor && isCompleted) {
+                newBtnEvaluate.style.display = 'flex';
+                newBtnEvaluate.disabled = false;
+                newBtnEvaluate.style.opacity = "1";
+                newBtnEvaluate.style.cursor = "pointer";
+                
+                if (userVoted) {
+                    newBtnEvaluate.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round;"><polyline points="20 6 9 17 4 12"></polyline></svg> Avaliada';
+                    newBtnEvaluate.style.background = "rgba(255, 255, 255, 0.05)";
+                    newBtnEvaluate.style.border = "none";
+                    newBtnEvaluate.style.color = "var(--text-muted)";
+                    newBtnEvaluate.style.pointerEvents = "none";
+                    newBtnEvaluate.disabled = true;
+                } else {
+                    newBtnEvaluate.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round;"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg> Avaliar';
+                    newBtnEvaluate.style.background = "";
+                    newBtnEvaluate.style.pointerEvents = "auto";
+                    
+                    newBtnEvaluate.addEventListener('click', () => {
+                  evalSection.classList.toggle('active');
+                  newBtnEvaluate.classList.toggle('active');
                 });
-                if (response.ok) {
-                  alert('Avaliação enviada com sucesso! Muito obrigado.');
-                  if (window.pendingReviewsList) {
-                      window.pendingReviewsList = window.pendingReviewsList.filter(p => !(p.disciplina === item.name && p.professor === item.professor));
-                  }
+
+                newBtnCancel.addEventListener('click', () => {
                   evalSection.classList.remove('active');
                   newBtnEvaluate.classList.remove('active');
-                  newBtnEvaluate.style.display = 'none';
-                } else {
-                  alert("Houve um erro ao enviar a avaliação.");
+                  radios.forEach(r => r.checked = false);
+                });
+                
+                newBtnSubmit.addEventListener('click', async () => {
+                  const checked = document.querySelector('input[name="m-rating"]:checked');
+                  if(!checked) return alert("Por favor, selecione um nível de exigência de 1 a 5.");
+                  
+                  const val = parseInt(checked.value);
+                  const payload = { itens: [{ disciplina: item.name, professor: item.professor, nota: val, recusado: false }] };
+                  
+                  const oldText = newBtnSubmit.textContent;
+                  newBtnSubmit.textContent = "Enviando...";
+                  newBtnSubmit.disabled = true;
+                  
+                  try {
+                    const response = await fetch('/api/avaliacoes/submeter', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': window.APP_CONFIG.csrfToken
+                      },
+                      body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.ok) {
+                      newBtnSubmit.textContent = "Sucesso!";
+                      newBtnSubmit.style.background = "var(--success)";
+                      item.user_voted = true;
+                      setTimeout(() => {
+                        evalSection.classList.remove('active');
+                        newBtnEvaluate.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor; stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round;"><polyline points="20 6 9 17 4 12"></polyline></svg> Avaliada';
+                        newBtnEvaluate.style.background = "rgba(255, 255, 255, 0.05)";
+                        newBtnEvaluate.style.border = "none";
+                        newBtnEvaluate.style.color = "var(--text-muted)";
+                        newBtnEvaluate.style.pointerEvents = "none";
+                        newBtnEvaluate.disabled = true;
+                        
+                        newBtnSubmit.textContent = oldText;
+                        newBtnSubmit.disabled = false;
+                        newBtnSubmit.style.background = "";
+                      }, 1000);
+                    } else {
+                      throw new Error("Erro na API");
+                    }
+                  } catch (e) {
+                    console.error("Error submitting evaluation", e);
+                    alert("Falha ao enviar avaliação.");
+                    newBtnSubmit.textContent = oldText;
+                    newBtnSubmit.disabled = false;
+                  }
+                });
                 }
-              } catch (e) {
-                console.error(e);
-                alert("Houve um erro ao enviar a avaliação.");
-              } finally {
-                newBtnSubmit.textContent = oldText;
-                newBtnSubmit.disabled = false;
-              }
-            });
+            }
+        }
+
+        // Fetch or use cached user_voted state
+        const outerTemProfessor = item.professor && item.professor !== 'Desconhecido';
+        const outerIsCompleted = item.status && item.status.status && (
+            item.status.status.includes('Aprovado') || 
+            item.status.status.includes('Reprovado') || 
+            item.status.status.includes('Concluído') || 
+            item.status.status.includes('Cancelado') || 
+            item.status.status.includes('Dispensado') || 
+            item.status.status.includes('Trancado')
+        );
+
+        if (outerTemProfessor) {
+            const cacheKey = `${item.name}|${item.professor}`;
+            
+            if (item.user_voted !== undefined) {
+                setupEvaluation(item.user_voted);
+            } else if (window.courseUserVoted && window.courseUserVoted[cacheKey] !== undefined) {
+                setupEvaluation(window.courseUserVoted[cacheKey]);
+            } else {
+                if (outerIsCompleted) {
+                    newBtnEvaluate.style.display = 'flex';
+                    newBtnEvaluate.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" style="stroke:currentColor; stroke-width:2; fill:none; stroke-linecap:round; stroke-linejoin:round;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Carregando...';
+                    newBtnEvaluate.disabled = true;
+                    newBtnEvaluate.style.opacity = "0.7";
+                    newBtnEvaluate.style.cursor = "wait";
+                }
+                fetch(`/api/avaliacoes/media?disciplina=${encodeURIComponent(item.name)}&professor=${encodeURIComponent(item.professor)}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        if (!window.courseUserVoted) window.courseUserVoted = {};
+                        window.courseUserVoted[cacheKey] = !!d.user_voted;
+                        item.user_voted = !!d.user_voted;
+                        setupEvaluation(item.user_voted);
+                    })
+                    .catch(e => {
+                        console.error(e);
+                        setupEvaluation(false); // fallback
+                    });
+            }
+        } else {
+            setupEvaluation(false);
         }
       }
     }
 
-    function closeModal() { document.getElementById('modal').style.display = 'none'; }
-    document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
-
-
-    // --- ONBOARDING FLOW ---
-    let isOnboardingActive = false;
-    function startOnboardingFlow() {
-        isOnboardingActive = true;
-        const modal = document.getElementById('onboarding-modal');
-        if (modal) modal.style.display = 'flex';
-        
-        const steps = [
-            { text: 'Montando boletim atual', pct: 15 },
-            { text: 'Recuperando histórico', pct: 55 },
-            { text: 'Finalizando perfil', pct: 88 },
-            { text: 'Tudo pronto', pct: 100 }
-        ];
-        const CIRC = 264;
-        const ringFg = document.getElementById('ring-fg');
-        const ringPct = document.getElementById('ring-pct');
-        const statusText = document.getElementById('status-text');
-        
-        if (!ringFg || !ringPct || !statusText) return;
-
-        function setProgress(pct, text) {
-            ringFg.style.strokeDashoffset = CIRC - (CIRC * pct / 100);
-            ringPct.textContent = pct + '%';
-            if (pct === 100) ringFg.style.stroke = '#10b981';
-            statusText.classList.add('swap');
-            setTimeout(() => {
-                statusText.textContent = text;
-                statusText.classList.remove('swap');
-            }, 200);
-        }
-
-        ringFg.style.stroke = '#3b82f6';
-        ringFg.style.strokeDashoffset = CIRC;
-        ringPct.textContent = '0%';
-        statusText.textContent = steps[0].text;
-        
-        setTimeout(() => setProgress(steps[0].pct, steps[0].text), 50);
-
-        for (let i = 1; i < steps.length; i++) {
-            setTimeout(() => setProgress(steps[i].pct, steps[i].text), i * 1500);
-        }
-
-        setTimeout(() => {
-            if (modal) {
-                modal.style.opacity = '0';
-                modal.style.transition = 'opacity 0.5s ease';
-                setTimeout(() => {
-                    modal.style.display = 'none';
-                    isOnboardingActive = false;
-                    fetch('/api/user/complete_onboarding', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': window.APP_CONFIG.csrfToken
-                        }
-                    }).catch(e => console.error(e));
-                    
-                    if (window.pendingReviewsList && window.pendingReviewsList.length > 0) {
-                        showReviewsModal({ pendentes: window.pendingReviewsList });
-                    }
-                }, 500);
-            }
-        }, steps.length * 1500 + 500);
-    }
-
-    if (window.APP_CONFIG && window.APP_CONFIG.hasCompletedOnboarding === false) {
-        startOnboardingFlow();
-    }
-
-    startDataStream();
-
-    // --- REVIEW SYSTEM (ANTI-BOMBING) ---
     let hasCheckedPendingReviews = false;
     async function checkPendingReviews() {
         if (hasCheckedPendingReviews) return;
         hasCheckedPendingReviews = true;
         
-        // Fetch avaliacoes pendentes
         try {
             const response = await fetch('/api/avaliacoes/pendentes');
             if (response.ok) {
-                const data = await response.json();
-                window.pendingReviewsList = data.pendentes || [];
-                mRenderGroupedList(); // Re-render to hide buttons for already evaluated classes
-                if (data.pendentes && data.pendentes.length > 0 && !isOnboardingActive) {
-                    showReviewsModal(data);
+                const pendData = await response.json();
+                window.pendingReviewsList = pendData.pendentes || [];
+                mRenderGroupedList();
+                
+                const currentSem = pendData.current_semester;
+                const skipped = pendData.skipped_semesters || [];
+                
+                if (window.pendingReviewsList.length > 0) {
+                    if (currentSem && skipped.includes(currentSem)) {
+                        console.log("Reviews skipped for semester", currentSem);
+                    } else {
+                        window.currentSemesterForSkip = currentSem;
+                        openReviewWizardModal(window.pendingReviewsList);
+                    }
+                    return;
                 }
             }
         } catch (e) { console.error("Error checking pending reviews", e); }
 
-        // Fetch medias em lote para cache rapido no modal
         try {
             const pares = [];
             if (typeof data !== 'undefined' && Array.isArray(data)) {
@@ -2046,114 +2086,189 @@ let data = [];
                     body: JSON.stringify({ pares })
                 });
                 if (response.ok) {
-                    window.courseRatings = await response.json();
+                    const loteData = await response.json();
+                    window.courseRatings = loteData.averages || {};
+                    window.courseUserVoted = loteData.user_voted || {};
+                    mRenderGroupedList(); // re-render to show stars
                 }
             } else {
                 window.courseRatings = {};
+                window.courseUserVoted = {};
             }
         } catch (e) { console.error("Error fetching medias em lote", e); }
     }
 
-    function showReviewsModal(pendingData) {
-        const container = document.getElementById('reviews-list-container');
-        container.innerHTML = '';
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+    document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
-        const pendentes = pendingData.pendentes || [];
-        const isSingle = pendentes.length <= 1;
-        document.getElementById('reviews-modal-text').innerHTML = isSingle
-            ? "Avalie a exigência desta disciplina sob a regência deste professor para ajudar a comunidade!"
-            : "Notamos que você já cursou estas disciplinas. Avalie a exigência delas para ajudar outros alunos!";
+    // Iniciar a busca de dados
+    startDataStream();
 
-        pendentes.forEach((par, idx) => {
-            container.innerHTML += `
-                <div class="review-item-card" data-disciplina="${par.disciplina}" data-professor="${par.professor}">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                        <span style="font-weight:700; font-size:14px; color:#fff;">Disciplina: ${par.disciplina} | Prof. ${formatProfName(par.professor)}</span>
-                        <input type="checkbox" class="decline-cb" id="decline_${idx}" style="display:none;" />
-                        <label for="decline_${idx}" class="decline-btn">Não Avaliar</label>
-                    </div>
-                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">Quão exigente foi esta disciplina sob a regência deste docente?</div>
-                    <div class="segmented-rating" dir="ltr">
-                        <input type="radio" id="star1_${idx}" name="rating_${idx}" value="1" /><label for="star1_${idx}">1</label>
-                        <input type="radio" id="star2_${idx}" name="rating_${idx}" value="2" /><label for="star2_${idx}">2</label>
-                        <input type="radio" id="star3_${idx}" name="rating_${idx}" value="3" /><label for="star3_${idx}">3</label>
-                        <input type="radio" id="star4_${idx}" name="rating_${idx}" value="4" /><label for="star4_${idx}">4</label>
-                        <input type="radio" id="star5_${idx}" name="rating_${idx}" value="5" /><label for="star5_${idx}">5</label>
-                    </div>
-                    <div class="segmented-rating-legend">
-                        <span>Baixa Exigência</span>
-                        <span>Altíssima Exigência</span>
-                    </div>
-                </div>
-            `;
-        });
+/* ========================================================================= */
+/* FASE 2: WIZARD GAMIFICADO DE AVALIACOES NO DASHBOARD                      */
+/* ========================================================================= */
 
-        document.getElementById('reviews-modal').style.display = 'flex';
+let wizardPendingReviews = [];
+let wizardCurrentCardIndex = 0;
+let wizardEvaluatedItems = [];
+let wizardComboCount = 0;
+
+function formatWizardProfName(fullName) {
+    if (!fullName || fullName.toUpperCase() === 'DESCONHECIDO') return fullName;
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length <= 1) return fullName;
+    const preps = ['DE', 'DA', 'DO', 'DAS', 'DOS'];
+    if (parts.length > 2 && preps.includes(parts[1].toUpperCase())) {
+        return parts[0] + ' ' + parts[1] + ' ' + parts[2];
     }
+    return parts[0] + ' ' + parts[1];
+}
 
-    function closeReviewsModal(didSubmit) {
-        document.getElementById('reviews-modal').style.display = 'none';
-    }
+window.openReviewWizardModal = function(reviewsList) {
+    wizardPendingReviews = reviewsList;
+    wizardCurrentCardIndex = 0;
+    wizardEvaluatedItems = [];
+    wizardComboCount = 0;
+    
+    document.getElementById('review-wizard-overlay').style.display = 'flex';
+    
+    const container = document.getElementById('card-container');
+    container.innerHTML = '';
+    
+    wizardPendingReviews.forEach((rev, idx) => {
+        const card = document.createElement('div');
+        card.className = `review-card ${idx === 0 ? 'active' : ''}`;
+        card.id = `wizcard-${idx}`;
+        card.innerHTML = `
+            <div class="disc-name">${rev.disciplina}</div>
+            <div class="prof-name">Prof. ${formatWizardProfName(rev.professor)}</div>
+            
+            <div class="rating-label">Quão exigente foi esta disciplina?</div>
+            <div class="rating-group">
+                <button class="btn-rate r1" onclick="wizardRateCard(${idx}, 1, event)">1</button>
+                <button class="btn-rate r2" onclick="wizardRateCard(${idx}, 2, event)">2</button>
+                <button class="btn-rate r3" onclick="wizardRateCard(${idx}, 3, event)">3</button>
+                <button class="btn-rate r4" onclick="wizardRateCard(${idx}, 4, event)">4</button>
+                <button class="btn-rate r5" onclick="wizardRateCard(${idx}, 5, event)">5</button>
+            </div>
+            
+            <button class="btn-skip" onclick="wizardSkipCard(${idx})">Pular matéria</button>
+        `;
+        container.appendChild(card);
+    });
+    
+    // Add skip all button at the end of the container
+    const skipAllDiv = document.createElement('div');
+    skipAllDiv.style.position = 'absolute';
+    skipAllDiv.style.bottom = '-60px';
+    skipAllDiv.style.left = '0';
+    skipAllDiv.style.right = '0';
+    skipAllDiv.style.textAlign = 'center';
+    skipAllDiv.innerHTML = `<button style="background:none; border:none; color:var(--text-muted); font-size:12px; text-decoration:underline; cursor:pointer; opacity:0.8; transition:0.2s;" onmouseover="this.style.opacity='1'; this.style.color='#fff'" onmouseout="this.style.opacity='0.8'; this.style.color='var(--text-muted)'" onclick="wizardSkipSemester()">Pular todas as avaliações deste semestre</button>`;
+    container.appendChild(skipAllDiv);
+    
+    wizardUpdateProgress();
+};
 
-    function neverShowReviewsAgain() {
-        const container = document.getElementById('reviews-list-container');
-        const checkboxes = container.querySelectorAll('.decline-cb');
-        checkboxes.forEach(cb => cb.checked = true);
-        submitPendingReviews();
-    }
+function wizardUpdateProgress() {
+    const fill = document.getElementById('progress-fill');
+    const text = document.getElementById('progress-text');
+    const total = wizardPendingReviews.length;
+    const pct = ((wizardCurrentCardIndex) / total) * 100;
+    fill.style.width = `${pct}%`;
+    text.textContent = `${wizardCurrentCardIndex} de ${total} avaliadas`;
+}
 
-    async function submitPendingReviews() {
-        const container = document.getElementById('reviews-list-container');
-        const cards = container.querySelectorAll('.review-item-card');
-
-        let itens = [];
-
-        cards.forEach(card => {
-            const disciplina = card.getAttribute('data-disciplina');
-            const professor = card.getAttribute('data-professor');
-            const recusado = card.querySelector('.decline-cb').checked;
-            let nota = null;
-
-            const selectedStar = card.querySelector('input[type="radio"]:checked');
-            if (selectedStar) {
-                nota = parseInt(selectedStar.value, 10);
-            }
-
-            if (nota !== null || recusado) {
-                itens.push({ disciplina: disciplina, professor: professor, nota: nota, recusado: recusado });
-            }
-        });
-
-        if (itens.length === 0) {
-            closeReviewsModal(false);
-            return; // nothing selected
+function wizardUpdateCombo(reset) {
+    const badge = document.getElementById('combo-badge');
+    if (reset) {
+        wizardComboCount = 0;
+        badge.classList.remove('active');
+    } else {
+        wizardComboCount++;
+        if (wizardComboCount >= 2) {
+            badge.textContent = `🔥 ${wizardComboCount}x Combo!`;
+            badge.classList.add('active');
+            badge.style.transform = 'scale(1.1)';
+            setTimeout(() => badge.style.transform = 'scale(1)', 200);
+        } else {
+            badge.classList.remove('active');
         }
+    }
+}
 
-        const payload = { itens: itens };
+window.wizardRateCard = function(idx, rating, event) {
+    const rev = wizardPendingReviews[idx];
+    wizardEvaluatedItems.push({
+        disciplina: rev.disciplina,
+        professor: rev.professor,
+        nota: rating,
+        recusado: false
+    });
 
-        const btn = document.querySelector('#reviews-modal .m-btn-primary');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = "Salvando...";
-        btn.disabled = true;
+    wizardUpdateCombo(false);
+    wizardNextCard(idx, 'exit-right');
+};
 
+window.wizardSkipCard = function(idx) {
+    const rev = wizardPendingReviews[idx];
+    wizardEvaluatedItems.push({
+        disciplina: rev.disciplina,
+        professor: rev.professor,
+        nota: null,
+        recusado: true
+    });
+
+    wizardUpdateCombo(true);
+    wizardNextCard(idx, 'exit-left');
+};
+
+window.wizardSkipSemester = async function() {
+    if (!window.currentSemesterForSkip) {
+        document.getElementById('review-wizard-overlay').style.display = 'none';
+        return;
+    }
+    try {
+        await fetch('/api/avaliacoes/skip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+            body: JSON.stringify({ semester: window.currentSemesterForSkip })
+        });
+    } catch (e) {
+        console.error("Error skipping semester", e);
+    }
+    document.getElementById('review-wizard-overlay').style.display = 'none';
+};
+
+function wizardNextCard(idx, exitClass) {
+    const currentCard = document.getElementById(`wizcard-${idx}`);
+    currentCard.classList.remove('active');
+    currentCard.classList.add(exitClass);
+
+    wizardCurrentCardIndex++;
+    wizardUpdateProgress();
+
+    if (wizardCurrentCardIndex < wizardPendingReviews.length) {
+        const nxt = document.getElementById(`wizcard-${wizardCurrentCardIndex}`);
+        nxt.classList.add('active');
+    } else {
+        wizardFinish();
+    }
+}
+
+async function wizardFinish() {
+    document.getElementById('card-container').innerHTML = `<div style="text-align:center; padding-top:100px; color:var(--success); font-weight:bold; font-size: 20px;">Salvando avaliações...</div>`;
+    
+    if (wizardEvaluatedItems.length > 0) {
         try {
-            const res = await fetch('/api/avaliacoes/submeter', {
+            await fetch('/api/avaliacoes/submeter', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': window.APP_CONFIG.csrfToken
-                },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+                body: JSON.stringify({ itens: wizardEvaluatedItems })
             });
-            if (res.ok) {
-                closeReviewsModal(true);
-            } else {
-                alert("Ocorreu um erro ao salvar as avaliações.");
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
+        } catch(e) { console.error(e); }
     }
+    
+    document.getElementById('review-wizard-overlay').style.display = 'none';
+}
+
