@@ -3,6 +3,7 @@ class RemoteError(Exception):
 
 class RemoteUnavailable(RemoteError):
     pass
+
 class RemoteApiError(RemoteError):
 
     def __init__(self, status_code, code=None, message=None):

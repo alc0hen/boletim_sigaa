@@ -718,7 +718,7 @@ async def stream_grades():
                                 pass
                         if raw_password and len(all_courses) > 1:
                             import math
-                            num_workers = min(3, len(all_courses))
+                            num_workers = min(10, len(all_courses))
                             chunk_size = math.ceil(len(all_courses) / num_workers)
                             chunks = [all_courses[i:i + chunk_size] for i in range(0, len(all_courses), chunk_size)]
                             queue = asyncio.Queue()
@@ -795,65 +795,6 @@ async def stream_grades():
                                     fallback_data = {'grades': [], 'status': empty_result.to_dict()}
                                     yield (json.dumps({'type': 'course_data', 'id': c_id, 'data': fallback_data}) + '\n')
                                 yield (json.dumps({'type': 'course_loading', 'id': c_id, 'step': 'done'}) + '\n')
-                        c_hist = cached_profile.get('history_raw', {}) if cached_profile else {}
-                        history = c_hist
-                        logger.info('Using cached history in stream, skipped heavy fetching.')
-                        bond_id = bonds_to_use[0]['bond_id'] if bonds_to_use else None
-                        for sem, subjects in history.items():
-                            unique_subjects = []
-                            seen_names = set()
-                            for subj in subjects:
-                                if subj['name'] in seen_names:
-                                    continue
-                                seen_names.add(subj['name'])
-                                try:
-                                    if subj.get('final_grade') is None:
-                                        res = calculator.calculate(subj.get('grades', []))
-                                        subj['final_grade'] = res.average
-                                        subj['status_dict'] = res.to_dict()
-                                        logger.info(f"Calculator applied for '{subj.get('name')}': {res.average} ({res.status.name})")
-                                    else:
-                                        subj.pop('status_dict', None)
-                                except Exception as e:
-                                    logger.error(f"Failed to calculate history grades for {subj.get('name')}: {e}")
-                                unique_subjects.append(subj)
-                            history[sem] = unique_subjects
-                        total_grades = []
-                        best_grade = 0
-                        best_subject = '-'
-                        semesters_data = []
-                        for sem, subjects in history.items():
-                            sem_grades = []
-                            for subj in subjects:
-                                grade = subj.get('final_grade')
-                                if grade is not None:
-                                    sem_grades.append(grade)
-                                    total_grades.append(grade)
-                                    if grade > best_grade:
-                                        best_grade = grade
-                                        best_subject = subj.get('name')
-                            sem_avg = sum(sem_grades) / len(sem_grades) if sem_grades else 0
-                            if sem_grades:
-                                semesters_data.append({'semester': sem, 'average': round(sem_avg, 2), 'count': len(sem_grades)})
-                        general_avg = sum(total_grades) / len(total_grades) if total_grades else 0
-                        profile_data = {'general_average': round(general_avg, 2), 'best_subject': best_subject, 'best_grade': best_grade, 'semesters': semesters_data, 'history_raw': history}
-                        profile_data = _scrub_active_semester_from_cache(profile_data)
-                        if has_linked_account and active_account_id:
-                            try:
-                                cipher = get_cipher_suite()
-                                json_str = json.dumps(profile_data)
-                                encrypted_data = cipher.encrypt(json_str.encode('utf-8')).decode('utf-8')
-                                async with db_session() as s:
-                                    db_account = await s.get(LinkedAccount, active_account_id)
-                                    if db_account:
-                                        db_account.history_json = encrypted_data
-                                        db_account.history_updated_at = datetime.utcnow()
-                                        await s.commit()
-                                        logger.info('Successfully persisted history_json in stream_grades')
-                            except Exception as e:
-                                logger.error(f'Failed to cache history in stream_grades: {e}')
-                        profile_data = await _inject_exigencia_medias(sigaa_inst_val, profile_data)
-                        yield (json.dumps({'type': 'profile_data', 'data': profile_data}) + '\n')
                 yield (json.dumps({'type': 'sync_end'}) + '\n')
         except SigaaQuestionnaire as e:
             logger.warning(f'Stream blocked by questionnaire: {e}')
@@ -1037,16 +978,9 @@ async def api_matricula_confirm():
             res = await gateway.confirm_enrollment(bond_id, password)
             _save_gateway(gateway)
             html = res.get('html') or ''
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html, 'lxml')
-            res_body_lower = html.lower()
-            if soup.find('input', type='password') or 'senha incorreta' in res_body_lower or 'senha de confirmação inválida' in res_body_lower or ('inválida' in res_body_lower):
-                error_elements = soup.find_all(class_='erros')
-                msg = ''
-                if error_elements:
-                    msg = '; '.join([err.get_text(strip=True) for err in error_elements])
-                else:
-                    msg = 'Senha incorreta ou erro de confirmação no SIGAA.'
+            from app.sigaa_api.enrollment_parser import parse_confirmation_result
+            ok, msg = parse_confirmation_result(html)
+            if not ok:
                 return (jsonify({'status': 'error', 'message': msg}), 400)
             return jsonify({'status': 'success', 'message': 'Matrícula gravada com sucesso no SIGAA!'})
         except SigaaSessionExpired:
