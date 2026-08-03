@@ -9,3 +9,6 @@ instance/
 mime.py
 migrations
 app/sigaa_api/api_important
+tests
+scratch
+app/sigaa_api/paginas_sigaa
