@@ -945,7 +945,36 @@ let data = [];
     }
 
 
+    let _renderTimer = null;
+    let _needsRender = false;
+    let _needsUpdateHeader = false;
+
+    function mRenderGroupedList() {
+      _needsRender = true;
+      _scheduleRender();
+    }
+
     function updateHeader() {
+      _needsUpdateHeader = true;
+      _scheduleRender();
+    }
+
+    function _scheduleRender() {
+      if (_renderTimer) return;
+      _renderTimer = requestAnimationFrame(() => {
+        _renderTimer = null;
+        if (_needsRender) {
+          _needsRender = false;
+          _doRenderGroupedList();
+        }
+        if (_needsUpdateHeader) {
+          _needsUpdateHeader = false;
+          _doUpdateHeader();
+        }
+      });
+    }
+
+    function _doUpdateHeader() {
       const valid = data.filter(d => !d.isLoading && d.status);
       const pending = valid.filter(s => s.status.needed > 0).length;
       const critical = valid.filter(s => s.status.is_critical).length;
@@ -983,7 +1012,7 @@ let data = [];
 
 
 
-    function mRenderGroupedList() {
+    function _doRenderGroupedList() {
       // Select the main list view section
       const viewList = document.getElementById('view-list');
       if (!viewList) return;

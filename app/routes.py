@@ -748,13 +748,14 @@ async def stream_grades():
                                             if freq_data:
                                                 await queue.put({'type': 'course_frequency', 'id': c_id, 'data': freq_data})
                                         except Exception as e:
+                                            logger.error(f"SIGAA: Falha ao coletar dados detalhados para a disciplina '{item['title']}' (ID: {c_id}): {e}", exc_info=True)
                                             empty_result = calculator.calculate([])
                                             fallback_data = {'grades': [], 'status': empty_result.to_dict()}
                                             await queue.put({'type': 'course_data', 'id': c_id, 'data': fallback_data})
                                         await queue.put({'type': 'course_loading', 'id': c_id, 'step': 'done'})
                                     await w_gateway.logout()
                                 except Exception as e:
-                                    logger.error(f'Worker login failed in stream_grades: {e}')
+                                    logger.error(f'SIGAA: Worker login falhou no stream_grades (isto afetará {len(chunk)} disciplinas): {e}', exc_info=True)
                                     for b_id, item in chunk:
                                         c_id = item['id']
                                         empty_result = calculator.calculate([])
@@ -788,7 +789,8 @@ async def stream_grades():
                                     yield (json.dumps({'type': 'course_loading', 'id': c_id, 'step': 'frequencia'}) + '\n')
                                     if freq_data:
                                         yield (json.dumps({'type': 'course_frequency', 'id': c_id, 'data': freq_data}) + '\n')
-                                except Exception:
+                                except Exception as e:
+                                    logger.error(f"SIGAA: Falha sequencial ao coletar dados para a disciplina '{item['title']}' (ID: {c_id}): {e}", exc_info=True)
                                     empty_result = calculator.calculate([])
                                     fallback_data = {'grades': [], 'status': empty_result.to_dict()}
                                     yield (json.dumps({'type': 'course_data', 'id': c_id, 'data': fallback_data}) + '\n')

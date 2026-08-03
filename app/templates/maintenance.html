@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Em Manutenção | Boletim App</title>
+    <style>
+        :root {
+            --bg-base: #0a0b0e;
+            --bg-panel: #12141a;
+            --border-color: #272a35;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --inst-accent: #3b82f6; /* Default Blue */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+        }
+
+        .ambient-glow {
+            position: fixed;
+            top: -20vh;
+            left: -20vw;
+            width: 140vw;
+            height: 140vh;
+            background: radial-gradient(circle at 50% 50%, var(--inst-accent), transparent 60%);
+            opacity: 0.05;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .maintenance-container {
+            z-index: 1;
+            background: rgba(18, 20, 26, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 3rem 2.5rem;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeInUp 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem auto;
+            border-radius: 50%;
+            background: rgba(59, 130, 246, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .icon-wrapper svg {
+            width: 40px;
+            height: 40px;
+            color: var(--inst-accent);
+        }
+
+        .title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+        }
+
+        .description {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .footer-note {
+            font-family: 'Courier New', monospace;
+            font-size: 0.75rem;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.5); }
+        }
+
+        .icon-wrapper {
+            animation: pulseGlow 3s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow"></div>
+    <div class="maintenance-container">
+        <div class="icon-wrapper">
+            <!-- Wrench / Settings Icon -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+            </svg>
+        </div>
+        <h1 class="title">Sistema em Manutenção</h1>
+        <p class="description">
+            A plataforma Boletim App está passando por uma atualização programada para melhorar sua experiência.<br><br>
+            Voltaremos ao ar em breve! Agradecemos sua paciência.
+        </p>
+        <div class="footer-note">STATUS: UPGRADING</div>
+    </div>
+</body>
+</html>
