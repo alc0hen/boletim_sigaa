@@ -34,40 +34,39 @@ class Course:
         self.frequency = self._parse_frequency(freq_page)
         return self.frequency
 
+    async def _navigate_menu(self, current_page, navigate):
+        try:
+            return await navigate(current_page)
+        except ValueError:
+            fresh_page = await self.session.get('/sigaa/ava/index.jsf')
+            return await navigate(fresh_page)
+
     async def get_all_details(self):
         course_page = await self._enter_course()
         current_page = course_page
         try:
-            freq_page = await self._navigate_to_frequency(current_page)
+            participantes_page = await self._navigate_menu(current_page, self._navigate_to_participantes)
+            current_page = participantes_page
+            self.professor_name = self._parse_professor(participantes_page)
+        except Exception:
+            self.professor_name = 'Desconhecido'
+        try:
+            freq_page = await self._navigate_menu(current_page, self._navigate_to_frequency)
+            current_page = freq_page
             self.frequency = self._parse_frequency(freq_page)
-            current_page = await self.session.get('/sigaa/ava/index.jsf')
         except ValueError:
             self.frequency = None
         except Exception as e:
             logger.warning(f'Could not parse frequency for {self.title}: {e}')
             self.frequency = None
-            try:
-                current_page = await self.session.get('/sigaa/ava/index.jsf')
-            except Exception:
-                pass
         try:
-            grades_page = await self._navigate_to_grades(current_page)
+            grades_page = await self._navigate_menu(current_page, self._navigate_to_grades)
             self.grades = self._parse_grades(grades_page)
-            current_page = await self.session.get('/sigaa/ava/index.jsf')
         except ValueError:
             self.grades = []
         except Exception as e:
             logger.error(f'Error parsing grades for {self.title}: {e}', exc_info=True)
             self.grades = []
-            try:
-                current_page = await self.session.get('/sigaa/ava/index.jsf')
-            except Exception:
-                pass
-        try:
-            participantes_page = await self._navigate_to_participantes(current_page)
-            self.professor_name = self._parse_professor(participantes_page)
-        except Exception:
-            self.professor_name = 'Desconhecido'
         return (self.grades, self.frequency, self.professor_name)
 
     async def get_professor_only(self):

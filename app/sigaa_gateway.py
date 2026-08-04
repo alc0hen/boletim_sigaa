@@ -131,6 +131,8 @@ class _LocalBackend:
         from .sigaa_api.sigaa import Sigaa
         from .sigaa_api.account import Account
         from .sigaa_api.exceptions import SigaaQuestionnaireError
+        if self._sigaa is not None and self._account is not None:
+            return self
         self._sigaa = Sigaa(self.url, self._institution_type(), cookies=self.cookies)
         try:
             response = await self._sigaa.session.get('/sigaa/portais/discente/discente.jsf')
@@ -286,7 +288,7 @@ class SigaaGateway:
         return self._backend.name
 
     @classmethod
-    async def login(cls, url, institution, username, password, credentials=None):
+    async def login(cls, url, institution, username, password, credentials=None, keep_session=False):
         institution = (institution or 'IFAL').upper()
         preference = _backend_preference()
         if preference != LOCAL and is_configured():
@@ -308,10 +310,10 @@ class SigaaGateway:
                 if e.status_code == 401:
                     raise SigaaLoginFailed(str(e))
                 raise SigaaError(str(e))
-        return await cls._login_local(url, institution, username, password, credentials)
+        return await cls._login_local(url, institution, username, password, credentials, keep_session=keep_session)
 
     @classmethod
-    async def _login_local(cls, url, institution, username, password, credentials=None):
+    async def _login_local(cls, url, institution, username, password, credentials=None, keep_session=False):
         from .sigaa_api.sigaa import Sigaa
         from .sigaa_api.enums import InstitutionType
         from .sigaa_api.exceptions import SigaaException, SigaaInvalidCredentials, SigaaQuestionnaireError
@@ -320,6 +322,7 @@ class SigaaGateway:
         except KeyError:
             inst_type = InstitutionType.IFAL
         sigaa = Sigaa(url, inst_type)
+        keep = False
         try:
             account = await sigaa.login(username, password)
             client_session = await sigaa.session._get_session()
@@ -330,6 +333,7 @@ class SigaaGateway:
                 bonds.append(_LocalBackend._bond_summary(f'active:{i}', 'active', bond))
             for i, bond in enumerate(getattr(account, 'inactive_bonds', None) or []):
                 bonds.append(_LocalBackend._bond_summary(f'inactive:{i}', 'inactive', bond))
+            keep = keep_session
         except SigaaQuestionnaireError as e:
             raise SigaaQuestionnaire(str(e))
         except SigaaInvalidCredentials as e:
@@ -337,8 +341,12 @@ class SigaaGateway:
         except SigaaException as e:
             raise SigaaError(str(e))
         finally:
-            await sigaa.close()
+            if not keep:
+                await sigaa.close()
         backend = _LocalBackend(cookies, url, institution)
+        if keep:
+            backend._sigaa = sigaa
+            backend._account = account
         gateway = cls(backend, url, institution, credentials)
         gateway.login_info = {'name': name, 'bonds': bonds}
         return gateway
@@ -471,3 +479,9 @@ class SigaaGateway:
             await self._backend.logout()
         except Exception as e:
             logger.info('Falha ao encerrar sessão do SIGAA (ignorada): %s', e)
+
+    async def close(self):
+        try:
+            await self._backend.close_scope()
+        except Exception:
+            logger.debug('Falha ao fechar o backend do SIGAA.', exc_info=True)

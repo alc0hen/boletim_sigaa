@@ -21,6 +21,8 @@ from datetime import datetime, timedelta
 bp = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 SUPPORTERS_URL = 'https://raw.githubusercontent.com/AlbertCohenhgs/public_lists/refs/heads/main/apoiadores.json'
+_supporters_cache = {'data': None, 'at': 0.0}
+_SUPPORTERS_TTL = 600
 QUESTIONNAIRE_MESSAGE = 'Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.'
 _login_limiter = RateLimiter(max_attempts=8, window_seconds=300)
 _data_limiter = RateLimiter(max_attempts=12, window_seconds=60)
@@ -396,45 +398,6 @@ async def activate_account(id):
 
 @bp.route('/dashboard')
 async def dashboard():
-    if 'user_id' in session:
-        async with db_session() as s:
-            user = await s.get(User, session['user_id'])
-            if user and (not user.has_completed_onboarding):
-                res = await s.execute(select(LinkedAccount).where(LinkedAccount.user_id == user.id))
-                if res.first():
-                    return redirect(url_for('main.onboarding'))
-    if 'user_id' in session and (not session.get('sigaa_state')):
-        active_id = session.get('active_account_id')
-        async with db_session() as s:
-            if not active_id:
-                user = await s.get(User, session['user_id'])
-                if user and user.linked_accounts:
-                    active_id = user.linked_accounts[0].id
-                    session['active_account_id'] = active_id
-                else:
-                    return redirect(url_for('main.profile'))
-            account = await s.get(LinkedAccount, active_id)
-            if not account:
-                session.pop('active_account_id', None)
-                return redirect(url_for('main.profile'))
-            password = account.get_password()
-            if not password:
-                return redirect(url_for('main.profile'))
-            acct_username = account.username
-            acct_institution = account.institution
-        try:
-            url = institution_url(acct_institution)
-            gateway = await SigaaGateway.login(url, acct_institution, acct_username, password, credentials={'username': acct_username, 'password': password})
-            _save_gateway(gateway)
-            session['username'] = acct_username
-            return redirect(url_for('main.dashboard'))
-        except Exception as e:
-            logger.error(f'Auto-login failed for {acct_username}: {e}')
-            return redirect(url_for('main.profile'))
-    if not session.get('sigaa_state'):
-        if 'user_id' in session:
-            return redirect(url_for('main.profile'))
-        return redirect(url_for('main.login'))
     user = None
     linked_accounts = []
     if 'user_id' in session:
@@ -442,7 +405,49 @@ async def dashboard():
             user = await s.get(User, session['user_id'])
             if user:
                 linked_accounts = user.linked_accounts
-    return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'), has_completed_onboarding=user.has_completed_onboarding if user else False)
+        if user and (not user.has_completed_onboarding) and linked_accounts:
+            return redirect(url_for('main.onboarding'))
+    if 'user_id' in session and (not session.get('sigaa_state')):
+        active_id = session.get('active_account_id')
+        if not active_id:
+            if linked_accounts:
+                active_id = linked_accounts[0].id
+                session['active_account_id'] = active_id
+            else:
+                return redirect(url_for('main.profile'))
+        account = next((a for a in linked_accounts if a.id == active_id), None)
+        if not account:
+            session.pop('active_account_id', None)
+            return redirect(url_for('main.profile'))
+        password = account.get_password()
+        if not password:
+            return redirect(url_for('main.profile'))
+        try:
+            url = institution_url(account.institution)
+            gateway = await SigaaGateway.login(url, account.institution, account.username, password, credentials={'username': account.username, 'password': password})
+            _save_gateway(gateway)
+            session['username'] = account.username
+            return redirect(url_for('main.dashboard'))
+        except Exception as e:
+            logger.error(f'Auto-login failed for {account.username}: {e}')
+            return redirect(url_for('main.profile'))
+    if not session.get('sigaa_state'):
+        if 'user_id' in session:
+            return redirect(url_for('main.profile'))
+        return redirect(url_for('main.login'))
+    initial_profile = None
+    active_id = session.get('active_account_id')
+    if active_id and linked_accounts:
+        account = next((a for a in linked_accounts if a.id == active_id), None)
+        if account and account.history_json:
+            try:
+                cipher = get_cipher_suite()
+                initial_profile = json.loads(cipher.decrypt(account.history_json.encode('utf-8')).decode('utf-8'))
+                initial_profile = await _inject_exigencia_medias(session.get('sigaa_inst', 'IFAL'), initial_profile)
+            except Exception as e:
+                logger.warning(f'Falha ao montar o perfil inicial do dashboard: {e}')
+                initial_profile = None
+    return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'), has_completed_onboarding=user.has_completed_onboarding if user else False, initial_profile=initial_profile)
 
 @bp.route('/onboarding')
 async def onboarding():
@@ -632,46 +637,72 @@ async def update_course(course_id):
 async def stream_grades():
     if not session.get('sigaa_state'):
         return Response(json.dumps({'error': 'Unauthorized', 'session_expired': True}) + '\n', status=401, mimetype='application/x-ndjson')
-    retry_after = await _rate_limited(_data_limiter, f'stream:{_client_ip()}')
-    if retry_after:
-        return Response(json.dumps({'error': 'Muitas requisições. Aguarde alguns segundos.', 'retry_after': int(retry_after) + 1}) + '\n', status=429, mimetype='application/x-ndjson')
+    has_profile = request.args.get('has_profile') == '1'
     skip_ids = [int(x) for x in request.args.get('skip', '').split(',') if x.strip().isdigit()]
     inst_type = _inst_type()
     student_name = session.get('sigaa_name')
     active_account_id = session.get('active_account_id')
+
+    async def _fetch_linked_account():
+        if active_account_id:
+            return await g.db_session.get(LinkedAccount, active_account_id)
+        return None
+    retry_after, linked_account = await asyncio.gather(_rate_limited(_data_limiter, f'stream:{_client_ip()}'), _fetch_linked_account())
+    if retry_after:
+        return Response(json.dumps({'error': 'Muitas requisições. Aguarde alguns segundos.', 'retry_after': int(retry_after) + 1}) + '\n', status=429, mimetype='application/x-ndjson')
+    if active_account_id and linked_account is None:
+        logger.warning('active_account_id existe na sessão mas não no banco.')
     cached_profile = None
-    has_linked_account = False
-    if active_account_id:
-        linked_account = await g.db_session.get(LinkedAccount, active_account_id)
-        if linked_account:
-            has_linked_account = True
-            if linked_account.history_json:
-                try:
-                    cipher = get_cipher_suite()
-                    decrypted = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
-                    cached_profile = json.loads(decrypted)
-                except Exception as e:
-                    logger.warning(f'Failed to load cached history: {e}')
-        else:
-            logger.warning('active_account_id existe na sessão mas não no banco.')
-    gateway = await _get_gateway()
+    if linked_account and linked_account.history_json and (not has_profile):
+        try:
+            cipher = get_cipher_suite()
+            decrypted = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
+            cached_profile = json.loads(decrypted)
+        except Exception as e:
+            logger.warning(f'Failed to load cached history: {e}')
+    credentials = None
+    if linked_account:
+        try:
+            password = linked_account.get_password()
+            if password:
+                credentials = {'username': linked_account.username, 'password': password}
+        except Exception as e:
+            logger.warning(f'Falha ao ler credenciais da conta vinculada: {e}')
+    if credentials is None:
+        encrypted = session.get('sigaa_temp_password')
+        if encrypted and session.get('username'):
+            try:
+                cipher = get_cipher_suite()
+                credentials = {'username': session['username'], 'password': cipher.decrypt(encrypted.encode('utf-8')).decode('utf-8')}
+            except Exception as e:
+                logger.warning(f'Falha ao decifrar a senha temporária da sessão: {e}')
+    gateway = SigaaGateway.from_state(session.get('sigaa_state'), credentials)
     if gateway is None:
         return Response(json.dumps({'error': 'Unauthorized', 'session_expired': True}) + '\n', status=401, mimetype='application/x-ndjson')
 
     async def get_supporters_task():
+        now = time.time()
+        if _supporters_cache['data'] is not None and now - _supporters_cache['at'] < _SUPPORTERS_TTL:
+            return _supporters_cache['data']
         try:
             async with aiohttp.ClientSession() as http_client_session:
                 async with http_client_session.get(SUPPORTERS_URL, timeout=3) as resp:
                     if resp.status == 200:
-                        return await resp.json(content_type=None)
+                        data = await resp.json(content_type=None)
+                        _supporters_cache['data'] = data
+                        _supporters_cache['at'] = now
+                        return data
         except:
             pass
-        return []
-    sigaa_temp_pwd = session.get('sigaa_temp_password')
+        return _supporters_cache['data'] or []
     sigaa_inst_val = session.get('sigaa_inst', 'IFAL')
-    sigaa_username_val = session.get('username')
+    worker_username = credentials['username'] if credentials else session.get('username')
+    worker_password = credentials['password'] if credentials else None
 
     async def async_generate():
+        stream_t0 = time.time()
+        first_data_logged = []
+        supporters_task = asyncio.create_task(get_supporters_task())
         if cached_profile:
             injected_profile = await _inject_exigencia_medias(sigaa_inst_val, cached_profile)
             yield (json.dumps({'type': 'profile_data', 'data': injected_profile}) + '\n')
@@ -682,9 +713,10 @@ async def stream_grades():
                 active_bonds = _active_student_bonds(all_bonds)
                 student_bonds = [b for b in all_bonds if b.get('type') == 'student']
                 bonds_to_use = active_bonds if active_bonds else student_bonds
-                supporters = await get_supporters_task()
+                supporters = await supporters_task
                 registration = bonds_to_use[0].get('registration') if bonds_to_use else None
                 is_supporter = bool(registration and str(registration) in {str(s) for s in supporters})
+                logger.info(f'SIGAA stream: user_info emitido em {time.time() - stream_t0:.2f}s')
                 yield (json.dumps({'type': 'user_info', 'name': student_name, 'is_supporter': is_supporter}) + '\n')
                 if bonds_to_use:
                     calculator = CalculatorFactory.get_calculator(inst_type)
@@ -692,109 +724,88 @@ async def stream_grades():
                     yield (json.dumps({'type': 'sync_start', 'total_courses': len(listing)}) + '\n')
                     for item in listing:
                         yield (json.dumps({'type': 'course_start', 'id': item['id'], 'name': item['title'], 'obs': item['program']}) + '\n')
+                    raw_password = worker_password
+                    try:
+                        worker_url = resolve_sigaa_url(sigaa_inst_val)
+                    except:
+                        worker_url = gateway.url
                     for bond in bonds_to_use:
                         bond_id = bond['bond_id']
                         bond_courses = [item for item in listing if item['bond_id'] == bond_id]
-                        all_courses = []
+                        pending = []
                         for item in bond_courses:
                             if item['id'] in skip_ids:
                                 yield (json.dumps({'type': 'course_skipped', 'id': item['id']}) + '\n')
                             else:
-                                all_courses.append((bond_id, item))
-                        raw_password = None
-                        if sigaa_temp_pwd:
-                            try:
-                                cipher = get_cipher_suite()
-                                raw_password = cipher.decrypt(sigaa_temp_pwd.encode('utf-8')).decode('utf-8')
-                            except:
-                                pass
-                        elif active_account_id:
-                            try:
-                                async with db_session() as s:
-                                    db_acc = await s.get(LinkedAccount, active_account_id)
-                                    if db_acc:
-                                        raw_password = db_acc.get_password()
-                            except:
-                                pass
-                        if raw_password and len(all_courses) > 1:
-                            import math
-                            num_workers = min(10, len(all_courses))
-                            chunk_size = math.ceil(len(all_courses) / num_workers)
-                            chunks = [all_courses[i:i + chunk_size] for i in range(0, len(all_courses), chunk_size)]
-                            queue = asyncio.Queue()
-                            inst_str = sigaa_inst_val
-                            try:
-                                url = resolve_sigaa_url(inst_str)
-                            except:
-                                url = gateway.url
-                            username_val = sigaa_username_val
+                                pending.append((bond_id, item))
+                        if not pending:
+                            continue
+                        work_queue = asyncio.Queue()
+                        for entry in pending:
+                            work_queue.put_nowait(entry)
+                        out_queue = asyncio.Queue()
 
-                            async def worker(chunk):
-                                try:
-                                    w_gateway = await SigaaGateway.login(url, inst_str, username_val, raw_password, credentials={'username': username_val, 'password': raw_password})
-                                    for b_id, item in chunk:
-                                        c_id = item['id']
-                                        await queue.put({'type': 'course_loading', 'id': c_id, 'step': 'notas'})
-                                        try:
-                                            details = await w_gateway.get_course_details(b_id, item['course_id'])
-                                            raw_grades = details.get('grades') or []
-                                            freq_data = details.get('frequency')
-                                            course_result = calculator.calculate(raw_grades)
-                                            prof = details.get('professor')
-                                            exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
-                                            result_data = {'grades': raw_grades, 'status': course_result.to_dict(), 'professor': prof, 'exigencia_media': exigencia}
-                                            await queue.put({'type': 'course_data', 'id': c_id, 'data': result_data})
-                                            await queue.put({'type': 'course_loading', 'id': c_id, 'step': 'frequencia'})
-                                            if freq_data:
-                                                await queue.put({'type': 'course_frequency', 'id': c_id, 'data': freq_data})
-                                        except Exception as e:
-                                            logger.error(f"SIGAA: Falha ao coletar dados detalhados para a disciplina '{item['title']}' (ID: {c_id}): {e}", exc_info=True)
-                                            empty_result = calculator.calculate([])
-                                            fallback_data = {'grades': [], 'status': empty_result.to_dict()}
-                                            await queue.put({'type': 'course_data', 'id': c_id, 'data': fallback_data})
-                                        await queue.put({'type': 'course_loading', 'id': c_id, 'step': 'done'})
-                                    await w_gateway.logout()
-                                except Exception as e:
-                                    logger.error(f'SIGAA: Worker login falhou no stream_grades (isto afetará {len(chunk)} disciplinas): {e}', exc_info=True)
-                                    for b_id, item in chunk:
-                                        c_id = item['id']
-                                        empty_result = calculator.calculate([])
-                                        fallback_data = {'grades': [], 'status': empty_result.to_dict()}
-                                        await queue.put({'type': 'course_data', 'id': c_id, 'data': fallback_data})
-                                        await queue.put({'type': 'course_loading', 'id': c_id, 'step': 'done'})
-                            tasks = [asyncio.create_task(worker(chunk)) for chunk in chunks]
+                        async def process_item(gw, b_id, item, out_queue=out_queue):
+                            c_id = item['id']
+                            await out_queue.put({'type': 'course_loading', 'id': c_id, 'step': 'notas'})
+                            try:
+                                details = await gw.get_course_details(b_id, item['course_id'])
+                                raw_grades = details.get('grades') or []
+                                freq_data = details.get('frequency')
+                                course_result = calculator.calculate(raw_grades)
+                                prof = details.get('professor')
+                                exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
+                                result_data = {'grades': raw_grades, 'status': course_result.to_dict(), 'professor': prof, 'exigencia_media': exigencia}
+                                await out_queue.put({'type': 'course_data', 'id': c_id, 'data': result_data})
+                                if not first_data_logged:
+                                    first_data_logged.append(True)
+                                    logger.info(f'SIGAA stream: primeiro course_data emitido em {time.time() - stream_t0:.2f}s')
+                                await out_queue.put({'type': 'course_loading', 'id': c_id, 'step': 'frequencia'})
+                                if freq_data:
+                                    await out_queue.put({'type': 'course_frequency', 'id': c_id, 'data': freq_data})
+                            except Exception as e:
+                                logger.error(f"SIGAA: Falha ao coletar dados detalhados para a disciplina '{item['title']}' (ID: {c_id}): {e}", exc_info=True)
+                                empty_result = calculator.calculate([])
+                                fallback_data = {'grades': [], 'status': empty_result.to_dict()}
+                                await out_queue.put({'type': 'course_data', 'id': c_id, 'data': fallback_data})
+                            await out_queue.put({'type': 'course_loading', 'id': c_id, 'step': 'done'})
 
-                            async def waiter():
-                                await asyncio.gather(*tasks)
-                                await queue.put(None)
-                            asyncio.create_task(waiter())
+                        async def consume(gw, work_queue=work_queue):
                             while True:
-                                evt = await queue.get()
-                                if evt is None:
-                                    break
-                                yield (json.dumps(evt) + '\n')
-                        else:
-                            for b_id, item in all_courses:
-                                c_id = item['id']
-                                yield (json.dumps({'type': 'course_loading', 'id': c_id, 'step': 'notas'}) + '\n')
                                 try:
-                                    details = await gateway.get_course_details(b_id, item['course_id'])
-                                    raw_grades = details.get('grades') or []
-                                    freq_data = details.get('frequency')
-                                    course_result = calculator.calculate(raw_grades)
-                                    prof = details.get('professor')
-                                    exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
-                                    result_data = {'grades': raw_grades, 'status': course_result.to_dict(), 'professor': prof, 'exigencia_media': exigencia}
-                                    yield (json.dumps({'type': 'course_data', 'id': c_id, 'data': result_data}) + '\n')
-                                    yield (json.dumps({'type': 'course_loading', 'id': c_id, 'step': 'frequencia'}) + '\n')
-                                    if freq_data:
-                                        yield (json.dumps({'type': 'course_frequency', 'id': c_id, 'data': freq_data}) + '\n')
-                                except Exception as e:
-                                    logger.error(f"SIGAA: Falha sequencial ao coletar dados para a disciplina '{item['title']}' (ID: {c_id}): {e}", exc_info=True)
-                                    empty_result = calculator.calculate([])
-                                    fallback_data = {'grades': [], 'status': empty_result.to_dict()}
-                                    yield (json.dumps({'type': 'course_data', 'id': c_id, 'data': fallback_data}) + '\n')
-                                yield (json.dumps({'type': 'course_loading', 'id': c_id, 'step': 'done'}) + '\n')
+                                    b_id, item = work_queue.get_nowait()
+                                except asyncio.QueueEmpty:
+                                    break
+                                await process_item(gw, b_id, item)
+
+                        async def extra_worker():
+                            w_gateway = None
+                            try:
+                                w_gateway = await SigaaGateway.login(worker_url, sigaa_inst_val, worker_username, raw_password, credentials={'username': worker_username, 'password': raw_password}, keep_session=True)
+                                async with w_gateway.scope():
+                                    await consume(w_gateway)
+                            except Exception as e:
+                                logger.error(f'SIGAA: Worker adicional falhou no stream_grades (as disciplinas restantes seguem na fila): {e}', exc_info=True)
+                            finally:
+                                if w_gateway is not None:
+                                    try:
+                                        await w_gateway.logout()
+                                    except Exception:
+                                        pass
+                                    await w_gateway.close()
+                        n_extra = min(10, len(pending)) - 1 if raw_password and len(pending) > 1 else 0
+                        tasks = [asyncio.create_task(consume(gateway))]
+                        tasks.extend((asyncio.create_task(extra_worker()) for _ in range(n_extra)))
+
+                        async def waiter(tasks=tasks, out_queue=out_queue):
+                            await asyncio.gather(*tasks, return_exceptions=True)
+                            await out_queue.put(None)
+                        asyncio.create_task(waiter())
+                        while True:
+                            evt = await out_queue.get()
+                            if evt is None:
+                                break
+                            yield (json.dumps(evt) + '\n')
                 yield (json.dumps({'type': 'sync_end'}) + '\n')
         except SigaaQuestionnaire as e:
             logger.warning(f'Stream blocked by questionnaire: {e}')

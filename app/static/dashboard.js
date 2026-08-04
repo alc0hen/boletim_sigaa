@@ -790,7 +790,14 @@ let data = [];
           if (skipIndices.length > 0) params.set('skip', skipIndices.join(','));
           if (params.toString()) endpoint += '?' + params.toString();
         }
-        const response = await fetch(endpoint);
+        // Reaproveita a requisição disparada no <head> (early fetch) quando aplicável.
+        let response = null;
+        if (!isDemo && !params.toString() && window.__earlyStream) {
+          const early = window.__earlyStream;
+          window.__earlyStream = null;
+          response = await early;
+        }
+        if (!response) response = await fetch(endpoint);
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -1385,6 +1392,7 @@ let data = [];
     }
 
     function renderChart() {
+      if (typeof Chart === 'undefined') return; // chart.js (defer) ainda não carregou
       const chartCard = document.getElementById('chart-card');
       const active = data.filter(d => !d.isLoading && d.status && d.status.needed > 0)
         .sort((a, b) => b.status.needed - a.status.needed).slice(0, 10);
@@ -2130,8 +2138,14 @@ let data = [];
     function closeModal() { document.getElementById('modal').style.display = 'none'; }
     document.getElementById('modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
+    // Perfil injetado pelo servidor no HTML: pinta o histórico sem esperar o stream.
+    if (window.__initialProfile) {
+      profileData = window.__initialProfile;
+      _buildMSemDropdown('Atual');
+      checkPendingReviews();
+    }
     // Iniciar a busca de dados
-    startDataStream();
+    startDataStream();
 
 /* ========================================================================= */
 /* FASE 2: WIZARD GAMIFICADO DE AVALIACOES NO DASHBOARD                      */

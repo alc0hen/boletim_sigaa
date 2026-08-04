@@ -78,7 +78,7 @@ class Account:
             elif 'Status:' in key:
                 status = value
         if registration and program:
-            bond = StudentBond(self.session, registration, program, None)
+            bond = StudentBond(self.session, registration, program, None, homepage=page)
             if status in ['CURSANDO', 'CONCLUINTE', 'ATIVO']:
                 self.active_bonds.append(bond)
             else:

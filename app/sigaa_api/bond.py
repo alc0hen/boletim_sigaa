@@ -7,19 +7,27 @@ logger = logging.getLogger(__name__)
 
 class StudentBond:
 
-    def __init__(self, session, registration, program, switch_url=None):
+    def __init__(self, session, registration, program, switch_url=None, homepage=None):
         self.session = session
         self.registration = registration
         self.program = program
         self.switch_url = switch_url
         self.courses = []
+        self._homepage = homepage
+
+    def _consume_homepage(self):
+        page = self._homepage
+        self._homepage = None
+        return page
 
     async def get_courses(self):
         page = None
         if self.switch_url:
             page = await self.session.get(self.switch_url)
         else:
-            page = await self.session.get('/sigaa/portais/discente/discente.jsf')
+            page = self._consume_homepage()
+            if page is None:
+                page = await self.session.get('/sigaa/portais/discente/discente.jsf')
         self.courses = self._parse_courses(page)
         return self.courses
 
@@ -130,8 +138,10 @@ class StudentBond:
                 logger.info(f'SIGAA: Switching context via URL: {self.switch_url}')
                 page = await self.session.get(self.switch_url)
             else:
-                logger.info('SIGAA: Accessing discente.jsf to ensure session context.')
-                page = await self.session.get('/sigaa/portais/discente/discente.jsf')
+                page = self._consume_homepage()
+                if page is None:
+                    logger.info('SIGAA: Accessing discente.jsf to ensure session context.')
+                    page = await self.session.get('/sigaa/portais/discente/discente.jsf')
             official_history = {}
             action_data = self._extract_jscook_action_by_jsf_method(page, 'portalDiscente.boletim')
             if not action_data:
