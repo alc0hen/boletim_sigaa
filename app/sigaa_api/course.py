@@ -41,15 +41,18 @@ class Course:
             fresh_page = await self.session.get('/sigaa/ava/index.jsf')
             return await navigate(fresh_page)
 
-    async def get_all_details(self):
+    async def get_all_details(self, skip_professor=False):
         course_page = await self._enter_course()
         current_page = course_page
-        try:
-            participantes_page = await self._navigate_menu(current_page, self._navigate_to_participantes)
-            current_page = participantes_page
-            self.professor_name = self._parse_professor(participantes_page)
-        except Exception:
-            self.professor_name = 'Desconhecido'
+        if skip_professor:
+            self.professor_name = None
+        else:
+            try:
+                participantes_page = await self._navigate_menu(current_page, self._navigate_to_participantes)
+                current_page = participantes_page
+                self.professor_name = self._parse_professor(participantes_page)
+            except Exception:
+                self.professor_name = 'Desconhecido'
         try:
             freq_page = await self._navigate_menu(current_page, self._navigate_to_frequency)
             current_page = freq_page

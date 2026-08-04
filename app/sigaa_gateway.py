@@ -82,7 +82,7 @@ class _RemoteBackend:
         data = await get_client().list_courses(self.session_id, bond_id)
         return data.get('courses', [])
 
-    async def get_course_details(self, bond_id, course_id):
+    async def get_course_details(self, bond_id, course_id, skip_professor=False):
         return await get_client().course_details(self.session_id, bond_id, course_id)
 
     async def get_history(self, bond_id, cached_history=None):
@@ -211,19 +211,19 @@ class _LocalBackend:
             raise SigaaError('Vínculo docente não possui disciplinas.')
         courses = await bond.get_courses()
         self._courses[bond_id] = courses
-        return [{'id': i, 'title': c.title, 'schedule_code': getattr(c, 'schedule_code', '')} for i, c in enumerate(courses)]
+        return [{'id': i, 'title': c.title, 'schedule_code': getattr(c, 'schedule_code', ''), 'turma_id': getattr(c, 'id', None)} for i, c in enumerate(courses)]
 
     async def _course_objects(self, bond_id):
         if bond_id not in self._courses:
             await self.get_courses(bond_id)
         return self._courses[bond_id]
 
-    async def get_course_details(self, bond_id, course_id):
+    async def get_course_details(self, bond_id, course_id, skip_professor=False):
         courses = await self._course_objects(bond_id)
         if not 0 <= course_id < len(courses):
             raise SigaaError(f'Disciplina não encontrada: {course_id}')
         course = courses[course_id]
-        grades, frequency, professor = await course.get_all_details()
+        grades, frequency, professor = await course.get_all_details(skip_professor=skip_professor)
         return {'id': course_id, 'title': course.title, 'schedule_code': getattr(course, 'schedule_code', ''), 'grades': grades, 'frequency': frequency, 'professor': professor}
 
     async def get_history(self, bond_id, cached_history=None):
@@ -459,8 +459,8 @@ class SigaaGateway:
     async def get_courses(self, bond_id):
         return await self._call('get_courses', bond_id)
 
-    async def get_course_details(self, bond_id, course_id):
-        return await self._call('get_course_details', bond_id, course_id)
+    async def get_course_details(self, bond_id, course_id, skip_professor=False):
+        return await self._call('get_course_details', bond_id, course_id, skip_professor=skip_professor)
 
     async def get_history(self, bond_id, cached_history=None):
         return await self._call('get_history', bond_id, cached_history=cached_history)
