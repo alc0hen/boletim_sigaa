@@ -48,7 +48,7 @@
             </div>
         {% endif %}
         <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">{{ user.name }}</h2>
-        <p style="margin-bottom: 1.5rem;">{{ user.email }}</p>
+        <p style="margin-bottom: 1.5rem; word-break: break-all;">{{ user.email }}</p>
         <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
             <a href="{{ url_for('main.logout') }}" class="btn-secondary" style="font-size: 0.8rem; width: auto; display: inline-block; padding: 6px 12px; margin-top: 0; border-radius: 6px;">Sair da Conta</a>
             <form method="POST" action="{{ url_for('main.delete_account') }}" onsubmit="return confirm('Tem certeza? Isso apagará permanentemente sua conta, todas as suas contas vinculadas do SIGAA e todo o seu cache de histórico. Suas avaliações serão anonimizadas. Esta ação é irreversível.');" style="margin: 0;">

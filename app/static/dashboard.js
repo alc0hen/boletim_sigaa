@@ -852,7 +852,36 @@ let data = [];
 
     function handleStreamMessage(msg, updatedCourseIds) {
       if (msg.error) {
-        if (msg.error === "Session expired") window.location.href = "/login";
+        if (msg.error === "Session expired") {
+          const strip = document.getElementById('m-alert-strip');
+          if (strip) {
+            strip.innerHTML = `⚠️ <strong>Conexão perdida:</strong> Tentando reconectar automaticamente ao SIGAA... <div class="loading-spinner" style="width:14px;height:14px;display:inline-block;border-width:2px;margin-left:8px;vertical-align:middle;border-left-color:currentColor;"></div>`;
+            strip.style.background = 'rgba(59,130,246,0.1)';
+            strip.style.borderLeftColor = '#3b82f6';
+            strip.style.color = '#3b82f6';
+            strip.classList.add('visible');
+          }
+          fetch('/dashboard?reauth=1').then(res => {
+            if (res.url.includes('/profile') || res.url.includes('/login')) {
+              if (strip) {
+                strip.innerHTML = `⚠️ <strong>Sessão expirada:</strong> Não foi possível reconectar automaticamente. <a href="/profile" style="color:inherit;text-decoration:underline;">Verifique suas credenciais</a>`;
+                strip.style.background = 'rgba(239,68,68,0.1)';
+                strip.style.borderLeftColor = '#ef4444';
+                strip.style.color = '#ef4444';
+              }
+            } else {
+              if (strip) strip.classList.remove('visible');
+              startDataStream();
+            }
+          }).catch(err => {
+              if (strip) {
+                strip.innerHTML = `⚠️ <strong>Erro:</strong> Falha de rede ao tentar reconectar. <a href="javascript:location.reload()" style="color:inherit;text-decoration:underline;">Atualizar página</a>`;
+                strip.style.background = 'rgba(239,68,68,0.1)';
+                strip.style.borderLeftColor = '#ef4444';
+                strip.style.color = '#ef4444';
+              }
+          });
+        }
         else if (msg.is_questionnaire) {
           const strip = document.getElementById('m-alert-strip');
           if (strip) {

@@ -378,6 +378,11 @@
         font-size: 26px;
         line-height: 1.15;
         margin: 0 0 6px;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .m-ficha-prof {
         font-family: 'Newsreader', serif;
@@ -499,12 +504,13 @@
       }
       .m-card-stage {
         padding: 40px;
-        height: 460px;
+        min-height: 460px;
+        height: auto;
         flex: 0 0 auto;
       }
       .m-stack-card {
         width: 75%;
-        height: 380px;
+        min-height: 380px;
         border-radius: 12px;
       }
       .m-stack-card.m-stack-2 {
@@ -515,7 +521,7 @@
       }
       .m-ficha-card {
         width: 75%;
-        height: 380px;
+        min-height: 380px;
         border-radius: 12px;
         padding: 40px;
       }

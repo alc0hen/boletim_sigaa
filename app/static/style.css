@@ -649,9 +649,10 @@ footer {
         padding: 15px 0;
     }
     .nav-content {
-        flex-direction: column;
-        gap: 15px;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
     }
     .container {
         padding: 0 1.5rem;

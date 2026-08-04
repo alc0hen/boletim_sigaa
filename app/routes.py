@@ -23,6 +23,15 @@ logger = logging.getLogger(__name__)
 SUPPORTERS_URL = 'https://raw.githubusercontent.com/AlbertCohenhgs/public_lists/refs/heads/main/apoiadores.json'
 _supporters_cache = {'data': None, 'at': 0.0}
 _SUPPORTERS_TTL = 600
+_PROFESSOR_TTL = 7 * 24 * 3600
+_SYNC_META_TTL = 30 * 24 * 3600
+_background_tasks = set()
+
+def _fire_and_forget(coro):
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 QUESTIONNAIRE_MESSAGE = 'Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.'
 _login_limiter = RateLimiter(max_attempts=8, window_seconds=300)
 _data_limiter = RateLimiter(max_attempts=12, window_seconds=60)
@@ -159,7 +168,7 @@ async def _enumerate_courses(gateway, bonds=None):
     listing = []
     for bond in bonds:
         for course in await gateway.get_courses(bond['bond_id']):
-            listing.append({'id': len(listing) + 1, 'bond_id': bond['bond_id'], 'course_id': course['id'], 'title': course.get('title'), 'program': bond.get('program')})
+            listing.append({'id': len(listing) + 1, 'bond_id': bond['bond_id'], 'course_id': course['id'], 'title': course.get('title'), 'program': bond.get('program'), 'turma_id': course.get('turma_id')})
     return (bonds, listing)
 
 @bp.route('/')
@@ -170,6 +179,9 @@ async def index():
 
 @bp.route('/login', methods=['GET', 'POST'])
 async def login():
+    if request.method == 'GET' and 'user_id' in session:
+        return redirect(url_for('main.dashboard'))
+        
     if request.method == 'POST':
         form = await request.form
         username = form.get('username', '')
@@ -199,22 +211,20 @@ async def login():
                     query = select(LinkedAccount).filter_by(username=username, institution=institution_str)
                     result = await s.execute(query)
                     linked_account = result.scalars().first()
-                    session_user_id = session.get('user_id')
                     if linked_account:
                         session['user_id'] = linked_account.user_id
                         session['active_account_id'] = linked_account.id
                         session['sigaa_inst'] = institution_str
                         linked_account.set_password(password)
                     else:
-                        if not session_user_id:
-                            anon_google_id = f'anon_{uuid.uuid4().hex}'
-                            anon_email = f'anon_{uuid.uuid4().hex}@anon.sigaa.local'
-                            anon_user = User(google_id=anon_google_id, email=anon_email, name='Usuário Anônimo')
-                            s.add(anon_user)
-                            await s.flush()
-                            session_user_id = anon_user.id
-                            session['user_id'] = session_user_id
-                            logger.info(f'Criado novo usuário anônimo (ID {session_user_id}) para {institution_str}')
+                        anon_google_id = f'anon_{uuid.uuid4().hex}'
+                        anon_email = f'anon_{uuid.uuid4().hex}@anon.sigaa.local'
+                        anon_user = User(google_id=anon_google_id, email=anon_email, name='Usuário Anônimo')
+                        s.add(anon_user)
+                        await s.flush()
+                        session_user_id = anon_user.id
+                        session['user_id'] = session_user_id
+                        logger.info(f'Criado novo usuário anônimo (ID {session_user_id}) para {institution_str}')
                         linked_account = LinkedAccount(user_id=session_user_id, institution=institution_str, username=username)
                         linked_account.set_password(password)
                         s.add(linked_account)
@@ -398,6 +408,9 @@ async def activate_account(id):
 
 @bp.route('/dashboard')
 async def dashboard():
+    if request.args.get('reauth') == '1':
+        _clear_sigaa_session()
+        return redirect(url_for('main.dashboard'))
     user = None
     linked_accounts = []
     if 'user_id' in session:
@@ -613,7 +626,7 @@ async def update_course(course_id):
             target = next((item for item in listing if item['id'] == course_id), None)
             if not target:
                 return Response(json.dumps({'error': 'Course not found'}), status=404, mimetype='application/json')
-            details = await gateway.get_course_details(target['bond_id'], target['course_id'])
+            details = await gateway.get_course_details(target['bond_id'], target['course_id'], skip_professor=True)
         _save_gateway(gateway)
         raw_grades = details.get('grades') or []
         freq_data = details.get('frequency')
@@ -647,7 +660,8 @@ async def stream_grades():
         if active_account_id:
             return await g.db_session.get(LinkedAccount, active_account_id)
         return None
-    retry_after, linked_account = await asyncio.gather(_rate_limited(_data_limiter, f'stream:{_client_ip()}'), _fetch_linked_account())
+    count_key = f"{session.get('user_id')}_{session.get('username')}_{session.get('sigaa_inst')}_course_count"
+    retry_after, linked_account, expected_count = await asyncio.gather(_rate_limited(_data_limiter, f'stream:{_client_ip()}'), _fetch_linked_account(), cache_get('sync_meta', count_key))
     if retry_after:
         return Response(json.dumps({'error': 'Muitas requisições. Aguarde alguns segundos.', 'retry_after': int(retry_after) + 1}) + '\n', status=429, mimetype='application/x-ndjson')
     if active_account_id and linked_account is None:
@@ -698,11 +712,32 @@ async def stream_grades():
     sigaa_inst_val = session.get('sigaa_inst', 'IFAL')
     worker_username = credentials['username'] if credentials else session.get('username')
     worker_password = credentials['password'] if credentials else None
+    try:
+        worker_url = resolve_sigaa_url(sigaa_inst_val)
+    except Exception:
+        worker_url = gateway.url
+
+    async def _login_worker_gateway():
+        try:
+            return await SigaaGateway.login(worker_url, sigaa_inst_val, worker_username, worker_password, credentials={'username': worker_username, 'password': worker_password}, keep_session=True)
+        except Exception as e:
+            logger.error(f'SIGAA: pré-login de worker falhou no stream_grades: {e}')
+            return None
 
     async def async_generate():
         stream_t0 = time.time()
         first_data_logged = []
         supporters_task = asyncio.create_task(get_supporters_task())
+        prewarmed = []
+        if worker_password:
+            try:
+                expected = int(expected_count or 0) - len(skip_ids)
+            except (TypeError, ValueError):
+                expected = 0
+            n_pre = min(10, expected) - 1 if expected > 1 else 0
+            prewarmed.extend(asyncio.create_task(_login_worker_gateway()) for _ in range(n_pre))
+            if n_pre:
+                logger.info(f'SIGAA stream: pré-aquecendo {n_pre} workers em paralelo com a enumeração.')
         if cached_profile:
             injected_profile = await _inject_exigencia_medias(sigaa_inst_val, cached_profile)
             yield (json.dumps({'type': 'profile_data', 'data': injected_profile}) + '\n')
@@ -721,14 +756,11 @@ async def stream_grades():
                 if bonds_to_use:
                     calculator = CalculatorFactory.get_calculator(inst_type)
                     _, listing = await _enumerate_courses(gateway, bonds_to_use)
+                    _fire_and_forget(cache_set('sync_meta', count_key, len(listing), ttl=_SYNC_META_TTL))
                     yield (json.dumps({'type': 'sync_start', 'total_courses': len(listing)}) + '\n')
                     for item in listing:
                         yield (json.dumps({'type': 'course_start', 'id': item['id'], 'name': item['title'], 'obs': item['program']}) + '\n')
                     raw_password = worker_password
-                    try:
-                        worker_url = resolve_sigaa_url(sigaa_inst_val)
-                    except:
-                        worker_url = gateway.url
                     for bond in bonds_to_use:
                         bond_id = bond['bond_id']
                         bond_courses = [item for item in listing if item['bond_id'] == bond_id]
@@ -749,11 +781,17 @@ async def stream_grades():
                             c_id = item['id']
                             await out_queue.put({'type': 'course_loading', 'id': c_id, 'step': 'notas'})
                             try:
-                                details = await gw.get_course_details(b_id, item['course_id'])
+                                turma_id = item.get('turma_id')
+                                cached_prof = None
+                                if turma_id:
+                                    cached_prof = await cache_get('prof', f'{sigaa_inst_val}:{turma_id}')
+                                details = await gw.get_course_details(b_id, item['course_id'], skip_professor=bool(cached_prof))
                                 raw_grades = details.get('grades') or []
                                 freq_data = details.get('frequency')
                                 course_result = calculator.calculate(raw_grades)
-                                prof = details.get('professor')
+                                prof = cached_prof or details.get('professor')
+                                if turma_id and (not cached_prof) and prof and (prof != 'Desconhecido'):
+                                    _fire_and_forget(cache_set('prof', f'{sigaa_inst_val}:{turma_id}', prof, ttl=_PROFESSOR_TTL))
                                 exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
                                 result_data = {'grades': raw_grades, 'status': course_result.to_dict(), 'professor': prof, 'exigencia_media': exigencia}
                                 await out_queue.put({'type': 'course_data', 'id': c_id, 'data': result_data})
@@ -781,7 +819,10 @@ async def stream_grades():
                         async def extra_worker():
                             w_gateway = None
                             try:
-                                w_gateway = await SigaaGateway.login(worker_url, sigaa_inst_val, worker_username, raw_password, credentials={'username': worker_username, 'password': raw_password}, keep_session=True)
+                                if prewarmed:
+                                    w_gateway = await prewarmed.pop(0)
+                                if w_gateway is None:
+                                    w_gateway = await SigaaGateway.login(worker_url, sigaa_inst_val, worker_username, raw_password, credentials={'username': worker_username, 'password': raw_password}, keep_session=True)
                                 async with w_gateway.scope():
                                     await consume(w_gateway)
                             except Exception as e:
@@ -800,7 +841,7 @@ async def stream_grades():
                         async def waiter(tasks=tasks, out_queue=out_queue):
                             await asyncio.gather(*tasks, return_exceptions=True)
                             await out_queue.put(None)
-                        asyncio.create_task(waiter())
+                        _fire_and_forget(waiter())
                         while True:
                             evt = await out_queue.get()
                             if evt is None:
@@ -820,6 +861,14 @@ async def stream_grades():
                 yield (json.dumps({'error': 'Session expired', 'session_expired': True}) + '\n')
             else:
                 yield (json.dumps({'error': 'Erro no carregamento dos dados.'}) + '\n')
+        finally:
+            for leftover in prewarmed:
+                try:
+                    w_gw = await leftover
+                    if w_gw is not None:
+                        await w_gw.close()
+                except Exception:
+                    logger.debug('Falha ao descartar worker pré-aquecido não utilizado.', exc_info=True)
     return Response(async_generate(), mimetype='application/x-ndjson')
 
 @bp.route('/logout')
