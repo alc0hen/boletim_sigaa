@@ -744,6 +744,30 @@ let data = [];
         }
     }
     function roundSigga(val) { return Math.round(val * 2) / 2; }
+    // Nome usado para casar avaliações: o formato "CODIGO - NOME" do histórico.
+    // A exibição continua usando d.name (sem o código).
+    function reviewName(item) { return (item && (item.review_name || item.name)) || ''; }
+
+    // Expõe o código da turma no console para inspeção (window.sigaaTurmas mostra tudo).
+    window.sigaaTurmas = window.sigaaTurmas || {};
+    function logCourseCode(nome, d) {
+      if (!d) return;
+      const info = {
+        disciplina: nome,
+        codigo: d.code || null,
+        nome_avaliacao: d.review_name || null,
+        professor: d.professor || null,
+        sala_horario: d.schedule_code || null,
+        turma_key: d.turma_id || null,
+        exigencia_media: d.exigencia_media ?? null
+      };
+      window.sigaaTurmas[d.code || nome] = info;
+      console.log(
+        `%c[SIGAA]%c ${info.codigo || '(sem código)'} %c${nome}`,
+        'color:#0284c7;font-weight:bold', 'color:#16a34a;font-weight:bold', 'color:inherit',
+        info
+      );
+    }
     function deepEqual(obj1, obj2) {
       if (obj1 === obj2) return true;
       if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) return false;
@@ -933,6 +957,7 @@ let data = [];
       } else if (msg.type === 'course_data') {
         const idx = liveData.findIndex(d => String(d.id) === String(msg.id));
         if (idx !== -1) {
+          logCourseCode(liveData[idx].name, msg.data);
           const current = liveData[idx];
           const isNew = current.grades && current.grades.length > 0 ? !deepEqual(current.grades, msg.data.grades) : false;
           liveData[idx] = { ...liveData[idx], ...msg.data, id: String(msg.data.id || msg.id), isLoading: false, isNew: isNew, sync_time: Date.now() };
@@ -967,6 +992,10 @@ let data = [];
           }
         }
       } else if (msg.type === 'sync_end') {
+        if (Object.keys(window.sigaaTurmas || {}).length) {
+          console.log('%c[SIGAA] Códigos das turmas — inspecione com window.sigaaTurmas', 'color:#0284c7;font-weight:bold');
+          console.table(window.sigaaTurmas);
+        }
         pruneStaleCourses(updatedCourseIds);
         mRenderGroupedList(); // Ensures empty state is shown if data is 0
       }
@@ -1674,7 +1703,7 @@ let data = [];
       if (typeof data !== 'undefined' && Array.isArray(data)) {
           data.forEach(d => {
               if (d.name && d.professor && d.professor !== 'Desconhecido') {
-                  pares.push({disciplina: d.name, professor: d.professor});
+                  pares.push({disciplina: reviewName(d), professor: d.professor});
               }
           });
       }
@@ -1808,13 +1837,13 @@ let data = [];
         }
 
         if (item.professor && item.professor !== 'Desconhecido') {
-            const cacheKey = `${item.name}|${item.professor}`;
+            const cacheKey = `${reviewName(item)}|${item.professor}`;
             if (item.exigencia_media !== undefined) {
                 renderDifficultyWidget(item.exigencia_media);
             } else if (window.courseRatings && window.courseRatings[cacheKey] !== undefined) {
                 renderDifficultyWidget(window.courseRatings[cacheKey]);
             } else {
-                fetch(`/api/avaliacoes/media?disciplina=${encodeURIComponent(item.name)}&professor=${encodeURIComponent(item.professor)}`)
+                fetch(`/api/avaliacoes/media?disciplina=${encodeURIComponent(reviewName(item))}&professor=${encodeURIComponent(item.professor)}`)
                     .then(r => r.json())
                     .then(d => {
                         if (window.courseRatings) window.courseRatings[cacheKey] = d.average;
@@ -2017,7 +2046,7 @@ let data = [];
                   if(!checked) return alert("Por favor, selecione um nível de exigência de 1 a 5.");
                   
                   const val = parseInt(checked.value);
-                  const payload = { itens: [{ disciplina: item.name, professor: item.professor, nota: val, recusado: false }] };
+                  const payload = { itens: [{ disciplina: reviewName(item), professor: item.professor, nota: val, recusado: false }] };
                   
                   const oldText = newBtnSubmit.textContent;
                   newBtnSubmit.textContent = "Enviando...";
@@ -2076,7 +2105,7 @@ let data = [];
         );
 
         if (outerTemProfessor) {
-            const cacheKey = `${item.name}|${item.professor}`;
+            const cacheKey = `${reviewName(item)}|${item.professor}`;
             
             if (item.user_voted !== undefined) {
                 setupEvaluation(item.user_voted);
@@ -2090,7 +2119,7 @@ let data = [];
                     newBtnEvaluate.style.opacity = "0.7";
                     newBtnEvaluate.style.cursor = "wait";
                 }
-                fetch(`/api/avaliacoes/media?disciplina=${encodeURIComponent(item.name)}&professor=${encodeURIComponent(item.professor)}`)
+                fetch(`/api/avaliacoes/media?disciplina=${encodeURIComponent(reviewName(item))}&professor=${encodeURIComponent(item.professor)}`)
                     .then(r => r.json())
                     .then(d => {
                         if (!window.courseUserVoted) window.courseUserVoted = {};
@@ -2141,7 +2170,7 @@ let data = [];
             if (typeof data !== 'undefined' && Array.isArray(data)) {
                 data.forEach(d => {
                     if (d.name && d.professor && d.professor !== 'Desconhecido') {
-                        pares.push({disciplina: d.name, professor: d.professor});
+                        pares.push({disciplina: reviewName(d), professor: d.professor});
                     }
                 });
             }

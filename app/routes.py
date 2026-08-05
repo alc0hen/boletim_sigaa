@@ -168,7 +168,7 @@ async def _enumerate_courses(gateway, bonds=None):
     listing = []
     for bond in bonds:
         for course in await gateway.get_courses(bond['bond_id']):
-            listing.append({'id': len(listing) + 1, 'bond_id': bond['bond_id'], 'course_id': course['id'], 'title': course.get('title'), 'program': bond.get('program'), 'turma_id': course.get('turma_id')})
+            listing.append({'id': len(listing) + 1, 'bond_id': bond['bond_id'], 'course_id': course['id'], 'title': course.get('title'), 'program': bond.get('program'), 'turma_id': course.get('turma_id'), 'schedule_code': course.get('schedule_code')})
     return (bonds, listing)
 
 @bp.route('/')
@@ -792,8 +792,9 @@ async def stream_grades():
                                 prof = cached_prof or details.get('professor')
                                 if turma_id and (not cached_prof) and prof and (prof != 'Desconhecido'):
                                     _fire_and_forget(cache_set('prof', f'{sigaa_inst_val}:{turma_id}', prof, ttl=_PROFESSOR_TTL))
-                                exigencia = await _get_single_media(sigaa_inst_val, item['title'], prof)
-                                result_data = {'grades': raw_grades, 'status': course_result.to_dict(), 'professor': prof, 'exigencia_media': exigencia}
+                                review_name = details.get('review_name') or item['title']
+                                exigencia = await _get_single_media(sigaa_inst_val, review_name, prof)
+                                result_data = {'grades': raw_grades, 'status': course_result.to_dict(), 'professor': prof, 'exigencia_media': exigencia, 'review_name': review_name, 'code': details.get('code'), 'turma_id': turma_id, 'schedule_code': item.get('schedule_code')}
                                 await out_queue.put({'type': 'course_data', 'id': c_id, 'data': result_data})
                                 if not first_data_logged:
                                     first_data_logged.append(True)

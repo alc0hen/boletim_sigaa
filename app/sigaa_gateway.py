@@ -211,7 +211,7 @@ class _LocalBackend:
             raise SigaaError('Vínculo docente não possui disciplinas.')
         courses = await bond.get_courses()
         self._courses[bond_id] = courses
-        return [{'id': i, 'title': c.title, 'schedule_code': getattr(c, 'schedule_code', ''), 'turma_id': getattr(c, 'id', None)} for i, c in enumerate(courses)]
+        return [{'id': i, 'title': c.title, 'schedule_code': getattr(c, 'schedule_code', ''), 'turma_id': getattr(c, 'turma_key', None)} for i, c in enumerate(courses)]
 
     async def _course_objects(self, bond_id):
         if bond_id not in self._courses:
@@ -224,7 +224,7 @@ class _LocalBackend:
             raise SigaaError(f'Disciplina não encontrada: {course_id}')
         course = courses[course_id]
         grades, frequency, professor = await course.get_all_details(skip_professor=skip_professor)
-        return {'id': course_id, 'title': course.title, 'schedule_code': getattr(course, 'schedule_code', ''), 'grades': grades, 'frequency': frequency, 'professor': professor}
+        return {'id': course_id, 'title': course.title, 'schedule_code': getattr(course, 'schedule_code', ''), 'grades': grades, 'frequency': frequency, 'professor': professor, 'review_name': getattr(course, 'canonical_title', course.title), 'code': getattr(course, 'code', None)}
 
     async def get_history(self, bond_id, cached_history=None):
         bond = self._find_bond(bond_id)
