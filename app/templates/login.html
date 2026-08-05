@@ -668,15 +668,19 @@
         // Avisa quando o SIGAA da instituição escolhida está fora do ar.
         let statusRequestId = 0;
 
-        // segundos -> "há 40 segundos" / "há 12 minutos" / "há 2h05"
+        // segundos -> "há 40 segundos" / "há 12 minutos" / "há 2h05" / "há 1 dia"
         function tempoDecorrido(segundos) {
             const s = Math.max(0, Math.floor(segundos));
             if (s < 60) return 'há ' + s + (s === 1 ? ' segundo' : ' segundos');
             const m = Math.floor(s / 60);
             if (m < 60) return 'há ' + m + (m === 1 ? ' minuto' : ' minutos');
             const h = Math.floor(m / 60);
-            const resto = m % 60;
-            return 'há ' + h + 'h' + (resto ? String(resto).padStart(2, '0') : '');
+            if (h < 24) {
+                const resto = m % 60;
+                return 'há ' + h + 'h' + (resto ? String(resto).padStart(2, '0') : '');
+            }
+            const d = Math.floor(h / 24);
+            return 'há ' + d + (d === 1 ? ' dia' : ' dias');
         }
 
         async function checkInstitutionStatus(inst) {

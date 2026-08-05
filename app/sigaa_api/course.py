@@ -35,7 +35,6 @@ class Course:
 
     @property
     def canonical_title(self):
-        """Nome no mesmo formato do histórico ('CODIGO - NOME'), usado para casar avaliações."""
         if self.code and (not self.title.upper().startswith(self.code.upper())):
             return f'{self.code} - {self.title}'
         return self.title
