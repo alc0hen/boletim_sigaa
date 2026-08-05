@@ -18,9 +18,38 @@ class Course:
         self.grades = []
         self.schedule_code = schedule_code
         self.professor_name = None
+        self.code = None
 
     def __repr__(self):
         return f"<Course title='{self.title}'>"
+
+    def _parse_course_code(self, page):
+        try:
+            el = page.soup.find(id='linkCodigoTurma')
+            if not el:
+                return None
+            code = el.get_text(strip=True).strip().rstrip('-').strip()
+            return code or None
+        except Exception:
+            return None
+
+    @property
+    def canonical_title(self):
+        """Nome no mesmo formato do histórico ('CODIGO - NOME'), usado para casar avaliações."""
+        if self.code and (not self.title.upper().startswith(self.code.upper())):
+            return f'{self.code} - {self.title}'
+        return self.title
+
+    @property
+    def turma_key(self):
+        try:
+            real_id = self.form_data['post_values'].get('idTurma')
+        except Exception:
+            real_id = None
+        if real_id:
+            return real_id
+        import hashlib
+        return hashlib.md5(f'{self.title}|{self.schedule_code}'.encode('utf-8')).hexdigest()
 
     async def get_grades(self):
         course_page = await self._enter_course()
@@ -44,6 +73,7 @@ class Course:
     async def get_all_details(self, skip_professor=False):
         course_page = await self._enter_course()
         current_page = course_page
+        self.code = self._parse_course_code(course_page)
         if skip_professor:
             self.professor_name = None
         else:
