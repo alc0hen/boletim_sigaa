@@ -127,7 +127,7 @@ def _parse_review_name(value):
 
 def _inst_type(inst_str=None):
     try:
-        return InstitutionType[(inst_str or session.get('sigaa_inst') or 'IFAL').upper()]
+        return InstitutionType[(inst_str or session.get('sigaa_inst') or 'UFAL').upper()]
     except KeyError:
         return InstitutionType.IFAL
 
@@ -241,7 +241,7 @@ async def login():
         form = await request.form
         username = form.get('username', '')
         password = form.get('password', '')
-        institution_str = form.get('institution', 'IFAL')
+        institution_str = form.get('institution', 'UFAL')
         if not username or not password:
             return await render_template('login.html', error='Informe usuário e senha.')
         retry_after = await _rate_limited(_login_limiter, f'login:{_client_ip()}')
@@ -528,7 +528,7 @@ async def dashboard():
             try:
                 cipher = get_cipher_suite()
                 initial_profile = json.loads(cipher.decrypt(account.history_json.encode('utf-8')).decode('utf-8'))
-                initial_profile = await _inject_exigencia_medias(session.get('sigaa_inst', 'IFAL'), initial_profile)
+                initial_profile = await _inject_exigencia_medias(session.get('sigaa_inst', 'UFAL'), initial_profile)
             except Exception as e:
                 logger.warning(f'Falha ao montar o perfil inicial do dashboard: {e}')
                 initial_profile = None
@@ -781,7 +781,7 @@ async def stream_grades():
         except:
             pass
         return _supporters_cache['data'] or []
-    sigaa_inst_val = session.get('sigaa_inst', 'IFAL')
+    sigaa_inst_val = session.get('sigaa_inst', 'UFAL')
     worker_username = credentials['username'] if credentials else session.get('username')
     worker_password = credentials['password'] if credentials else None
     try:

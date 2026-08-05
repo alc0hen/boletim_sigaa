@@ -123,7 +123,7 @@ class _LocalBackend:
     def _institution_type(self):
         from .sigaa_api.enums import InstitutionType
         try:
-            return InstitutionType[(self.institution or 'IFAL').upper()]
+            return InstitutionType[(self.institution or 'UFAL').upper()]
         except KeyError:
             return InstitutionType.IFAL
 
@@ -289,7 +289,7 @@ class SigaaGateway:
 
     @classmethod
     async def login(cls, url, institution, username, password, credentials=None, keep_session=False):
-        institution = (institution or 'IFAL').upper()
+        institution = (institution or 'UFAL').upper()
         preference = _backend_preference()
         if preference != LOCAL and is_configured():
             try:
@@ -356,7 +356,7 @@ class SigaaGateway:
         if not state:
             return None
         url = state.get('url') or SIGAA_URL
-        institution = (state.get('institution') or 'IFAL').upper()
+        institution = (state.get('institution') or 'UFAL').upper()
         if state.get('backend') == REMOTE and state.get('session_id'):
             backend = _RemoteBackend(state['session_id'], url, institution)
         elif state.get('cookies'):
