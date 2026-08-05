@@ -42,17 +42,19 @@ _SIGAA_STATUS_TTL_OFFLINE = 120
 _SIGAA_STATUS_TIMEOUT = 8
 _SIGAA_STATUS_CONNECT_TIMEOUT = 3
 _SIGAA_OUTAGE_NS = 'sigaa_outage'
-_SIGAA_OUTAGE_TTL = 3600
+_SIGAA_OUTAGE_TTL = 86400
 
 async def _record_sigaa_status(institution: str, online: bool) -> dict:
-    """Grava o estado e mantém, em chave própria de TTL longo, desde quando a queda dura."""
     now = int(time.time())
     since = None
     if online:
         await cache_delete(_SIGAA_OUTAGE_NS, institution)
     else:
         previous = await cache_get(_SIGAA_OUTAGE_NS, institution)
-        since = previous if isinstance(previous, int) else now
+        try:
+            since = int(previous)
+        except (TypeError, ValueError):
+            since = now
         await cache_set(_SIGAA_OUTAGE_NS, institution, since, ttl=_SIGAA_OUTAGE_TTL)
     status = {'institution': institution, 'online': online, 'checked_at': now}
     if since is not None:
@@ -71,7 +73,6 @@ async def _probe_sigaa(url: str) -> bool:
         return False
 
 async def _sigaa_status(institution: str):
-    """Estado do SIGAA da instituição, com cache no Redis para não sondar a cada visita."""
     institution = (institution or '').upper()
     try:
         url = institution_url(institution)
@@ -84,7 +85,6 @@ async def _sigaa_status(institution: str):
     return await _record_sigaa_status(institution, online)
 
 async def _set_sigaa_status(institution: str, online: bool):
-    """Registra o estado a partir de um login real — sinal mais confiável que a sondagem."""
     institution = (institution or '').upper()
     try:
         institution_url(institution)
@@ -237,7 +237,6 @@ async def index():
 async def login():
     if request.method == 'GET' and 'user_id' in session:
         return redirect(url_for('main.dashboard'))
-        
     if request.method == 'POST':
         form = await request.form
         username = form.get('username', '')
@@ -808,7 +807,7 @@ async def stream_grades():
             except (TypeError, ValueError):
                 expected = 0
             n_pre = min(10, expected) - 1 if expected > 1 else 0
-            prewarmed.extend(asyncio.create_task(_login_worker_gateway()) for _ in range(n_pre))
+            prewarmed.extend((asyncio.create_task(_login_worker_gateway()) for _ in range(n_pre)))
             if n_pre:
                 logger.info(f'SIGAA stream: pré-aquecendo {n_pre} workers em paralelo com a enumeração.')
         if cached_profile:
