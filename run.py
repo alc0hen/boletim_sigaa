@@ -50,6 +50,8 @@ async def main():
         asyncio.create_task(start_bridge())
     else:
         logger.info('WS_URL not set — Redis bridge disabled (using direct Redis connection)')
+    from test_redis import run_redis_test
+    asyncio.create_task(run_redis_test())
     await serve(app, config)
 if __name__ == '__main__':
     asyncio.run(main())
