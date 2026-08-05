@@ -529,6 +529,13 @@
                     <div class="alert-error" role="alert">{{ error }}</div>
                 {% endif %}
 
+                <div id="ifal-discontinued-alert" class="alert-warning" style="display: none; border-left-color: #f59e0b; color: #fcd34d; background: rgba(245, 158, 11, 0.05); border-color: rgba(245, 158, 11, 0.2); margin-bottom: 1.5rem; line-height: 1.6;">
+                    <strong style="font-size: 1.05rem; display: block; margin-bottom: 0.5rem; color: #fde68a;">Serviço descontinuado para o IFAL</strong>
+                    O suporte ao SIGAA do IFAL foi suspenso, pois a desenvolvedora não possui mais vínculo ativo com a instituição.<br><br>
+                    Se você é usuário do IFAL e deseja que a plataforma volte a funcionar para a sua instituição, <a href="mailto:al.cohenhs@gmail.com?subject=Interesse%20na%20continuidade%20do%20Boletim%20App%20para%20o%20IFAL&body=Ol%C3%A1%2C%20sou%20aluno%20do%20IFAL%20e%20gostaria%20muito%20que%20o%20Boletim%20App%20continuasse%20funcionando%20para%20n%C3%B3s%21" style="color: #fbbf24; text-decoration: underline; font-weight: bold;">clique aqui</a> para registrar seu interesse na retomada do serviço.<br><br>
+                    <span style="opacity: 0.9; font-size: 0.9em;">O Boletim App facilita sua vida acadêmica? Considere apoiar a manutenção do projeto com qualquer contribuição através do <strong>PIX: 15077538450</strong>.</span>
+                </div>
+
                 <div class="alert-warning" id="sigaa-status-alert" role="status" aria-live="polite"></div>
 
                 <form method="POST" action="{{ url_for('main.login') }}" id="login-form" novalidate>
@@ -556,37 +563,41 @@
                         <span class="field-error">Selecione sua instituição de ensino.</span>
                     </div>
 
-                    <div class="field-group" id="usernameField">
-                        <label for="username" class="field-label">Usuário (SIGAA)</label>
-                        <input type="text" name="username" id="username" class="field-input" required autocomplete="username">
-                        <span class="field-error">Informe seu usuário do SIGAA.</span>
-                    </div>
+                    <div id="login-fields-container">
+                        <div class="field-group" id="usernameField">
+                            <label for="username" class="field-label">Usuário (SIGAA)</label>
+                            <input type="text" name="username" id="username" class="field-input" required autocomplete="username">
+                            <span class="field-error">Informe seu usuário do SIGAA.</span>
+                        </div>
 
-                    <div class="field-group" id="passwordField">
-                        <label for="password" class="field-label">Senha</label>
-                        <input type="password" name="password" id="password" class="field-input" required autocomplete="current-password">
-                        <span class="field-error">Informe sua senha.</span>
-                    </div>
+                        <div class="field-group" id="passwordField">
+                            <label for="password" class="field-label">Senha</label>
+                            <input type="password" name="password" id="password" class="field-input" required autocomplete="current-password">
+                            <span class="field-error">Informe sua senha.</span>
+                        </div>
 
-                    <button type="submit" class="btn-submit">
-                        Entrar no Sistema
-                    </button>
+                        <button type="submit" class="btn-submit">
+                            Entrar no Sistema
+                        </button>
+                    </div>
                 </form>
 
-                <div class="divider"><span>Ou</span></div>
+                <div id="extra-login-actions">
+                    <div class="divider"><span>Ou</span></div>
 
-                <a href="{{ url_for('main.login_google') }}" class="btn-google">
-                    <svg viewBox="0 0 48 48">
-                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                    </svg>
-                    Acessar via Google
-                </a>
+                    <a href="{{ url_for('main.login_google') }}" class="btn-google">
+                        <svg viewBox="0 0 48 48">
+                            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+                            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                        </svg>
+                        Acessar via Google
+                    </a>
 
-                <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
-                    Ao entrar, você concorda com nossos <a href="{{ url_for('main.privacy') }}" style="color: var(--inst-accent); text-decoration: none;">Termos de Uso e Política de Privacidade</a>.
+                    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+                        Ao entrar, você concorda com nossos <a href="{{ url_for('main.privacy') }}" style="color: var(--inst-accent); text-decoration: none;">Termos de Uso e Política de Privacidade</a>.
+                    </div>
                 </div>
 
                 <div class="app-version">Boletim App v{{ app_version }}</div>
@@ -601,9 +612,9 @@
 
     <script>
         const INSTITUTIONS = [
-            { value: 'IFAL', acronym: 'IFAL', name: 'IFAL', full: 'Instituto Federal de Alagoas',       color: '#10b981', url: 'https://sigaa.ifal.edu.br' },
             { value: 'UFAL', acronym: 'UFAL', name: 'UFAL', full: 'Universidade Federal de Alagoas',    color: '#3b82f6', url: 'https://sigaa.sig.ufal.br' },
             { value: 'UFPE', acronym: 'UFPE', name: 'UFPE', full: 'Universidade Federal de Pernambuco', color: '#a855f7', url: 'https://sigaa.ufpe.br' },
+            { value: 'IFAL', acronym: 'IFAL', name: 'IFAL', full: 'Instituto Federal de Alagoas',       color: '#10b981', url: 'https://sigaa.ifal.edu.br', discontinued: true },
         ];
 
         let selectedInst = null;
@@ -662,7 +673,22 @@
             
             try { localStorage.setItem('last_institution', inst.value); } catch(e){}
 
-            checkInstitutionStatus(inst);
+            const ifalAlert = document.getElementById('ifal-discontinued-alert');
+            const loginFields = document.getElementById('login-fields-container');
+            const extraActions = document.getElementById('extra-login-actions');
+            const statusAlert = document.getElementById('sigaa-status-alert');
+
+            if (inst.discontinued) {
+                ifalAlert.style.display = 'block';
+                loginFields.style.display = 'none';
+                extraActions.style.display = 'none';
+                if (statusAlert) statusAlert.style.display = 'none';
+            } else {
+                ifalAlert.style.display = 'none';
+                loginFields.style.display = 'block';
+                extraActions.style.display = 'block';
+                checkInstitutionStatus(inst);
+            }
         }
 
         // Avisa quando o SIGAA da instituição escolhida está fora do ar.
