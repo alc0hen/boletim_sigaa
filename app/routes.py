@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from .models import User, LinkedAccount, Disciplina, Professor, Avaliacao, VotoControle, compute_vote_hash, get_cipher_suite
 import asyncio
 import hmac
-from .cache import get as cache_get, set as cache_set
+from .cache import get as cache_get, set as cache_set, delete as cache_delete
 import json
 import os
 import aiohttp
@@ -35,6 +35,62 @@ def _fire_and_forget(coro):
 QUESTIONNAIRE_MESSAGE = 'Questionário de Avaliação PENDENTE bloqueia o acesso aos dados. Acesse o SIGAA para respondê-lo e tente novamente.'
 _login_limiter = RateLimiter(max_attempts=8, window_seconds=300)
 _data_limiter = RateLimiter(max_attempts=12, window_seconds=60)
+_status_limiter = RateLimiter(max_attempts=20, window_seconds=60)
+_SIGAA_STATUS_NS = 'sigaa_status'
+_SIGAA_STATUS_TTL_ONLINE = 60
+_SIGAA_STATUS_TTL_OFFLINE = 120
+_SIGAA_STATUS_TIMEOUT = 8
+_SIGAA_STATUS_CONNECT_TIMEOUT = 3
+_SIGAA_OUTAGE_NS = 'sigaa_outage'
+_SIGAA_OUTAGE_TTL = 3600
+
+async def _record_sigaa_status(institution: str, online: bool) -> dict:
+    """Grava o estado e mantém, em chave própria de TTL longo, desde quando a queda dura."""
+    now = int(time.time())
+    since = None
+    if online:
+        await cache_delete(_SIGAA_OUTAGE_NS, institution)
+    else:
+        previous = await cache_get(_SIGAA_OUTAGE_NS, institution)
+        since = previous if isinstance(previous, int) else now
+        await cache_set(_SIGAA_OUTAGE_NS, institution, since, ttl=_SIGAA_OUTAGE_TTL)
+    status = {'institution': institution, 'online': online, 'checked_at': now}
+    if since is not None:
+        status['offline_since'] = since
+    await cache_set(_SIGAA_STATUS_NS, institution, status, ttl=_SIGAA_STATUS_TTL_ONLINE if online else _SIGAA_STATUS_TTL_OFFLINE)
+    return status
+
+async def _probe_sigaa(url: str) -> bool:
+    try:
+        timeout = aiohttp.ClientTimeout(total=_SIGAA_STATUS_TIMEOUT, connect=_SIGAA_STATUS_CONNECT_TIMEOUT, sock_connect=_SIGAA_STATUS_CONNECT_TIMEOUT)
+        async with aiohttp.ClientSession(timeout=timeout) as http:
+            async with http.get(f'{url}/sigaa/verTelaLogin.do') as resp:
+                return resp.status < 500
+    except Exception as e:
+        logger.info(f'SIGAA fora do ar em {url}: {type(e).__name__}')
+        return False
+
+async def _sigaa_status(institution: str):
+    """Estado do SIGAA da instituição, com cache no Redis para não sondar a cada visita."""
+    institution = (institution or '').upper()
+    try:
+        url = institution_url(institution)
+    except SigaaInstitutionError:
+        return None
+    cached = await cache_get(_SIGAA_STATUS_NS, institution)
+    if cached is not None:
+        return cached
+    online = await _probe_sigaa(url)
+    return await _record_sigaa_status(institution, online)
+
+async def _set_sigaa_status(institution: str, online: bool):
+    """Registra o estado a partir de um login real — sinal mais confiável que a sondagem."""
+    institution = (institution or '').upper()
+    try:
+        institution_url(institution)
+    except SigaaInstitutionError:
+        return
+    await _record_sigaa_status(institution, online)
 
 def _client_ip() -> str:
     forwarded = request.headers.get('X-Forwarded-For', '')
@@ -200,6 +256,7 @@ async def login():
             return await render_template('login.html', error='Instituição inválida. Selecione uma das opções da lista.')
         try:
             gateway = await SigaaGateway.login(url, institution_str, username, password, credentials={'username': username, 'password': password})
+            _fire_and_forget(_set_sigaa_status(institution_str, True))
             await _login_limiter.reset(f'login:{_client_ip()}')
             _save_gateway(gateway)
             session['username'] = username
@@ -241,14 +298,30 @@ async def login():
             return await render_template('login.html', error=QUESTIONNAIRE_MESSAGE)
         except SigaaLoginFailed:
             logger.info('Login recusado pelo SIGAA.')
+            _fire_and_forget(_set_sigaa_status(institution_str, True))
             return await render_template('login.html', error='Falha no login. Verifique suas credenciais.')
         except SigaaError as e:
             logger.error(f'Login indisponível: {e}')
+            await _set_sigaa_status(institution_str, False)
             return await render_template('login.html', error='O SIGAA está indisponível no momento. Tente novamente em alguns minutos.')
         except Exception as e:
             logger.error(f'Login failed: {type(e).__name__}')
             return await render_template('login.html', error='Falha no login. Verifique suas credenciais.')
     return await render_template('login.html')
+
+@bp.route('/api/sigaa/status')
+async def api_sigaa_status():
+    institution = request.args.get('institution', '')
+    retry_after = await _rate_limited(_status_limiter, f'sigaastatus:{_client_ip()}')
+    if retry_after:
+        return (jsonify({'online': None, 'unknown': True}), 429)
+    status = await _sigaa_status(institution)
+    if status is None:
+        return (jsonify({'error': 'Instituição inválida'}), 400)
+    since = status.get('offline_since')
+    if since:
+        status = {**status, 'offline_for': max(0, int(time.time()) - int(since))}
+    return jsonify(status)
 
 @bp.route('/login/google')
 async def login_google():

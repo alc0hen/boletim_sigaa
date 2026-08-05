@@ -440,6 +440,25 @@
             margin-top: 6px;
         }
         
+        .alert-warning {
+            display: none;
+            background: rgba(250, 204, 21, 0.06);
+            border: 1px solid rgba(250, 204, 21, 0.25);
+            border-left: 3px solid #facc15;
+            color: #fde68a;
+            padding: 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+        .alert-warning strong { color: #fef3c7; }
+        .alert-warning .alert-meta {
+            display: block;
+            margin-top: 0.6rem;
+            font-size: 0.8rem;
+            opacity: 0.75;
+        }
         .alert-error {
             background: rgba(239, 68, 68, 0.05);
             border: 1px solid rgba(239, 68, 68, 0.2);
@@ -509,6 +528,8 @@
                 {% if error %}
                     <div class="alert-error" role="alert">{{ error }}</div>
                 {% endif %}
+
+                <div class="alert-warning" id="sigaa-status-alert" role="status" aria-live="polite"></div>
 
                 <form method="POST" action="{{ url_for('main.login') }}" id="login-form" novalidate>
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -640,6 +661,45 @@
             document.getElementById('instField').classList.remove('invalid');
             
             try { localStorage.setItem('last_institution', inst.value); } catch(e){}
+
+            checkInstitutionStatus(inst);
+        }
+
+        // Avisa quando o SIGAA da instituição escolhida está fora do ar.
+        let statusRequestId = 0;
+
+        // segundos -> "há 40 segundos" / "há 12 minutos" / "há 2h05"
+        function tempoDecorrido(segundos) {
+            const s = Math.max(0, Math.floor(segundos));
+            if (s < 60) return 'há ' + s + (s === 1 ? ' segundo' : ' segundos');
+            const m = Math.floor(s / 60);
+            if (m < 60) return 'há ' + m + (m === 1 ? ' minuto' : ' minutos');
+            const h = Math.floor(m / 60);
+            const resto = m % 60;
+            return 'há ' + h + 'h' + (resto ? String(resto).padStart(2, '0') : '');
+        }
+
+        async function checkInstitutionStatus(inst) {
+            const el = document.getElementById('sigaa-status-alert');
+            if (!el || !inst) return;
+            const myId = ++statusRequestId;
+            el.style.display = 'none';
+            try {
+                const resp = await fetch('/api/sigaa/status?institution=' + encodeURIComponent(inst.value));
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (myId !== statusRequestId) return; // resposta de uma seleção anterior
+                if (data && data.online === false) {
+                    const desde = (typeof data.offline_for === 'number')
+                        ? '<span class="alert-meta">Problema detectado ' + tempoDecorrido(data.offline_for) + '.</span>'
+                        : '';
+                    el.innerHTML = '<strong>O SIGAA da ' + inst.name + ' parece estar fora do ar.</strong><br>'
+                        + 'Isso é um problema na própria instituição, não no Boletim App. '
+                        + 'Você ainda pode tentar entrar, mas o login provavelmente vai falhar.'
+                        + desde;
+                    el.style.display = 'block';
+                }
+            } catch (e) { /* silencioso: nunca atrapalhar o login */ }
         }
 
         trigger.addEventListener('click', () => {
