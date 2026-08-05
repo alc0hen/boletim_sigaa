@@ -40,18 +40,22 @@ async def start_bridge():
     except OSError as e:
         logger.warning(f'⚠️ Não foi possível iniciar a ponte do Redis (porta 6379 já está em uso?): {e}')
 
+@app.before_serving
+async def startup_tasks():
+    if WS_URL:
+        asyncio.create_task(start_bridge())
+    else:
+        logger.info('WS_URL not set — Redis bridge disabled (using direct Redis connection)')
+        
+    from test_redis import run_redis_test
+    asyncio.create_task(run_redis_test())
+
 async def main():
     is_prod = os.environ.get('Render') or os.environ.get('FLASK_ENV') == 'production'
     config = Config()
     config.bind = [f"0.0.0.0:{os.getenv('PORT', '5000')}"]
     config.loglevel = 'info' if is_prod else 'debug'
     config.use_reloader = not is_prod
-    if WS_URL:
-        asyncio.create_task(start_bridge())
-    else:
-        logger.info('WS_URL not set — Redis bridge disabled (using direct Redis connection)')
-    from test_redis import run_redis_test
-    asyncio.create_task(run_redis_test())
     await serve(app, config)
 if __name__ == '__main__':
     asyncio.run(main())
