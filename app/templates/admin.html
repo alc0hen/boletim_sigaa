@@ -65,6 +65,26 @@
         </div>
     </div>
 
+    <h3 style="margin: 2rem 0 1rem 0;">Configurações</h3>
+    <div class="card" style="padding: 1.5rem; text-align: left; margin-bottom: 2rem;">
+        <h4 style="margin-top: 0;">Período de Matrícula</h4>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">Defina o intervalo no qual o botão de matrícula ficará visível no sistema.</p>
+        <form method="POST" action="{{ url_for('main.admin') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.9rem; margin-bottom: 5px;">Início (AAAA-MM-DD)</label>
+                <input type="date" name="matricula_inicio" value="{{ configs.matricula_inicio }}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: #fff;">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; font-size: 0.9rem; margin-bottom: 5px;">Fim (AAAA-MM-DD)</label>
+                <input type="date" name="matricula_fim" value="{{ configs.matricula_fim }}" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: #fff;">
+            </div>
+            <div>
+                <button type="submit" class="btn-primary" style="margin-top: 0; height: 38px;">Salvar Datas</button>
+            </div>
+        </form>
+    </div>
+
     <h3 style="margin: 2rem 0 1rem 0;">Por Instituição</h3>
     <div class="grid-2">
         {% for inst, count in stats.institutions.items() %}

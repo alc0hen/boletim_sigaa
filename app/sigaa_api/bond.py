@@ -31,6 +31,50 @@ class StudentBond:
         self.courses = self._parse_courses(page)
         return self.courses
 
+    async def get_institutional_data(self):
+        page = None
+        if self.switch_url:
+            page = await self.session.get(self.switch_url)
+        else:
+            page = self._homepage
+            if page is None:
+                page = await self.session.get('/sigaa/portais/discente/discente.jsf')
+        return self._parse_institutional_data(page)
+
+    def _parse_institutional_data(self, page):
+        data = {}
+        agenda_divs = page.soup.find_all('div', id='agenda-docente')
+        if not agenda_divs:
+            return {'error': 'agenda-docente not found', 'url': str(getattr(page, 'url', 'unknown'))}
+            
+        import re
+        for agenda_div in agenda_divs:
+            tds = agenda_div.find_all('td')
+            for i, td in enumerate(tds):
+                acronym = td.find('acronym')
+                if acronym:
+                    title = acronym.get('title', '').lower()
+                    if 'rendimento' in title or 'eficiência acadêmica' in title:
+                        if i + 1 < len(tds):
+                            val_td = tds[i + 1]
+                            val_text = val_td.get_text(strip=True).replace(',', '.')
+                            match = re.search(r'([\d.]+)', val_text)
+                            if match:
+                                try:
+                                    data['general_average'] = float(match.group(1))
+                                except ValueError:
+                                    pass
+            
+            text_nodes = agenda_div.find_all(string=re.compile(r'Integralizado', re.IGNORECASE))
+            for node in text_nodes:
+                match = re.search(r'([\d.,]+)\s*%\s*Integralizado', node, re.IGNORECASE)
+                if match:
+                    try:
+                        data['integration_percentage'] = float(match.group(1).replace(',', '.'))
+                    except ValueError:
+                        pass
+        return data
+
     def _parse_courses(self, page):
         courses = []
         try:

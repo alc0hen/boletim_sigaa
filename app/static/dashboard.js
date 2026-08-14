@@ -2,6 +2,7 @@ let data = [];
     let liveData = [];
     let isHistoryMode = false;
     let chart = null;
+    let absencesChart = null;
     let historyChart = null;
     let isStreamActive = false;
     let supportCardShown = false;
@@ -217,146 +218,24 @@ let data = [];
     }
 
     // ----------------- ONLINE ENROLLMENT JAVASCRIPT LOGIC -----------------
+    // ----------------- ONLINE ENROLLMENT JAVASCRIPT LOGIC -----------------
     let matriculaLevels = [];
-    let selectedClassIds = [];
+    let allDisciplines = []; // flattened for easy access
+    let picked = {}; // discCode -> classId
     let matriculaViewState = '';
     let isMatriculaLoaded = false;
+    let stage = 1;
 
-    function startMatriculaFlow() {
-      const btn = document.querySelector('#matricula-intro-card .m-btn-primary');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = 'Carregando turmas...';
+    const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const dayCodes = [2, 3, 4, 5, 6, 7];
+    const BLOCOS = [
+      {id:'M1', s:'07:00'}, {id:'M2', s:'07:55'}, {id:'M3', s:'08:55'}, {id:'M4', s:'09:50'}, {id:'M5', s:'10:50'}, {id:'M6', s:'11:45'},
+      {id:'T1', s:'13:00'}, {id:'T2', s:'13:55'}, {id:'T3', s:'14:55'}, {id:'T4', s:'15:50'}, {id:'T5', s:'16:50'}, {id:'T6', s:'17:45'},
+      {id:'N1', s:'18:45'}, {id:'N2', s:'19:40'}, {id:'N3', s:'20:30'}, {id:'N4', s:'21:20'}
+    ];
 
-      fetch('/api/matricula/status')
-        .then(res => {
-          if (!res.ok) {
-            throw new Error('Falha ao autenticar ou carregar dados.');
-          }
-          return res.json();
-        })
-        .then(data => {
-          if (data.error) {
-            throw new Error(data.error);
-          }
-          matriculaLevels = data.levels || [];
-          matriculaViewState = data.view_state || '';
-          isMatriculaLoaded = true;
-          
-          renderMatriculaSelection();
-          
-          document.getElementById('matricula-intro-card').style.display = 'none';
-          document.getElementById('matricula-selection-container').style.display = 'block';
-        })
-        .catch(err => {
-          alert('Erro ao iniciar matrícula: ' + err.message);
-        })
-        .finally(() => {
-          btn.disabled = false;
-          btn.innerHTML = originalText;
-        });
-    }
-
-    function renderMatriculaSelection() {
-      const listContainer = document.getElementById('matricula-levels-list');
-      if (!listContainer._equivBound) {
-        listContainer._equivBound = true;
-        listContainer.addEventListener('click', (event) => {
-          const btn = event.target.closest('[data-equiv-code]');
-          if (btn) showEquivalents(btn.dataset.equivCode, btn.dataset.equivPayload);
-        });
-      }
-      listContainer.innerHTML = '';
-      
-      if (matriculaLevels.length === 0) {
-        listContainer.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted);">Nenhuma turma disponível no momento.</div>';
-        return;
-      }
-
-      matriculaLevels.forEach(level => {
-        const levelDiv = document.createElement('div');
-        levelDiv.style.marginBottom = '24px';
-        levelDiv.innerHTML = `<h4 style="color:var(--accent); font-weight:800; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:6px;">${escapeHtml(level.level)}</h4>`;
-
-        level.disciplines.forEach(disc => {
-          const discDiv = document.createElement('div');
-          discDiv.className = 'm-disc-group';
-
-          // Equivalents trigger JS
-          const equivBtnHtml = disc.equiv_onclick ? 
-            `<button class="m-btn m-btn-secondary" style="padding:4px 8px; font-size:11px; border-radius:8px;" data-equiv-code="${escapeHtml(disc.code)}" data-equiv-payload="${escapeHtml(disc.equiv_onclick)}">🔗 Equivalentes</button>` : '';
-
-          discDiv.innerHTML = `
-            <div class="m-disc-title">
-              <span>${escapeHtml(disc.code)} - ${escapeHtml(disc.name)}</span>
-              ${equivBtnHtml}
-            </div>
-            <div class="m-classes-list"></div>
-          `;
-
-          const classesList = discDiv.querySelector('.m-classes-list');
-          disc.classes.forEach(cls => {
-            const classItem = document.createElement('div');
-            classItem.className = 'm-class-item' + (selectedClassIds.includes(cls.class_id) ? ' selected' : '');
-            classItem.onclick = (e) => {
-              // Avoid triggering if clicked inside buttons/checkboxes directly
-              toggleSelectClass(cls.class_id);
-            };
-
-            classItem.innerHTML = `
-              <div class="m-class-chk"></div>
-              <div class="m-class-details">
-                <div class="m-class-code">${escapeHtml(cls.class_code)}</div>
-                <div class="m-class-info"><strong>Prof:</strong> ${escapeHtml(cls.teacher || 'A definir')}</div>
-                <div class="m-class-info"><strong>Horário:</strong> ${escapeHtml(cls.schedule)} | <strong>Local:</strong> ${escapeHtml(cls.location || 'A definir')}</div>
-              </div>
-            `;
-            classesList.appendChild(classItem);
-          });
-
-          levelDiv.appendChild(discDiv);
-        });
-
-        listContainer.appendChild(levelDiv);
-      });
-      
-      updateSummaryBar();
-    }
-
-    function toggleSelectClass(classId) {
-      const idx = selectedClassIds.indexOf(classId);
-      if (idx === -1) {
-        selectedClassIds.push(classId);
-      } else {
-        selectedClassIds.splice(idx, 1);
-      }
-      
-      // Update DOM classes
-      renderMatriculaSelection();
-      checkLocalConflicts();
-    }
-
-    function resetMatriculaSelection() {
-      selectedClassIds = [];
-      renderMatriculaSelection();
-      checkLocalConflicts();
-    }
-
-    function findClassById(classId) {
-      for (const lvl of matriculaLevels) {
-        for (const disc of lvl.disciplines) {
-          for (const cls of disc.classes) {
-            if (cls.class_id === classId) {
-              return { cls: cls, disc: disc };
-            }
-          }
-        }
-      }
-      return null;
-    }
-
-    // JS-based schedule conflict detector matching the python logic
     function parseSchedule(scheduleStr) {
+      if(!scheduleStr) return [];
       const regex = /^([2-7]+)([MNT])([1-6]+)$/;
       const match = scheduleStr.match(regex);
       if (!match) return [];
@@ -366,293 +245,458 @@ let data = [];
       const slots = [];
       days.forEach(d => {
         hours.forEach(h => {
-          slots.push(`${d}-${shift}-${h}`);
+          slots.push(`${d}-${shift}${h}`);
         });
       });
       return slots;
     }
 
-    function checkLocalConflicts() {
-      const slotMap = {};
-      const conflicts = [];
-      
-      selectedClassIds.forEach(id => {
-        const item = findClassById(id);
-        if (!item) return;
-        const cls = item.cls;
-        const slots = parseSchedule(cls.schedule);
-        
-        slots.forEach(slot => {
-          if (slotMap[slot]) {
-            conflicts.push({
-              slot: slot,
-              class1: slotMap[slot],
-              class2: item
+    function startMatriculaFlow() {
+      const btn = document.querySelector('#matricula-intro-card .m-btn-primary');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Carregando turmas...';
+
+      fetch('/api/matricula/status')
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) throw new Error(data.error);
+          matriculaLevels = data.levels || [];
+          matriculaViewState = data.view_state || '';
+          isMatriculaLoaded = true;
+          let availableDiscs = [];
+          let emptyDiscs = [];
+          matriculaLevels.forEach(l => {
+            l.disciplines.forEach(d => {
+              const fullD = {...d, level: l.level};
+              if (d.classes && d.classes.length > 0) availableDiscs.push(fullD);
+              else emptyDiscs.push(fullD);
             });
-          }
-          slotMap[slot] = item;
-        });
-      });
+          });
+          allDisciplines = availableDiscs.concat(emptyDiscs);
 
-      const alertBox = document.getElementById('matricula-conflict-alert');
-      const conflictList = document.getElementById('matricula-conflict-list');
-      const nextBtn = document.getElementById('btn-submit-selection');
-
-      if (conflicts.length > 0) {
-        alertBox.style.display = 'block';
-        nextBtn.disabled = true;
-        
-        // Render conflict descriptions
-        const uniqueConflicts = [];
-        const seenStr = new Set();
-        conflicts.forEach(conf => {
-          const key = [conf.class1.cls.class_id, conf.class2.cls.class_id].sort().join('-');
-          if (!seenStr.has(key)) {
-            seenStr.add(key);
-            uniqueConflicts.push(conf);
-          }
-        });
-
-        conflictList.innerHTML = uniqueConflicts.map(conf => {
-          return `• <strong>${conf.class1.disc.code} (${conf.class1.cls.class_code})</strong> e <strong>${conf.class2.disc.code} (${conf.class2.cls.class_code})</strong> possuem choque de horário (${conf.class1.cls.schedule} vs ${conf.class2.cls.schedule}).`;
-        }).join('<br>');
-      } else {
-        alertBox.style.display = 'none';
-        nextBtn.disabled = false;
-        conflictList.innerHTML = '';
-      }
+          const introCard = document.getElementById('matricula-intro-card');
+          const flowWrap = document.getElementById('matricula-flow-wrap');
+          const stepper = document.getElementById('stepper');
+          
+          if (introCard) introCard.style.display = 'none';
+          if (flowWrap) flowWrap.style.display = 'block';
+          if (stepper) stepper.style.display = 'flex';
+          document.getElementById('bbar').style.display = 'flex';
+          
+          go(1);
+        })
+        .catch(err => alert('Erro: ' + err.message))
+        .finally(() => { btn.disabled = false; btn.innerHTML = originalText; });
     }
 
-    function updateSummaryBar() {
-      const countEl = document.getElementById('matricula-selected-count');
-      const listEl = document.getElementById('matricula-selected-list');
-      
-      countEl.innerText = `${selectedClassIds.length} turma(s) selecionada(s)`;
-      listEl.innerHTML = '';
+    function renderStepper() {
+      const LABELS=['Escolher','Revisar','Confirmar'];
+      document.getElementById('stepper').innerHTML=LABELS.map((l,i)=>{
+        const n=i+1, st=n<stage?'done':n===stage?'active':'';
+        const dot=n<stage
+          ?`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+          :n;
+        const line=i<LABELS.length-1
+          ?`<div class="stp-line ${n<stage?'done':''}"></div>`:'';
+        return `<div class="stp ${st}"><div class="stp-n">${dot}</div><div class="stp-l">${l}</div></div>${line}`;
+      }).join('');
+    }
 
-      selectedClassIds.forEach(id => {
-        const item = findClassById(id);
-        if (item) {
-          const div = document.createElement('div');
-          div.innerHTML = `• ${escapeHtml(item.disc.code)} - ${escapeHtml(item.cls.class_code)} (${escapeHtml(item.cls.schedule)})`;
-          listEl.appendChild(div);
+    window.go = function(n) {
+      stage = n;
+      document.querySelectorAll('.stage').forEach(s => s.classList.remove('on'));
+      document.getElementById('s'+n).classList.add('on');
+      document.getElementById('bbar').style.display = n===1 ? 'flex' : 'none';
+      if(n === 1) renderDiscs();
+      if(n === 2) renderReview();
+      if(n === 3) renderConfirm();
+      renderStepper();
+      window.scrollTo({top:0,behavior:'smooth'});
+    };
+
+    let firstRender = true;
+    let prevConflictedCodes = new Set();
+    let lastCount = 0;
+
+    function exigColor(v){
+      if (v < 1.5) return '#10b981';
+      if (v < 2.5) return '#8bc34a';
+      if (v < 3.5) return '#f59e0b';
+      if (v < 4.5) return '#f97316';
+      return '#ef4444';
+    }
+    const STAR = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>';
+    const CHECK = '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+    const WARN_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    const dayNames = {2:'Seg',3:'Ter',4:'Qua',5:'Qui',6:'Sex',7:'Sáb'};
+
+    function humanSchedule(scheduleStr){
+      if(!scheduleStr) return scheduleStr;
+      const m = scheduleStr.match(/^([2-7]+)([MNT])([1-6]+)$/);
+      if(!m) return scheduleStr;
+      const days = m[1].split('').map(n => dayNames[n]).join('/');
+      const shift = m[2];
+      const hours = m[3].split('');
+      const firstBloco = BLOCOS.find(b => b.id === shift + hours[0]);
+      const codes = hours.map(h => shift + h).join('–');
+      return `${days} · ${codes} · ${firstBloco ? firstBloco.s : ''}`;
+    }
+
+    function buildSlotMap(){
+      const map = {};
+      Object.entries(picked).forEach(([code, cid]) => {
+        const d = allDisciplines.find(x => x.code === code);
+        if(!d) return;
+        const t = d.classes.find(x => x.class_id == cid);
+        if(!t) return;
+        parseSchedule(t.schedule).forEach(slot => {
+          if(!map[slot]) map[slot] = [];
+          map[slot].push({ code: d.code, teacher: t.teacher, name: d.name, t: t });
+        });
+      });
+      return map;
+    }
+
+    function buildConflictMap(slotMap){
+      const map = {}; 
+      Object.values(slotMap).forEach(arr => {
+        if(arr.length > 1){
+          arr.forEach(e => {
+            if(!map[e.code]) map[e.code] = new Set();
+            arr.forEach(o => { if(o.code !== e.code) map[e.code].add(o.code); });
+          });
         }
       });
+      return map;
     }
 
-    function showEquivalents(discCode, equivOnclick) {
-      // Clean overlay modal showing equivalent disciplines
-      const isDev = true; 
-      
-      let contentHtml = '';
-      if (discCode === 'PEDL092') {
-        contentHtml = `
-          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; padding:16px;">
-            <p><strong>Disciplinas Equivalentes Encontradas:</strong></p>
-            <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px; margin-bottom:8px;">
-              <strong>PED090 - ANTROPOLOGIA DA EDUCAÇÃO</strong> (Carga: 60h)
-              <br><span style="color:#4caf50;">Turma 01 (Prof: MARCOS VINICIUS) - 4M1234</span>
-            </div>
-            <p style="font-size:12px; color:var(--text-muted);">Essa equivalência é aceita para cumprir os requisitos da estrutura curricular de Geografia.</p>
-          </div>
-        `;
-      } else {
-        contentHtml = `
-          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:16px; padding:16px;">
-            <p><strong>Consulta de Equivalentes (Gatilho SIGAA):</strong></p>
-            <code>${equivOnclick}</code>
-            <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">Em ambiente de desenvolvimento, emulamos a verificação da expressão equivalente cadastrada no plano de curso.</p>
-          </div>
-        `;
-      }
-
-      const overlay = document.createElement('div');
-      overlay.className = 'modal-active';
-      overlay.style.position = 'fixed';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.width = '100vw';
-      overlay.style.height = '100vh';
-      overlay.style.background = 'rgba(0,0,0,0.85)';
-      overlay.style.zIndex = '9999';
-      overlay.style.display = 'flex';
-      overlay.style.alignItems = 'center';
-      overlay.style.justifyContent = 'center';
-      overlay.style.backdropFilter = 'blur(10px)';
-
-      overlay.innerHTML = `
-        <div class="m-matricula-card" style="width:90%; max-width:450px; position:relative; animation: modalEnter 0.3s ease;">
-          <button class="btn-close" style="top:15px; right:15px;" onclick="this.closest('.modal-active').remove()">X</button>
-          <h3 style="margin-top:0;">Equivalências: ${discCode}</h3>
-          ${contentHtml}
-        </div>
-      `;
-      document.body.appendChild(overlay);
+    function bump(el){
+      el.classList.remove('bump');
+      void el.offsetWidth; 
+      el.classList.add('bump');
     }
 
-    function submitMatriculaSelection() {
-      if (selectedClassIds.length === 0) {
-        alert('Selecione pelo menos uma turma.');
+    function renderDiscs() {
+      if(allDisciplines.length === 0){
+        document.getElementById('ficha-list').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:40px;">Nenhuma turma encontrada.</div>';
         return;
       }
       
-      const btn = document.getElementById('btn-submit-selection');
+      const slotMap = buildSlotMap();
+      const conflictMap = buildConflictMap(slotMap);
+      const list = document.getElementById('ficha-list');
+
+      list.innerHTML = allDisciplines.map((d, i) => {
+        const cid = picked[d.code];
+        const isFilled = cid !== undefined;
+        const conflicts = conflictMap[d.code];
+        const isConflict = !!conflicts;
+        const isNewConflict = isConflict && !prevConflictedCodes.has(d.code);
+
+        const formatProf = (name) => {
+          if (!name || name === 'A definir') return 'A definir';
+          return name.split(' ')
+            .filter(p => !['de', 'da', 'do', 'das', 'dos'].includes(p.toLowerCase()))
+            .slice(0, 2)
+            .join(' ');
+        };
+
+        let pillsHtml = '';
+        if(d.classes && d.classes.length > 0){
+          pillsHtml = d.classes.map((t) => `
+            <button class="pill ${cid == t.class_id ? 'sel' : ''}" data-code="${d.code}" data-cid="${t.class_id}" onclick="selectTurma('${escapeHtml(d.code)}', '${escapeHtml(String(t.class_id))}')">
+              <span class="pill-check">${CHECK}</span>
+              <span class="pill-code">
+                Turma ${escapeHtml(t.class_code.replace(/^Turma\s+/i, ''))} · ${escapeHtml(formatProf(t.teacher))}
+                ${t.media ? `<span style="display:inline-flex; align-items:center; gap:2px; color:${exigColor(t.media)}; font-size: 9px; opacity: 0.9; transform: translateY(-0.5px);">${STAR} ${t.media}</span>` : ''}
+              </span>
+              <span class="pill-prof">${escapeHtml(humanSchedule(t.schedule))}</span>
+              <span class="pill-sigaa">SIGAA ${escapeHtml(t.schedule)}</span>
+            </button>`).join('');
+        } else {
+          pillsHtml = `<div style="font-size:12px; color:var(--text-muted); font-style:italic; padding: 4px 0;">Nenhuma turma com vagas disponíveis no momento.</div>`;
+        }
+
+        let conflictNote = '';
+        if(isConflict){
+          const detail = [...conflicts].map(c => {
+            const other = allDisciplines.find(x => x.code === c);
+            const otherTurma = other.classes.find(x => x.class_id == picked[c]);
+            return `${other.name} (${humanSchedule(otherTurma.schedule)})`;
+          }).join('; ');
+          conflictNote = `
+          <div class="fr-conflict-note ${isNewConflict ? 'note-in' : ''}">
+            ${WARN_ICON}
+            <span><strong>Conflito de horário</strong> com ${detail}.</span>
+          </div>`;
+        }
+
+        let gradeHtml = '';
+        if (d.media !== undefined && d.media !== null) {
+          gradeHtml = `<span class="exig" style="color:${exigColor(d.media)}">${STAR} ${d.media}</span>`;
+        }
+
+        return `
+        <div class="ficha-row ${isFilled ? 'filled' : ''} ${isConflict ? 'conflict' : ''} ${firstRender ? 'row-in' : ''}" data-disc-code="${escapeHtml(d.code)}" ${firstRender ? `style="animation-delay:${i*35}ms"` : ''}>
+          <div class="fr-num">${String(i+1).padStart(2,'0')}</div>
+          <div class="fr-body">
+            <div class="fr-head">
+              <div>
+                <div class="fr-name">${escapeHtml(d.name)}</div>
+                <span class="fr-code">${escapeHtml(d.code)}</span>
+              </div>
+              ${gradeHtml}
+            </div>
+            <div class="fr-pills">${pillsHtml}</div>
+            ${conflictNote}
+          </div>
+        </div>`;
+      }).join('');
+
+      prevConflictedCodes = new Set(Object.keys(conflictMap));
+      firstRender = false;
+
+      renderTally();
+    }
+
+    function renderTally(){
+      const total = allDisciplines.length;
+      const count = Object.keys(picked).length;
+
+      document.getElementById('tally-count').textContent = String(count).padStart(2,'0');
+      document.getElementById('tally-total').textContent = String(total).padStart(2,'0');
+      document.getElementById('bb-count').textContent = count;
+      document.getElementById('bb-total').textContent = total;
+
+      if(count !== lastCount){
+        bump(document.getElementById('tally-count'));
+        bump(document.getElementById('bb-count'));
+        lastCount = count;
+      }
+
+      const slotMap = buildSlotMap();
+      const hasConflict = Object.keys(buildConflictMap(slotMap)).length > 0;
+
+      document.getElementById('conflict-badge').classList.toggle('show', hasConflict);
+      document.getElementById('bbar').classList.toggle('has-conflict', hasConflict);
+
+      const btn = document.getElementById('bb-btn');
+      btn.disabled = count === 0;
+      btn.classList.toggle('danger', hasConflict);
+      btn.innerHTML = hasConflict
+        ? `${WARN_ICON} Resolver conflito de horário`
+        : 'Continuar para revisão →';
+    }
+
+    window.selectTurma = function(discCode, classId) {
+      const wasSelected = picked[discCode] == classId;
+      if(wasSelected) delete picked[discCode]; 
+      else picked[discCode] = String(classId);
+      
+      renderDiscs();
+
+      if(!wasSelected){
+        requestAnimationFrame(() => {
+          const el = document.querySelector(`.pill[data-code="${discCode}"][data-cid="${classId}"]`);
+          if(el){
+            el.classList.add('just-picked');
+            setTimeout(() => el.classList.remove('just-picked'), 450);
+          }
+        });
+      }
+    };
+    
+    window.handleContinue = function(){
+      const slotMap = buildSlotMap();
+      const conflictMap = buildConflictMap(slotMap);
+      const codes = Object.keys(conflictMap);
+      if(codes.length > 0){
+        const rowEl = document.querySelector(`.ficha-row[data-disc-code="${codes[0]}"]`);
+        if(rowEl){
+          rowEl.scrollIntoView({ behavior:'smooth', block:'center' });
+          rowEl.classList.remove('flash'); void rowEl.offsetWidth;
+          rowEl.classList.add('flash');
+        }
+        return;
+      }
+      go(2);
+    };
+
+    window.remove = function(discCode) {
+      delete picked[discCode];
+      renderReview();
+    };
+
+    function pickedList() {
+      const list = [];
+      Object.entries(picked).forEach(([code, cid]) => {
+        const d = allDisciplines.find(x => x.code === code);
+        if(d) {
+          const c = d.classes.find(x => x.class_id == cid);
+          if(c) {
+            list.push({ ...c, dNome: d.name, dCod: d.code, dMedia: d.media });
+          }
+        }
+      });
+      return list;
+    }
+
+    function clashData(list) {
+      const occ = {};
+      list.forEach(t => {
+        const slots = parseSchedule(t.schedule);
+        slots.forEach(s => {
+          (occ[s] = occ[s] || []).push(t);
+        });
+      });
+      const keys = new Set(), ids = new Set();
+      Object.entries(occ).forEach(([k, arr]) => {
+        if(arr.length > 1) { keys.add(k); arr.forEach(t => ids.add(t.class_id)); }
+      });
+      return { keys, ids };
+    }
+
+    function renderReview() {
+      const list = pickedList();
+      const {keys, ids} = clashData(list);
+
+      // table
+      let html=`<tr><th></th>${DIAS.map(d=>`<th>${d}</th>`).join('')}</tr>`;
+      BLOCOS.forEach(b => {
+        html+=`<tr><th style="color:var(--text-muted);font-size:9px;">${b.s}</th>`;
+        dayCodes.forEach(dia => {
+          const k = `${dia}-${b.id}`;
+          const t = list.find(x => parseSchedule(x.schedule).includes(k));
+          const cls = t ? (keys.has(k) ? 'clash' : 'on') : '';
+          html+=`<td class="${cls}">${t ? escapeHtml(t.dCod) : ''}</td>`;
+        });
+        html+='</tr>';
+      });
+      document.getElementById('tgrid').innerHTML=html;
+
+      const cn = document.getElementById('clash-note');
+      if(keys.size){ cn.classList.add('on'); cn.textContent='Há choque de horário entre turmas selecionadas. Volte e ajuste antes de continuar.'; }
+      else cn.classList.remove('on');
+
+      document.getElementById('rev-list').innerHTML = list.length
+        ? list.map(t=>`
+          <div class="rv-item">
+            <div class="rv-dot ${ids.has(t.class_id)?'clash':''}"></div>
+            <div class="rv-main">
+              <div class="rv-name">${escapeHtml(t.dNome)}</div>
+              <div class="rv-meta">${escapeHtml(t.dCod)} · ${escapeHtml(t.teacher)} · ${escapeHtml(t.schedule)}</div>
+            </div>
+            <button class="rv-rmv" onclick="remove('${escapeHtml(t.dCod)}')">Remover</button>
+          </div>`).join('')
+        :`<div style="font-size:12px;color:var(--text-muted);padding:4px 0;">Nenhuma turma selecionada.</div>`;
+
+      document.getElementById('btn23').disabled = list.length === 0 || keys.size > 0;
+
+      // Gráfico de Avaliações
+      const chartCard = document.getElementById('rev-chart-card');
+      if (list.length > 0 && typeof Chart !== 'undefined') {
+        chartCard.style.display = 'block';
+        const ctx = document.getElementById('revChartCanvas').getContext('2d');
+        if (window.revChart) window.revChart.destroy();
+        window.revChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: list.map(t => t.dCod),
+            datasets: [{
+              label: 'Nível de Exigência (Disc + Prof)',
+              data: list.map(t => (t.dMedia || 0) + (t.media || 0)),
+              borderColor: '#38bdf8',
+              backgroundColor: 'rgba(56,189,248,0.2)',
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, max: 10, grid: { color: 'rgba(255,255,255,0.1)' } },
+              x: { ticks: { color: '#999', font: { size: 10 } }, grid: { display: false } }
+            }
+          }
+        });
+      } else {
+        if(chartCard) chartCard.style.display = 'none';
+      }
+    }
+
+    function renderConfirm() {
+      // Removido a pedido do usuário (agora a tela 3 só tem a senha)
+      document.getElementById('pwd').value = '';
+    }
+
+    window.finalize = function() {
+      const pwd = document.getElementById('pwd').value.trim();
+      const err = document.getElementById('pwd-err');
+      if(!pwd) { err.classList.add('on'); err.innerText='Digite sua senha para continuar.'; return; }
+      err.classList.remove('on');
+      
+      const btn = document.getElementById('btn-finalize');
       btn.disabled = true;
-      btn.innerText = 'Processando...';
+      btn.innerText = 'Assinando...';
+
+      const selectedClassIds = pickedList().map(x => x.class_id);
 
       fetch('/api/matricula/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': window.APP_CONFIG.csrfToken
-        },
-        body: JSON.stringify({
-          selected_class_ids: selectedClassIds,
-          view_state: matriculaViewState
-        })
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+        body: JSON.stringify({ selected_class_ids: selectedClassIds, view_state: matriculaViewState })
       })
       .then(res => {
-        if (!res.ok) throw new Error('Erro de comunicação com o servidor.');
-        return res.json();
+        if (!res.ok) throw new Error('Erro ao processar as turmas selecionadas.');
+        return fetch('/api/matricula/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+          body: JSON.stringify({ password: pwd })
+        });
       })
+      .then(res => res.json().then(data => {
+        if (!res.ok) throw new Error(data.message || 'Senha incorreta ou erro de validação.');
+        return data;
+      }))
       .then(data => {
-        if (data.error) throw new Error(data.error);
+        document.getElementById('proto-n').textContent = 'SIGAA-' + Math.floor(1e5 + Math.random()*9e5);
+        document.getElementById('suc-list').innerHTML = pickedList().map(t=>`
+          <div class="suc-row">
+            <div style="flex:1">
+              <div style="font-size:12.5px;font-weight:700;color:var(--text-main);">${escapeHtml(t.dNome)}</div>
+              <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(t.dCod)} · ${escapeHtml(t.schedule)}</div>
+            </div>
+            <div class="suc-ok">Gravada</div>
+          </div>`).join('');
         
-        // Show Step 3
-        document.getElementById('matricula-selection-container').style.display = 'none';
-        document.getElementById('matricula-review-container').style.display = 'block';
-        
-        // Render schedule grid table
-        renderTimetableGrid();
+        stage = 4;
+        document.querySelectorAll('.stage').forEach(s=>s.classList.remove('on'));
+        document.getElementById('s4').classList.add('on');
+        document.getElementById('bbar').style.display='none';
+        document.getElementById('stepper').style.display='none';
+        window.scrollTo({top:0,behavior:'smooth'});
       })
-      .catch(err => {
-        alert(err.message);
+      .catch(e => {
+        err.innerText = e.message;
+        err.classList.add('on');
       })
       .finally(() => {
         btn.disabled = false;
-        btn.innerText = 'Prosseguir ➔';
+        btn.innerText = 'Confirmar e assinar';
       });
-    }
+    };
 
-    function renderTimetableGrid() {
-      const container = document.getElementById('matricula-grid-table-container');
-      container.innerHTML = '';
-
-      const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-      const dayCodes = [2, 3, 4, 5, 6, 7];
-      const shifts = ['M', 'T', 'N'];
-      const shiftHours = {
-        'M': [1, 2, 3, 4, 5, 6],
-        'T': [1, 2, 3, 4, 5, 6],
-        'N': [1, 2, 3, 4]
-      };
-
-      let tableHtml = `
-        <table class="m-timetable-table">
-          <thead>
-            <tr>
-              <th>Horário</th>
-              ${days.map(d => `<th>${d}</th>`).join('')}
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      // Build rows
-      shifts.forEach(shift => {
-        shiftHours[shift].forEach(hour => {
-          const rowCode = `${shift}${hour}`;
-          tableHtml += `<tr><td><strong>${rowCode}</strong></td>`;
-          
-          dayCodes.forEach(day => {
-            const slotKey = `${day}-${shift}-${hour}`;
-            
-            // Check if any selected class occupies this slot
-            let occupiedClass = null;
-            let occupiedDisc = null;
-            selectedClassIds.forEach(id => {
-              const item = findClassById(id);
-              if (item) {
-                const slots = parseSchedule(item.cls.schedule);
-                if (slots.includes(slotKey)) {
-                  occupiedClass = item.cls;
-                  occupiedDisc = item.disc;
-                }
-              }
-            });
-
-            if (occupiedClass) {
-              tableHtml += `<td class="m-timetable-slot-active" title="${escapeHtml(occupiedDisc.name)}">${escapeHtml(occupiedDisc.code)}</td>`;
-            } else {
-              tableHtml += `<td>---</td>`;
-            }
-          });
-          
-          tableHtml += '</tr>';
-        });
-      });
-
-      tableHtml += '</tbody></table>';
-      container.innerHTML = tableHtml;
-    }
-
-    function backToSelection() {
-      document.getElementById('matricula-review-container').style.display = 'none';
-      document.getElementById('matricula-selection-container').style.display = 'block';
-    }
-
-    function finalizeMatricula() {
-      const password = document.getElementById('matricula-confirm-password').value;
-      const errorEl = document.getElementById('matricula-confirm-error');
-      const btn = document.getElementById('btn-finalize-matricula');
-      
-      errorEl.style.display = 'none';
-      btn.disabled = true;
-      btn.innerText = 'Enviando ao SIGAA...';
-
-      fetch('/api/matricula/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': window.APP_CONFIG.csrfToken
-        },
-        body: JSON.stringify({
-          password: password
-        })
-      })
-      .then(res => {
-        return res.json().then(data => {
-          if (!res.ok) {
-            throw new Error(data.message || 'Senha incorreta ou erro de validação.');
-          }
-          return data;
-        });
-      })
-      .then(data => {
-        // Step 4: Success
-        document.getElementById('matricula-review-container').style.display = 'none';
-        document.getElementById('matricula-success-container').style.display = 'block';
-        document.getElementById('matricula-success-msg').innerText = data.message;
-      })
-      .catch(err => {
-        errorEl.innerText = err.message;
-        errorEl.style.display = 'block';
-      })
-      .finally(() => {
-        btn.disabled = false;
-        btn.innerText = 'Confirmar e Gravar ➔';
-      });
-    }
-
-    function restartMatriculaWizard() {
-      selectedClassIds = [];
-      document.getElementById('matricula-success-container').style.display = 'none';
+    window.restartMatriculaWizard = function() {
+      picked = {};
+      document.getElementById('pwd').value = '';
+      document.getElementById('stepper').style.display = 'none';
+      document.getElementById('s4').classList.remove('on');
       document.getElementById('matricula-intro-card').style.display = 'block';
-      document.getElementById('matricula-confirm-password').value = '';
-    }
+    };
 
     function loadMatricula() {
-      // Lazy load indicator
       if (isMatriculaLoaded) return;
     }
 
@@ -1139,6 +1183,15 @@ let data = [];
       nonLoading.forEach(item => { if (!bucketed.has(item)) ordered.push(item); });
 
       viewList.appendChild(buildMGroup(ordered));
+      
+      // Atualizar abas secundárias se estiverem ativas durante a chegada de dados em tempo real
+      if (document.getElementById('view-stats') && document.getElementById('view-stats').classList.contains('active')) {
+          renderChart();
+          if (typeof loadAcademicProfile === 'function') loadAcademicProfile();
+      }
+      if (document.getElementById('view-achievements') && document.getElementById('view-achievements').classList.contains('active')) {
+          renderAchievements();
+      }
     }
 
     function buildMGroup(items) {
@@ -1298,18 +1351,28 @@ let data = [];
       }
 
       const items = data.filter(d => !d.isLoading);
-      const itemsWithFreq = items.filter(d => d.frequency && !d.frequency.nao_lancada);
+      const itemsWithFreq = items.map(d => {
+        if (!d.frequency || d.frequency.nao_lancada) {
+          const max_faltas = (d.frequency && d.frequency.max_faltas) || 18;
+          const aulas_total = (d.frequency && d.frequency.aulas_total) || 72;
+          return { ...d, frequency: { total_faltas: 0, max_faltas: max_faltas, percent: 0, aulas_total: aulas_total, nao_lancada: true } };
+        }
+        return d;
+      });
       
-      let overallAvg = 0, sumTotalFaltas = 0, sumMaxFaltas = 0;
+      let overallAvg = 0, sumTotalFaltas = 0, sumMaxFaltas = 0, sumTotalAulas = 0;
       let critCount = 0;
       let totalDiscs = itemsWithFreq.length;
       
       if (totalDiscs > 0) {
-        overallAvg = itemsWithFreq.reduce((s, d) => s + d.frequency.percent, 0) / totalDiscs;
-        sumTotalFaltas = itemsWithFreq.reduce((s, d) => s + d.frequency.total_faltas, 0);
-        sumMaxFaltas = itemsWithFreq.reduce((s, d) => s + d.frequency.max_faltas, 0);
-        critCount = itemsWithFreq.filter(d => (d.frequency.max_faltas - d.frequency.total_faltas) <= 1).length;
+        overallAvg = itemsWithFreq.reduce((s, d) => s + (d.frequency.percent || 0), 0) / totalDiscs;
+        sumTotalFaltas = itemsWithFreq.reduce((s, d) => s + (d.frequency.total_faltas || 0), 0);
+        sumMaxFaltas = itemsWithFreq.reduce((s, d) => s + (d.frequency.max_faltas || 18), 0);
+        sumTotalAulas = itemsWithFreq.reduce((s, d) => s + (d.frequency.aulas_total || ((d.frequency.max_faltas || 18) * 4)), 0);
+        critCount = itemsWithFreq.filter(d => ((d.frequency.max_faltas || 18) - (d.frequency.total_faltas || 0)) <= 1).length;
       }
+      
+      const presencaPercent = sumTotalAulas > 0 ? Math.max(0, 100 - (sumTotalFaltas / sumTotalAulas * 100)).toFixed(1) : 100;
 
       const statGrid = document.createElement('div');
       statGrid.className = 'stat-grid';
@@ -1317,6 +1380,7 @@ let data = [];
         <div class="stat-box"><div class="stat-val" style="color:#fff">${totalDiscs}</div><div class="stat-lbl">Matérias</div></div>
         <div class="stat-box"><div class="stat-val" style="color:var(--danger)">${critCount}</div><div class="stat-lbl">Críticas</div></div>
         <div class="stat-box"><div class="stat-val" style="color:var(--safe)">${Math.max(0, sumMaxFaltas - sumTotalFaltas)}</div><div class="stat-lbl">Restantes Totais</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:#00ffff">${presencaPercent}%</div><div class="stat-lbl">Presença Geral</div></div>
       `;
       container.appendChild(statGrid);
 
@@ -1339,33 +1403,28 @@ let data = [];
       container.appendChild(listContainer);
 
       const sortedItems = [...items].sort((a, b) => {
-        if (!a.frequency || a.frequency.nao_lancada) return 1;
-        if (!b.frequency || b.frequency.nao_lancada) return -1;
-        const remA = a.frequency.max_faltas - a.frequency.total_faltas;
-        const remB = b.frequency.max_faltas - b.frequency.total_faltas;
-        return remA - remB;
+        const getRem = (item) => {
+          if (!item.frequency || item.frequency.nao_lancada) return 18;
+          return item.frequency.max_faltas - item.frequency.total_faltas;
+        };
+        return getRem(a) - getRem(b);
       });
 
       sortedItems.forEach(item => {
         const div = document.createElement('div');
         
-        if (!item.frequency || item.frequency.nao_lancada) {
-          div.className = 'freq-item';
-          div.innerHTML = `
-            <div class="freq-item-head">
-              <div class="freq-item-info">
-                <div class="freq-item-subject" style="color:var(--text-muted);">${escapeHtml(item.name)}</div>
-                <div class="freq-item-meta">Frequência não lançada</div>
-              </div>
-            </div>
-          `;
-          listContainer.appendChild(div);
-          return;
-        }
+        const total_faltas = (item.frequency && item.frequency.total_faltas) || 0;
+        const max_faltas = (item.frequency && item.frequency.max_faltas) || 18;
+        const presencas = (item.frequency && item.frequency.presencas) || 0;
+        const aulas_per_session = (item.frequency && item.frequency.aulas_per_session) || 4;
+        
+        const daysTotalFaltas = Math.floor(total_faltas / aulas_per_session);
+        const daysMaxFaltas = Math.floor(max_faltas / aulas_per_session);
+        const daysPresencas = Math.floor(presencas / aulas_per_session);
+        const daysRemaining = Math.max(0, daysMaxFaltas - daysTotalFaltas);
 
-        const { total_faltas, max_faltas } = item.frequency;
         const remaining = Math.max(0, max_faltas - total_faltas);
-        const aulas_total = item.frequency.aulas_total || (max_faltas * 4);
+        const aulas_total = (item.frequency && item.frequency.aulas_total) || (max_faltas * 4);
         const pct = Math.min(100, (total_faltas / (max_faltas || 1)) * 100);
         
         let badgeClass = 'freq-b-safe';
@@ -1407,15 +1466,16 @@ let data = [];
             </div>
             <div class="freq-item-info">
               <div class="freq-item-subject">${escapeHtml(item.name)}</div>
-              <div class="freq-item-meta">${total_faltas} de ${aulas_total} aulas</div>
+              <div class="freq-item-meta">${total_faltas} de ${max_faltas} faltas permitidas</div>
             </div>
-            <div class="freq-item-badge ${badgeClass}">${remaining} restante${remaining !== 1 ? 's' : ''}</div>
+            <div class="freq-item-badge ${badgeClass}">${daysRemaining} dia${daysRemaining !== 1 ? 's' : ''} restante${daysRemaining !== 1 ? 's' : ''}</div>
             <div class="freq-chevron">▾</div>
           </div>
           <div class="freq-item-body">
             <div class="freq-item-body-inner">
-              <div class="freq-body-row"><span>Limite da disciplina</span><span>${max_faltas} faltas</span></div>
-              <div class="freq-body-row"><span>Faltas registradas</span><span>${total_faltas}</span></div>
+              <div class="freq-body-row"><span>Presenças</span><span>${daysPresencas} dias (${presencas} aulas)</span></div>
+              <div class="freq-body-row"><span>Limite da disciplina</span><span>${daysMaxFaltas} dias (${max_faltas} faltas)</span></div>
+              <div class="freq-body-row"><span>Faltas registradas</span><span>${daysTotalFaltas} dias (${total_faltas} faltas)</span></div>
               <div class="freq-dates-row" style="margin-top:8px;">${chipsHtml}</div>
             </div>
           </div>
@@ -1423,34 +1483,51 @@ let data = [];
         listContainer.appendChild(div);
       });
     }
-
-
-    function renderPriority() {
-      const list = document.getElementById('priority-list');
-      const header = document.getElementById('priority-header');
-      list.innerHTML = '';
-      const priorityItems = data
-        .filter(d => !d.isLoading && d.status)
-        .filter(d => d.status.is_critical || d.status.needed > 0)
-        .sort((a, b) => b.status.needed - a.status.needed);
-      if (priorityItems.length === 0) {
-        header.style.display = 'none'; list.style.display = 'none';
-      } else {
-        header.style.display = 'block'; list.style.display = 'block';
-        priorityItems.forEach(c => {
-          const div = document.createElement('div');
-          div.className = 'card'; div.style.padding = '12px';
-          div.innerHTML = `<div style="font-weight:700">${escapeHtml(c.name)}</div>
-          <div style="font-size:12px; color:var(--text-muted)">
-            ${c.status.is_critical ? '<span style="color:var(--danger)">STATUS CRÍTICO</span>' : `Falta ${c.status.needed.toFixed(1)} pts`}
-          </div>`;
-          list.appendChild(div);
-        });
+    
+    function renderAbsencesChart() {
+      if (typeof Chart === 'undefined') return;
+      const chartCard = document.getElementById('absences-chart-card');
+      const items = data.filter(d => !d.isLoading && d.frequency);
+      
+      if (items.length === 0) { 
+        if (chartCard) chartCard.style.display = 'none'; 
+        return; 
       }
+      
+      if (chartCard) chartCard.style.display = 'block';
+      const ctx = document.getElementById('absencesChart').getContext('2d');
+      if (absencesChart) absencesChart.destroy();
+      
+      absencesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: items.map(d => d.name.substring(0, 10) + '...'),
+          datasets: [{ 
+            label: 'Faltas', 
+            data: items.map(d => (d.frequency && d.frequency.total_faltas) || 0), 
+            borderColor: '#f43f5e', 
+            backgroundColor: 'rgba(244,63,94,0.2)', 
+            fill: true, 
+            tension: 0.3 
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+            x: { ticks: { color: '#999', font: { size: 10 } }, grid: { display: false } }
+          }
+        }
+      });
     }
 
     function renderChart() {
       if (typeof Chart === 'undefined') return; // chart.js (defer) ainda não carregou
+      
+      // Renderiza faltas independentemente das notas
+      renderAbsencesChart();
+      
       const chartCard = document.getElementById('chart-card');
       const active = data.filter(d => !d.isLoading && d.status && d.status.needed > 0)
         .sort((a, b) => b.status.needed - a.status.needed).slice(0, 10);
@@ -1473,7 +1550,6 @@ let data = [];
           }
         }
       });
-      renderPriority();
     }
 
 
@@ -1752,12 +1828,64 @@ let data = [];
     }
 
 
+    const RARITY_COLORS = {
+      comum: { text: '#b0bec5', bg: 'rgba(176, 190, 197, 0.1)', border: '#78909c', shadow: 'rgba(176,190,197,0.2)' },
+      raro: { text: '#42a5f5', bg: 'rgba(66, 165, 245, 0.1)', border: '#1e88e5', shadow: 'rgba(66,165,245,0.4)' },
+      epico: { text: '#ab47bc', bg: 'rgba(171, 71, 188, 0.1)', border: '#8e24aa', shadow: 'rgba(171,71,188,0.5)' },
+      lendario: { text: '#fbc02d', bg: 'rgba(251, 192, 45, 0.1)', border: '#fbc02d', shadow: 'rgba(251,192,45,0.6)' }
+    };
+    
+    const RARITY_NAMES = {
+      comum: 'Comum',
+      raro: 'Raro',
+      epico: 'Épico',
+      lendario: 'Lendário'
+    };
+
     const ACHIEVEMENTS_DB = [
-      { id: 'nerd_supremo', icon: '📘', name: 'Nerd Supremo', desc: 'Tirar 10 em qualquer disciplina', check: (d) => d.some(c => hasGradeVal(c, 10)) },
-      { id: 'genio_incompreendido', icon: '📘', name: 'Gênio Incompreendido', desc: 'Média 9+ em 3 matérias', check: (d) => d.filter(c => c.status && c.status.average >= 9).length >= 3 },
-      { id: 'sobrevivente', icon: '🔥', name: 'Sobrevivente', desc: 'Passar na recuperação/final', check: (d) => d.some(c => c.status && (c.status.status === 'Recuperação' || c.status.status === 'Prova Final')) },
-      { id: 'onipresente', icon: '🕒', name: 'Onipresente', desc: '100% de Frequência', check: (d) => d.some(c => c.frequency && c.frequency.percent === 0) },
-      { id: 'cartola', icon: '📝', name: 'Cartola do Semestre', desc: 'Todas notas > 8', check: (d) => d.length > 0 && d.every(c => c.status && c.status.average > 8) }
+      { id: 'meio_caminho', rarity: 'comum', icon: '', name: 'Meio Caminho Andado', desc: 'Atingir 50% de conclusão do curso', getProgress: (d) => { const pct = (window.__initialProfile && window.__initialProfile.integration_percentage) ? window.__initialProfile.integration_percentage : 0; return { unlocked: pct >= 50, current: Math.min(pct, 50), max: 50 }; } },
+      
+      { id: 'reta_final', rarity: 'raro', icon: '', name: 'Reta Final', desc: 'Atingir 90% de conclusão do curso', getProgress: (d) => { const pct = (window.__initialProfile && window.__initialProfile.integration_percentage) ? window.__initialProfile.integration_percentage : 0; return { unlocked: pct >= 90, current: Math.min(pct, 90), max: 90 }; } },
+      
+      { id: 'dever_cumprido', rarity: 'lendario', icon: '', name: 'Dever Cumprido', desc: 'Atingir 100% de conclusão do curso', getProgress: (d) => { const pct = (window.__initialProfile && window.__initialProfile.integration_percentage) ? window.__initialProfile.integration_percentage : 0; return { unlocked: pct >= 100, current: Math.min(pct, 100), max: 100 }; } },
+      
+      { id: 'primeiro_passo', rarity: 'comum', icon: '', name: 'Primeiro Passo', desc: 'Acessar o painel do aluno pela primeira vez', getProgress: (d) => { return { unlocked: true, current: 1, max: 1 }; } },
+      
+      { id: 'primeiro_10', rarity: 'comum', icon: '🎯', name: 'Primeiro 10', desc: 'Tirar 10 em qualquer avaliação', getProgress: (d) => { const u = d.some(c => hasGradeVal(c, 10)); return { unlocked: u, current: u?1:0, max: 1 }; } },
+      
+      { id: 'genio_incompreendido', rarity: 'epico', icon: '🧠', name: 'Gênio Incompreendido', desc: 'Média 9+ em 3 disciplinas no semestre', getProgress: (d) => { 
+          const count = d.filter(c => c.status && c.status.average >= 9).length; 
+          return { unlocked: count >= 3, current: Math.min(count, 3), max: 3 }; 
+      }},
+      
+      { id: 'sobrevivente', rarity: 'raro', icon: '🔥', name: 'Sobrevivente', desc: 'Passar na recuperação ou prova final', getProgress: (d) => { 
+          const v = d.some(c => c.status && c.status.status && (c.status.status.includes('Recuperação') || c.status.status.includes('Prova Final') || (c.status.status.includes('Aprovado') && hasGradeName(c, 'Recuperação'))));
+          return { unlocked: !!v, current: v?1:0, max: 1 }; 
+      }},
+      
+      { id: 'onipresente', rarity: 'lendario', icon: '👑', name: 'Onipresente', desc: '100% de presença em todas as disciplinas do semestre', getProgress: (d) => { 
+          const count = d.filter(c => c.frequency && c.frequency.percent === 0).length;
+          const max = d.length > 0 ? d.length : 1;
+          const u = d.length > 0 && count === d.length;
+          return { unlocked: u, current: count, max: max }; 
+      }},
+      
+      { id: 'cartola', rarity: 'epico', icon: '🎩', name: 'Cartola do Semestre', desc: 'Média final maior que 8 em todas as disciplinas', getProgress: (d) => { 
+          const count = d.filter(c => c.status && c.status.average > 8).length;
+          const max = d.length > 0 ? d.length : 1;
+          const u = d.length > 0 && count === d.length;
+          return { unlocked: u, current: count, max: max }; 
+      }},
+      
+      { id: 'polivalente', rarity: 'raro', icon: '⚔️', name: 'Polivalente', desc: 'Cursar 6 ou mais disciplinas em um único semestre', getProgress: (d) => { 
+          const count = d.length; 
+          return { unlocked: count >= 6, current: Math.min(count, 6), max: 6 }; 
+      }},
+      
+      { id: 'quase_la', rarity: 'comum', icon: '😅', name: 'Na Trave', desc: 'Passar com média igual a 5 ou 7 exatos (nota de corte)', getProgress: (d) => { 
+          const u = d.some(c => c.status && (c.status.average === 5 || c.status.average === 7) && c.status.status && c.status.status.includes('Aprovado'));
+          return { unlocked: !!u, current: u?1:0, max: 1 }; 
+      }}
     ];
 
     function hasGradeVal(course, val) {
@@ -1766,32 +1894,162 @@ let data = [];
       return check(course.grades);
     }
 
-    function getUnlockedAchievements() {
-      const validData = data.filter(d => !d.isLoading);
-      return ACHIEVEMENTS_DB.map(ach => ({ ...ach, unlocked: ach.check(validData) }));
+    function hasGradeName(course, nameChunk) {
+      if (!course.grades) return false;
+      const check = (list) => { for (let g of list) { if (g.name && g.name.toLowerCase().includes(nameChunk.toLowerCase())) return true; if (g.grades) if (check(g.grades)) return true; } return false; };
+      return check(course.grades);
     }
+
+    let claimedAchievements = window.__initialProfile && window.__initialProfile.claimed_achievements ? window.__initialProfile.claimed_achievements : [];
+
+    window.claimAchievement = async function(id) {
+      const btn = document.getElementById(`claim-btn-${id}`);
+      if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = 'Reivindicando...';
+          btn.style.opacity = '0.7';
+      }
+      try {
+          const resp = await fetch('/api/achievements/claim', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': window.APP_CONFIG.csrfToken },
+              body: JSON.stringify({ achievement_id: id })
+          });
+          const resData = await resp.json();
+          if (resp.ok && resData.success) {
+              claimedAchievements.push(id);
+              renderAchievements();
+          } else {
+              alert(resData.error || 'Erro ao reivindicar conquista.');
+              if (btn) { btn.disabled = false; btn.innerHTML = 'Reivindicar Título'; btn.style.opacity = '1'; }
+          }
+      } catch (e) {
+          alert('Falha de rede.');
+          if (btn) { btn.disabled = false; btn.innerHTML = 'Reivindicar Título'; btn.style.opacity = '1'; }
+      }
+    };
 
     function renderAchievements() {
       const list = document.getElementById('achievements-list');
+      const statsContainer = document.getElementById('achievements-stats');
+      if (!list || !statsContainer) return;
       list.innerHTML = '';
-      const achs = getUnlockedAchievements().sort((a, b) => (b.unlocked ? 1 : 0) - (a.unlocked ? 1 : 0));
+      statsContainer.innerHTML = '';
+      
+      const validData = data.filter(d => !d.isLoading);
+      const achs = ACHIEVEMENTS_DB.map(ach => ({ ...ach, state: ach.getProgress(validData) }));
+      achs.sort((a, b) => {
+        const aUnlocked = a.state.unlocked ? 1 : 0;
+        const bUnlocked = b.state.unlocked ? 1 : 0;
+        
+        if (aUnlocked !== bUnlocked) return bUnlocked - aUnlocked;
+        
+        if (!a.state.unlocked && !b.state.unlocked) {
+            const pctA = a.state.max > 0 ? (a.state.current / a.state.max) : 0;
+            const pctB = b.state.max > 0 ? (b.state.current / b.state.max) : 0;
+            if (pctA !== pctB) return pctB - pctA;
+        }
+        
+        return a.rarity.localeCompare(b.rarity);
+      });
+      
+      let unlockedCount = 0;
+      let rarityCounts = { comum: 0, raro: 0, epico: 0, lendario: 0 };
+      
+      achs.forEach(a => {
+        if (claimedAchievements.includes(a.id)) {
+           unlockedCount++;
+           if (rarityCounts[a.rarity] !== undefined) rarityCounts[a.rarity]++;
+        }
+      });
+      
+      statsContainer.innerHTML = `
+        <div style="background: var(--bg-lighter); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); color: var(--text-main);">
+          ${unlockedCount}/${achs.length} Títulos Obtidos
+        </div>
+        ${rarityCounts.lendario > 0 ? `<div style="background: ${RARITY_COLORS.lendario.bg}; color: ${RARITY_COLORS.lendario.text}; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid ${RARITY_COLORS.lendario.border}; box-shadow: 0 0 8px ${RARITY_COLORS.lendario.shadow};">${rarityCounts.lendario} Lendárias</div>` : ''}
+        ${rarityCounts.epico > 0 ? `<div style="background: ${RARITY_COLORS.epico.bg}; color: ${RARITY_COLORS.epico.text}; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid ${RARITY_COLORS.epico.border};">${rarityCounts.epico} Épicas</div>` : ''}
+        ${rarityCounts.raro > 0 ? `<div style="background: ${RARITY_COLORS.raro.bg}; color: ${RARITY_COLORS.raro.text}; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid ${RARITY_COLORS.raro.border};">${rarityCounts.raro} Raras</div>` : ''}
+      `;
+
+      const RIBBON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="6"/><path d="M8.5 13.2 6 21l6-3 6 3-2.5-7.8"/></svg>`;
+
       achs.forEach(a => {
         const div = document.createElement('div');
-        div.className = 'm-item';
-        if (!a.unlocked) div.style.opacity = '0.4';
-        div.innerHTML = `
-        <div class="m-item-bar" style="background:${a.unlocked ? 'var(--success)' : '#444'}"></div>
-        <div style="font-size:32px; margin-right:16px;">${a.icon}</div>
-        <div class="m-item-body">
-          <div class="m-item-name" style="color:${a.unlocked ? '#fff' : 'var(--text-muted)'}">${a.name}</div>
-          <div class="m-item-sub">${a.desc}</div>
-        </div>
-        <div class="m-item-right">
-          <div style="font-size:10px; font-weight:800; color:${a.unlocked ? 'var(--success)' : 'var(--text-muted)'}">
-            ${a.unlocked ? 'DESBLOQUEADO' : 'BLOQUEADO'}
+        const isCompleted = a.state.unlocked;
+        const isClaimed = claimedAchievements.includes(a.id);
+        const rColor = RARITY_COLORS[a.rarity];
+        
+        div.className = 'diploma ' + (isClaimed ? 'unlocked' : 'locked');
+        
+        if (isClaimed) {
+          div.style.setProperty('--accent', rColor.border);
+          if (a.rarity === 'lendario' || a.rarity === 'epico') {
+             div.style.boxShadow = `0 4px 24px ${rColor.shadow}`;
+          }
+        } else if (isCompleted) {
+          // Destaca ligeiramente conquistas prontas para reivindicar
+          div.style.opacity = '1';
+          div.style.borderColor = rColor.border;
+          div.style.boxShadow = `0 0 12px ${rColor.shadow}`;
+        } else if (a.state.current > 0) {
+          // Em progresso: brilho da cor da raridade proporcional ao avanço
+          const p = a.state.current / a.state.max;
+          div.style.borderColor = rColor.border;
+          div.style.boxShadow = `0 0 ${2 + (p * 8)}px ${rColor.shadow}`;
+          div.style.opacity = (0.5 + (p * 0.4)).toFixed(2);
+        }
+        
+        const pct = (a.state.current / a.state.max) * 100;
+        const userName = window.APP_CONFIG && window.APP_CONFIG.currentUser ? window.APP_CONFIG.currentUser : 'Você';
+        
+        if (isClaimed) {
+          div.innerHTML += `<div style="position:absolute; top:0; left:0; width:100%; height:100%; background: radial-gradient(circle at center, ${rColor.bg} 0%, transparent 70%); pointer-events:none; z-index:0;"></div>`;
+        }
+
+        let footHtml = '';
+        if (isClaimed) {
+           footHtml = `
+          <div style="width:100%; display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span>OBTIDO</span>
+            <span>${a.state.current}/${a.state.max}</span>
           </div>
-        </div>
-      `;
+          <div style="width:100%; height:4px; background:var(--bg-lighter); border-radius:2px; overflow:hidden;">
+            <div style="height:100%; width:100%; background:${rColor.border};"></div>
+          </div>`;
+        } else if (isCompleted) {
+           footHtml = `
+          <button id="claim-btn-${a.id}" onclick="claimAchievement('${a.id}')" style="width: 100%; background: ${rColor.border}; color: ${a.rarity === 'lendario' ? '#000' : '#fff'}; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; box-shadow: 0 2px 8px ${rColor.shadow}; transition: transform 0.2s;">
+            Reivindicar Título
+          </button>`;
+        } else {
+           footHtml = `
+          <div style="width:100%; display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span>EM PROGRESSO</span>
+            <span>${a.state.current}/${a.state.max}</span>
+          </div>
+          <div style="width:100%; height:4px; background:var(--bg-lighter); border-radius:2px; overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:${rColor.border}; opacity: 0.8; transition:width 1s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 8px ${rColor.shadow};"></div>
+          </div>`;
+        }
+
+        div.innerHTML += `
+          <span class="c2"></span>
+          <span class="diploma-ribbon" style="position:relative; z-index:1;">${RIBBON}</span>
+          <span class="kicker" style="position:relative; z-index:1; ${isClaimed ? 'color:' + rColor.border : ''}">
+            ${RARITY_NAMES[a.rarity]}
+            <span style="display:block; margin-top:6px; font-size:0.9em; opacity:0.8; letter-spacing:0.5px;">
+              ${isClaimed ? 'OUTORGADO A ' + userName.toUpperCase() : 'NÃO CONCEDIDO'}
+            </span>
+          </span>
+          <h3 style="position:relative; z-index:1;">${a.name}</h3>
+          <p class="crit" style="position:relative; z-index:1;">${a.desc}</p>
+          <div class="foot" style="position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+            ${footHtml}
+          </div>
+        `;
+        
         list.appendChild(div);
       });
     }
@@ -2373,3 +2631,51 @@ async function wizardFinish() {
     document.getElementById('review-wizard-overlay').style.display = 'none';
 }
 
+// Build background grid for intro card
+function buildGrid() {
+  const table = document.getElementById('grid-table');
+  if (!table) return;
+  
+  const DIAS = ['Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const BLOCOS = [
+    {id:'M1', s:'07:00'}, {id:'M2', s:'07:55'}, {id:'M3', s:'08:55'}, {id:'M4', s:'09:50'}, {id:'M5', s:'10:50'}, {id:'M6', s:'11:45'},
+    {id:'T1', s:'13:00'}, {id:'T2', s:'13:55'}, {id:'T3', s:'14:55'}, {id:'T4', s:'15:50'}, {id:'T5', s:'16:50'}, {id:'T6', s:'17:45'},
+    {id:'N1', s:'18:45'}, {id:'N2', s:'19:40'}, {id:'N3', s:'20:30'}, {id:'N4', s:'21:20'}
+  ];
+  const GHOSTS = [ {b:2, d:3}, {b:6, d:5}, {b:11, d:2} ];
+  
+  let html = '<div class="gcell ghead"></div>';
+  DIAS.forEach(d => html += `<div class="gcell ghead">${d}</div>`);
+
+  BLOCOS.forEach((bloco, bi) => {
+    html += `<div class="gcell glabel"><span class="code">${bloco.id}</span><span class="time">${bloco.s}</span></div>`;
+    DIAS.forEach((d, di) => {
+      const isGhost = GHOSTS.some(g => g.b === bi && g.d === di);
+      const isFirstGhost = isGhost && GHOSTS[0].b === bi && GHOSTS[0].d === di;
+      if (isGhost) {
+        html += `<div class="gcell ghost"><span class="ghost-dot${isFirstGhost ? ' pulse' : ''}"></span></div>`;
+      } else {
+        html += `<div class="gcell"></div>`;
+      }
+    });
+  });
+  table.innerHTML = html;
+}
+setTimeout(buildGrid, 100);
+
+// Redirecionamento automático via URL para tela de matrícula
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('matricula') || window.location.hash === '#matricula') {
+    if (window.innerWidth >= 992) {
+      if(typeof switchTab === 'function') switchTab('matricula');
+    } else {
+      if(typeof mSwitchTabFromNav === 'function') mSwitchTabFromNav('matricula');
+    }
+    
+    // Iniciar o fluxo diretamente se desejar pular a introdução
+    setTimeout(() => {
+      if(typeof startMatriculaFlow === 'function') startMatriculaFlow();
+    }, 150);
+  }
+});

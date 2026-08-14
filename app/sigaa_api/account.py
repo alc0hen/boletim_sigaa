@@ -27,6 +27,37 @@ class Account:
             self._parse_bond_page(homepage)
 
     def _parse_bond_page(self, page):
+        tables = page.soup.find_all('table', class_='listagem')
+        parsed_any = False
+        if tables:
+            for table in tables:
+                caption = table.find('caption')
+                caption_text = caption.get_text(strip=True).lower() if caption else ''
+                is_active = 'ativo' in caption_text and 'inativo' not in caption_text
+                
+                for row in table.find_all('tr'):
+                    cells = row.find_all('td')
+                    if len(cells) < 4:
+                        continue
+                    type_cell = row.find(id='tdTipo')
+                    if not type_cell:
+                        type_cell = cells[1]
+                    bond_type = type_cell.get_text(strip=True)
+                    if 'Discente' in bond_type:
+                        registration = cells[2].get_text(strip=True)
+                        program = cells[3].get_text(strip=True).replace('Curso: ', '')
+                        link = row.find('a', href=True)
+                        switch_url = urljoin(str(page.url), link['href']) if link else None
+                        bond = StudentBond(self.session, registration, program, switch_url)
+                        if is_active:
+                            self.active_bonds.append(bond)
+                        else:
+                            self.inactive_bonds.append(bond)
+                        parsed_any = True
+                        
+        if parsed_any:
+            return
+            
         rows = page.soup.select('table.subFormulario tbody tr')
         for row in rows:
             cells = row.find_all('td')
@@ -38,7 +69,7 @@ class Account:
                 continue
             status = cells[3].get_text(strip=True)
             bond = None
-            if 'Discente' in bond_type:
+            if 'Discente' in bond_type and len(cells) > 4:
                 registration = cells[2].get_text(strip=True)
                 program = cells[4].get_text(strip=True).replace('Curso: ', '')
                 link = row.find('a', href=True)

@@ -89,6 +89,9 @@ class _RemoteBackend:
         data = await get_client().history(self.session_id, bond_id, cached_history=cached_history)
         return data.get('history', {})
 
+    async def get_institutional_data(self, bond_id):
+        return {}
+
     async def get_enrollment(self, bond_id):
         return await get_client().enrollment_disciplines(self.session_id, bond_id)
 
@@ -230,6 +233,12 @@ class _LocalBackend:
         bond = self._find_bond(bond_id)
         credentials = self._parallel_credentials()
         return await bond.get_history(cached_history=cached_history, credentials=credentials)
+
+    async def get_institutional_data(self, bond_id):
+        bond = self._find_bond(bond_id)
+        if hasattr(bond, 'get_institutional_data'):
+            return await bond.get_institutional_data()
+        return {}
 
     def _parallel_credentials(self):
         creds = getattr(self, 'credentials', None)
@@ -464,6 +473,9 @@ class SigaaGateway:
 
     async def get_history(self, bond_id, cached_history=None):
         return await self._call('get_history', bond_id, cached_history=cached_history)
+
+    async def get_institutional_data(self, bond_id):
+        return await self._call('get_institutional_data', bond_id)
 
     async def get_enrollment(self, bond_id):
         return await self._call('get_enrollment', bond_id)

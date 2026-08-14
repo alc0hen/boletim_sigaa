@@ -4,12 +4,13 @@ from .sigaa_gateway import SigaaError, SigaaGateway, SigaaInstitutionError, Siga
 from .domain.factory import CalculatorFactory
 from .demo_data import get_demo_data
 from .extensions import db_session, google_oauth, generate_csrf_token
-from .security import RateLimiter, is_dev_emulation, sanitize_for_log
+from .security import RateLimiter, is_dev_emulation, is_production, sanitize_for_log
 from sqlalchemy import select, func, distinct
 from sqlalchemy.exc import IntegrityError
-from .models import User, LinkedAccount, Disciplina, Professor, Avaliacao, VotoControle, compute_vote_hash, get_cipher_suite
+from .models import User, LinkedAccount, Disciplina, Professor, Avaliacao, VotoControle, Config, compute_vote_hash, get_cipher_suite
 import asyncio
 import hmac
+import ipaddress
 from .cache import get as cache_get, set as cache_set, delete as cache_delete
 import json
 import os
@@ -92,11 +93,47 @@ async def _set_sigaa_status(institution: str, online: bool):
         return
     await _record_sigaa_status(institution, online)
 
+def _trusted_proxy_count() -> int:
+    """Número de proxies reversos confiáveis à frente do app.
+
+    Em produção há um proxy (Render) por padrão; em dev/local não confiamos em
+    nenhum. Pode ser sobrescrito via TRUSTED_PROXY_COUNT.
+    """
+    raw = os.environ.get('TRUSTED_PROXY_COUNT')
+    if raw is None:
+        return 1 if is_production() else 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        logger.warning('TRUSTED_PROXY_COUNT inválido (%r); usando padrão.', raw)
+        return 1 if is_production() else 0
+
+def _is_ip(value: str) -> bool:
+    try:
+        ipaddress.ip_address(value)
+        return True
+    except ValueError:
+        return False
+
 def _client_ip() -> str:
+    """IP real do cliente para rate-limiting.
+
+    X-Forwarded-For é preenchido pelo cliente; só é confiável a partir do valor
+    que o proxy confiável mais próximo escreveu. Com N proxies confiáveis, o IP
+    do cliente está na posição -N da lista — qualquer valor forjado pelo atacante
+    fica à esquerda disso e é ignorado. Sem proxy confiável, usamos o peer TCP.
+    """
+    remote = request.remote_addr or 'desconhecido'
+    num_proxies = _trusted_proxy_count()
+    if num_proxies <= 0:
+        return remote
     forwarded = request.headers.get('X-Forwarded-For', '')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.remote_addr or 'desconhecido'
+    parts = [p.strip() for p in forwarded.split(',') if p.strip()]
+    if len(parts) >= num_proxies:
+        candidate = parts[-num_proxies]
+        if _is_ip(candidate):
+            return candidate
+    return remote
 
 async def _rate_limited(limiter: RateLimiter, key: str):
     return await limiter.check(key)
@@ -532,7 +569,56 @@ async def dashboard():
             except Exception as e:
                 logger.warning(f'Falha ao montar o perfil inicial do dashboard: {e}')
                 initial_profile = None
-    return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'), has_completed_onboarding=user.has_completed_onboarding if user else False, initial_profile=initial_profile)
+
+    conf_inicio = await g.db_session.execute(select(Config).filter_by(key='matricula_inicio'))
+    conf_inicio = conf_inicio.scalars().first()
+    conf_fim = await g.db_session.execute(select(Config).filter_by(key='matricula_fim'))
+    conf_fim = conf_fim.scalars().first()
+    is_matricula_period = False
+    
+    if conf_inicio and conf_fim and conf_inicio.value and conf_fim.value:
+        try:
+            start_date = datetime.strptime(conf_inicio.value, '%Y-%m-%d').date()
+            end_date = datetime.strptime(conf_fim.value, '%Y-%m-%d').date()
+            today = datetime.now().date()
+            if start_date <= today <= end_date:
+                is_matricula_period = True
+        except ValueError:
+            pass
+    if initial_profile is None:
+        initial_profile = {}
+    if user:
+        initial_profile['claimed_achievements'] = [ca.achievement_id for ca in user.claimed_achievements]
+
+    return await render_template('dashboard.html', user=user, linked_accounts=linked_accounts, active_account_id=session.get('active_account_id'), has_completed_onboarding=user.has_completed_onboarding if user else False, initial_profile=initial_profile, is_matricula_period=is_matricula_period)
+
+@bp.route('/api/achievements/claim', methods=['POST'])
+async def claim_achievement():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Não autenticado'}), 401
+    
+    data = await request.get_json()
+    if not data or 'achievement_id' not in data:
+        return jsonify({'error': 'achievement_id não fornecido'}), 400
+        
+    achievement_id = data['achievement_id']
+    
+    from .models import ClaimedAchievement
+    from sqlalchemy import select
+    
+    async with g.db_session as s:
+        stmt = select(ClaimedAchievement).where(ClaimedAchievement.user_id == session['user_id'], ClaimedAchievement.achievement_id == achievement_id)
+        result = await s.execute(stmt)
+        existing = result.scalar_one_or_none()
+        
+        if existing:
+            return jsonify({'success': True, 'message': 'Já reivindicado', 'claimed_at': existing.claimed_at.isoformat()})
+            
+        new_claim = ClaimedAchievement(user_id=session['user_id'], achievement_id=achievement_id)
+        s.add(new_claim)
+        await s.commit()
+        
+        return jsonify({'success': True, 'claimed_at': new_claim.claimed_at.isoformat()})
 
 @bp.route('/onboarding')
 async def onboarding():
@@ -597,6 +683,12 @@ async def academic_profile():
             bonds_to_use = active_bonds if active_bonds else student_bonds
             if not bonds_to_use:
                 return (jsonify({'error': 'No student bonds found'}), 404)
+            try:
+                inst_data = await gateway.get_institutional_data(bonds_to_use[0]['bond_id'])
+            except Exception as e:
+                import traceback
+                logger.error(f'Failed to fetch institutional data: {e}')
+                inst_data = {'error': str(e), 'traceback': traceback.format_exc()}
             history = await gateway.get_history(bonds_to_use[0]['bond_id'], cached_history=cached_history_raw)
         _save_gateway(gateway)
         duration = time.time() - start_time
@@ -630,7 +722,16 @@ async def academic_profile():
             if sem_grades:
                 semesters_data.append({'semester': sem, 'average': round(sem_avg, 2), 'count': len(sem_grades)})
         general_avg = sum(total_grades) / len(total_grades) if total_grades else 0
-        final_data = {'general_average': round(general_avg, 2), 'best_subject': best_subject, 'best_grade': best_grade, 'semesters': semesters_data, 'history_raw': history}
+        if inst_data.get('general_average'):
+            general_avg = inst_data.get('general_average')
+            
+        final_data = {'general_average': round(general_avg, 4), 'best_subject': best_subject, 'best_grade': best_grade, 'semesters': semesters_data, 'history_raw': history}
+        if 'integration_percentage' in inst_data:
+            final_data['integration_percentage'] = inst_data['integration_percentage']
+        if 'error' in inst_data:
+            final_data['inst_error'] = inst_data['error']
+            final_data['inst_url'] = inst_data.get('url', '')
+            
         if linked_account:
             try:
                 cipher = get_cipher_suite()
@@ -952,13 +1053,43 @@ async def logout():
     session.clear()
     return redirect(url_for('main.login'))
 
-@bp.route('/admin')
+@bp.route('/admin', methods=['GET', 'POST'])
 async def admin():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
     user = await g.db_session.get(User, session['user_id'])
     if not user or not user.is_admin:
         return redirect(url_for('main.dashboard'))
+        
+    if request.method == 'POST':
+        form = await request.form
+        inicio = form.get('matricula_inicio')
+        fim = form.get('matricula_fim')
+        if inicio is not None and fim is not None:
+            conf_inicio = await g.db_session.execute(select(Config).filter_by(key='matricula_inicio'))
+            conf_inicio = conf_inicio.scalars().first()
+            if not conf_inicio:
+                conf_inicio = Config(key='matricula_inicio')
+                g.db_session.add(conf_inicio)
+            conf_inicio.value = inicio
+            
+            conf_fim = await g.db_session.execute(select(Config).filter_by(key='matricula_fim'))
+            conf_fim = conf_fim.scalars().first()
+            if not conf_fim:
+                conf_fim = Config(key='matricula_fim')
+                g.db_session.add(conf_fim)
+            conf_fim.value = fim
+            await g.db_session.commit()
+            
+    conf_inicio = await g.db_session.execute(select(Config).filter_by(key='matricula_inicio'))
+    conf_inicio = conf_inicio.scalars().first()
+    conf_fim = await g.db_session.execute(select(Config).filter_by(key='matricula_fim'))
+    conf_fim = conf_fim.scalars().first()
+    configs = {
+        'matricula_inicio': conf_inicio.value if conf_inicio else '',
+        'matricula_fim': conf_fim.value if conf_fim else ''
+    }
+
     total_users = await g.db_session.scalar(select(func.count()).select_from(User))
     total_linked_accounts = await g.db_session.scalar(select(func.count()).select_from(LinkedAccount))
     users_with_accounts = await g.db_session.scalar(select(func.count(distinct(LinkedAccount.user_id))))
@@ -976,7 +1107,7 @@ async def admin():
             masked_username = acc.username[:3] + '***' + acc.username[-2:] if len(acc.username) > 5 else '***'
             accounts.append({'institution': acc.institution, 'username_masked': masked_username, 'history_updated': acc.history_updated_at.strftime('%d/%m/%Y %H:%M') if acc.history_updated_at else 'Nunca'})
         user_list.append({'id': u.id, 'name': u.name if u.name else 'Usuário Anônimo', 'accounts': accounts})
-    return await render_template('admin.html', user=user, stats=stats, user_list=user_list)
+    return await render_template('admin.html', user=user, stats=stats, user_list=user_list, configs=configs)
 
 @bp.route('/admin/avaliacoes')
 async def admin_avaliacoes():
@@ -1007,6 +1138,106 @@ async def admin_avaliacoes():
         avaliacoes.append({'id': aval.id, 'disciplina': disc.name, 'professor': prof.name, 'nota': aval.nota_exigencia, 'media_disciplina': lookup_medias[disc.id, prof.id], 'data': aval.created_at.strftime('%d/%m/%Y %H:%M') if aval.created_at else ''})
     return await render_template('admin_avaliacoes.html', user=user, avaliacoes=avaliacoes, medias_list=medias_list)
 
+async def _inject_medias_into_levels(levels, institution):
+    if not levels or not institution:
+        return levels
+    from app.models import MediaExigencia, Disciplina, Professor
+    from sqlalchemy import select, func, or_
+    all_disc_names = set()
+    all_prof_names = set()
+    for lvl in levels:
+        for disc in lvl.get('disciplines', []):
+            if disc.get('name'):
+                all_disc_names.add(disc['name'])
+            for cls in disc.get('classes', []):
+                if cls.get('teacher') and cls['teacher'] != 'A definir':
+                    all_prof_names.add(cls['teacher'].upper())
+                    
+    if all_disc_names:
+        def _extract_name(full_name):
+            if ' - ' in full_name:
+                return full_name.split(' - ', 1)[1].strip()
+            return full_name.strip()
+            
+        like_conditions = [Disciplina.name.like(f"% - {name}") for name in all_disc_names]
+        like_conditions.extend([Disciplina.name == name for name in all_disc_names])
+        
+        # Média global da disciplina
+        stmt = select(
+            Disciplina.name,
+            func.avg(MediaExigencia.media_exigencia).label('media_global')
+        ).join(
+            MediaExigencia, Disciplina.id == MediaExigencia.disciplina_id
+        ).filter(
+            Disciplina.institution == institution,
+            or_(*like_conditions)
+        ).group_by(Disciplina.name)
+        res = await g.db_session.execute(stmt)
+        
+        disc_avgs_raw = {}
+        for row in res.all():
+            if row.media_global is not None:
+                short = _extract_name(row.name)
+                disc_avgs_raw.setdefault(short, []).append(float(row.media_global))
+        disc_avgs = {k: round(sum(v)/len(v), 1) for k, v in disc_avgs_raw.items()}
+        
+        # Média específica do professor na disciplina
+        prof_avgs = {}
+        stmt_prof = select(
+            Disciplina.name,
+            Professor.name.label('prof_name'),
+            func.avg(MediaExigencia.media_exigencia).label('media_prof')
+        ).join(
+            MediaExigencia, Disciplina.id == MediaExigencia.disciplina_id
+        ).join(
+            Professor, Professor.id == MediaExigencia.professor_id
+        ).filter(
+            Disciplina.institution == institution,
+            or_(*like_conditions)
+        ).group_by(Disciplina.name, Professor.name)
+        res_prof = await g.db_session.execute(stmt_prof)
+        
+        prof_avgs_raw = {}
+        for row in res_prof.all():
+            if row.media_prof is not None:
+                short_d = _extract_name(row.name).strip().upper()
+                p_clean = row.prof_name.strip().upper()
+                key = (short_d, p_clean)
+                prof_avgs_raw.setdefault(key, []).append(float(row.media_prof))
+        prof_avgs = {k: round(sum(v)/len(v), 1) for k, v in prof_avgs_raw.items()}
+            
+        for lvl in levels:
+            for disc in lvl.get('disciplines', []):
+                d_name = disc.get('name')
+                d_clean = d_name.strip().upper() if d_name else ''
+                if d_name in disc_avgs:
+                    disc['media'] = disc_avgs[d_name]
+                for cls in disc.get('classes', []):
+                    p_name = cls.get('teacher')
+                    if d_clean and p_name and p_name != 'A definir':
+                        p_clean = p_name.strip().upper()
+                        key = (d_clean, p_clean)
+                        if key in prof_avgs:
+                            cls['media'] = prof_avgs[key]
+                        else:
+                            import unicodedata
+                            def _norm(n):
+                                n = unicodedata.normalize('NFD', n).encode('ascii', 'ignore').decode('utf-8')
+                                return set(w for w in n.upper().split() if len(w) > 2)
+                            
+                            p_set = _norm(p_clean)
+                            for (db_d, db_p), avg in prof_avgs.items():
+                                if db_d == d_clean:
+                                    db_set = _norm(db_p)
+                                    if p_set.issubset(db_set) or db_set.issubset(p_set):
+                                        cls['media'] = avg
+                                        break
+                                    if len(p_set.intersection(db_set)) >= 2:
+                                        cls['media'] = avg
+                                        break
+                            
+    return levels
+
 @bp.route('/api/matricula/status')
 async def api_matricula_status():
     if not session.get('sigaa_state'):
@@ -1020,6 +1251,8 @@ async def api_matricula_status():
                 selecao_body = f.read()
             levels = parse_enrollment_page(selecao_body)
             session['mock_view_state'] = 'mock_view_state_123'
+            institution = session.get('sigaa_inst') or 'UFAL'
+            levels = await _inject_medias_into_levels(levels, institution)
             return jsonify({'is_dev': True, 'levels': levels, 'view_state': 'mock_view_state_123', 'status': 'success'})
         except Exception as e:
             logger.error(f'Error loading mock matricula: {sanitize_for_log(e)}')
@@ -1037,7 +1270,10 @@ async def api_matricula_status():
                 result = await gateway.get_enrollment(bond_id)
             session['sigaa_enrollment_bond'] = bond_id
             _save_gateway(gateway)
-            return jsonify({'is_dev': False, 'levels': result.get('levels'), 'view_state': result.get('view_state'), 'status': 'success'})
+            levels = result.get('levels', [])
+            institution = session.get('sigaa_inst') or 'UFAL'
+            levels = await _inject_medias_into_levels(levels, institution)
+            return jsonify({'is_dev': False, 'levels': levels, 'view_state': result.get('view_state'), 'status': 'success'})
         except SigaaSessionExpired:
             _clear_sigaa_session()
             return (jsonify({'error': 'Session expired', 'session_expired': True}), 401)
@@ -1424,10 +1660,76 @@ async def complete_onboarding():
     user_id = session.get('user_id')
     if not user_id:
         return (jsonify({'error': 'Unauthorized'}), 401)
-    async with db_session() as s:
-        user = await s.get(User, user_id)
-        if user:
-            user.has_completed_onboarding = True
-            await s.commit()
-            return jsonify({'success': True})
-    return (jsonify({'error': 'User not found'}), 404)
+    user = await g.db_session.get(User, user_id)
+    if not user:
+        return (jsonify({'error': 'User not found'}), 404)
+    user.has_completed_onboarding = True
+    await g.db_session.commit()
+    return jsonify({'success': True})
+
+@bp.route('/dev/force_history_all_bonds')
+async def dev_force_history_all_bonds():
+    user_id = session.get('user_id')
+    if not user_id:
+        return (jsonify({'error': 'Unauthorized'}), 401)
+    requester = await g.db_session.get(User, user_id)
+    if not requester or not requester.is_admin:
+        return (jsonify({'error': 'Forbidden'}), 403)
+    gateway = await _get_gateway()
+    if not gateway:
+        return jsonify({'error': 'Sessão do SIGAA não encontrada'})
+    active_account_id = session.get('active_account_id')
+    if not active_account_id:
+        return jsonify({'error': 'Nenhuma conta vinculada ativa'})
+    from app.models import LinkedAccount, get_cipher_suite
+    linked_account = await g.db_session.get(LinkedAccount, active_account_id)
+    if not linked_account:
+        return jsonify({'error': 'Conta não encontrada'})
+    try:
+        async with gateway.scope():
+            # Forçar o scraping da página de seleção de vínculos para garantir que
+            # os vínculos inativos (anteriores) sejam mapeados pela sessão atual
+            if hasattr(gateway._backend, '_sigaa') and gateway._backend._sigaa:
+                sigaa_client = gateway._backend._sigaa
+                account_obj = gateway._backend._account
+                bond_page = await sigaa_client.session.get('/sigaa/escolhaVinculo.do?dispatch=listar')
+                account_obj.active_bonds = []
+                account_obj.inactive_bonds = []
+                account_obj._parse_bond_page(bond_page)
+            
+            all_bonds = await gateway.get_bonds()
+            student_bonds = [b for b in all_bonds if b.get('type') == 'student']
+            history_merged = {}
+            for bond in student_bonds:
+                try:
+                    bond_hist = await gateway.get_history(bond['bond_id'])
+                    if bond_hist:
+                        for sem, subjects in bond_hist.items():
+                            history_merged.setdefault(sem, []).extend(subjects)
+                except Exception as e:
+                    logger.error(f"Erro ao buscar historico do bond: {e}")
+            cipher = get_cipher_suite()
+            
+            # Manter os outros dados do cache se existirem
+            cached_profile = {}
+            if linked_account.history_json:
+                try:
+                    decrypted = cipher.decrypt(linked_account.history_json.encode('utf-8')).decode('utf-8')
+                    cached_profile = json.loads(decrypted)
+                except:
+                    pass
+            
+            cached_profile['history_raw'] = history_merged
+            linked_account.history_json = cipher.encrypt(json.dumps(cached_profile).encode('utf-8')).decode('utf-8')
+            linked_account.history_updated_at = datetime.utcnow()
+            
+            await g.db_session.commit()
+            
+            return jsonify({
+                'success': True, 
+                'msg': f'Histórico de {len(student_bonds)} vínculos foi forçado no cache!',
+                'total_semesters': len(history_merged)
+            })
+    except Exception as e:
+        logger.error(f'Erro em force_history_all_bonds: {sanitize_for_log(e)}')
+        return (jsonify({'error': 'Erro ao forçar o histórico.'}), 500)

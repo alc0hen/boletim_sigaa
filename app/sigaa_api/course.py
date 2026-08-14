@@ -233,7 +233,8 @@ class Course:
         if inferred_aulas_per_session:
             aulas_per_session = inferred_aulas_per_session
         if 'frequência ainda não foi lançada' in text_full.lower() or 'frequencia ainda nao foi lancada' in text_full.lower():
-            return {'nao_lancada': True}
+            max_faltas = int(aulas_total * 0.25) if aulas_total else 0
+            return {'nao_lancada': True, 'aulas_total': aulas_total, 'aulas_ministradas': aulas_ministradas, 'max_faltas': max_faltas}
         data = {'total_faltas': 0, 'max_faltas': 0, 'percent': 0.0, 'presencas': 0, 'ausencias': 0, 'nao_registradas': 0, 'aulas_ministradas': aulas_ministradas, 'aulas_total': aulas_total, 'logs': [], 'aulas_per_session': aulas_per_session}
         freq_table = None
         for tbl in page.soup.find_all('table'):

@@ -46,9 +46,19 @@ class User(Base):
     has_completed_onboarding = Column(Boolean, default=False, nullable=False, server_default='0')
     skipped_review_semesters = Column(String(512), nullable=True)
     linked_accounts = relationship('LinkedAccount', back_populates='user', lazy='selectin', cascade='all, delete-orphan')
+    claimed_achievements = relationship('ClaimedAchievement', back_populates='user', lazy='selectin', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<User {self.email}>'
+
+class ClaimedAchievement(Base):
+    __tablename__ = 'claimed_achievements'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    achievement_id = Column(String(50), nullable=False)
+    claimed_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship('User', back_populates='claimed_achievements')
+    __table_args__ = (UniqueConstraint('user_id', 'achievement_id', name='uq_user_achievement'),)
 
 class LinkedAccount(Base):
     __tablename__ = 'linked_accounts'
@@ -135,3 +145,9 @@ class MediaExigencia(Base):
     media_exigencia = Column(Float, nullable=False, default=0.0)
     total_votos = Column(Integer, nullable=False, default=0)
     __table_args__ = (UniqueConstraint('disciplina_id', 'professor_id', name='uq_media_exigencia'),)
+
+class Config(Base):
+    __tablename__ = 'config'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(50), unique=True, nullable=False, index=True)
+    value = Column(String(255), nullable=True)
